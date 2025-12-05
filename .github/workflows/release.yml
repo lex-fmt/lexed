@@ -1,0 +1,136 @@
+name: Release LexEd
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to build (e.g. v0.3.0)
+        required: true
+      target:
+        description: Optional platform filter (linux-x64, macos-x64, macos-arm64, windows-x64)
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.vars.outputs.release_tag }}
+      manual_target: ${{ steps.vars.outputs.manual_target }}
+    steps:
+      - name: Derive release metadata
+        id: vars
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TAG="${{ github.event.inputs.tag }}"
+            MANUAL_TARGET="${{ github.event.inputs.target }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+            MANUAL_TARGET=""
+          fi
+
+          if [[ -z "$TAG" ]]; then
+            echo "Release tag is required" >&2
+            exit 1
+          fi
+
+          echo "release_tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "manual_target=$MANUAL_TARGET" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.vars.outputs.release_tag }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists"
+          else
+            gh release create "$TAG" --title "LexEd $TAG" --generate-notes
+          fi
+
+  build:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux-x64
+            runner: ubuntu-latest
+          - platform: macos-x64
+            runner: macos-13
+          - platform: macos-arm64
+            runner: macos-14
+          - platform: windows-x64
+            runner: windows-latest
+    runs-on: ${{ matrix.runner }}
+    env:
+      RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
+    steps:
+      - name: Evaluate target filter
+        id: target-filter
+        shell: bash
+        run: |
+          set -euo pipefail
+          MANUAL_TARGET="${{ needs.prepare.outputs.manual_target }}"
+          if [[ -n "$MANUAL_TARGET" && "$MANUAL_TARGET" != "${{ matrix.platform }}" ]]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: ${{ steps.target-filter.outputs.skip == 'false' }}
+
+      - name: Setup Node.js
+        if: ${{ steps.target-filter.outputs.skip == 'false' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        if: ${{ steps.target-filter.outputs.skip == 'false' }}
+        run: npm ci
+
+      - name: Build Electron package
+        if: ${{ steps.target-filter.outputs.skip == 'false' }}
+        env:
+          LEX_HIDE_WINDOW: "1"
+          NODE_OPTIONS: --max-old-space-size=4096
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run build
+
+      - name: Upload release assets
+        if: ${{ steps.target-filter.outputs.skip == 'false' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(release/*)
+          if [[ ${#files[@]} -eq 0 ]]; then
+            echo "No release assets found" >&2
+            exit 1
+          fi
+          gh release upload "$RELEASE_TAG" "${files[@]}" --clobber
+
+      - name: Upload workflow artifact (debug)
+        if: ${{ steps.target-filter.outputs.skip == 'false' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: lexed-${{ matrix.platform }}
+          path: |
+            release/**
+            dist/**
+          if-no-files-found: error

@@ -14,7 +14,7 @@
     "dev": "vite",
     "icons": "node ./scripts/generate-icons.mjs",
     "prebuild": "npm run icons && npm run build:quicklook",
-    "build:quicklook": "xcodebuild -project quicklook/LexQuickLook.xcodeproj -scheme LexQuickLook -configuration Release build && mkdir -p build/quicklook && cp -R ~/Library/Developer/Xcode/DerivedData/LexQuickLook-*/Build/Products/Release/LexQuickLook.appex build/quicklook/",
+    "build:quicklook": "bash ./scripts/build-quicklook.sh",
     "build": "bash scripts/download-lex-lsp.sh && tsc && vite build && electron-builder",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",

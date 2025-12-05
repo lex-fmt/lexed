@@ -5,9 +5,22 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 RESOURCES_DIR="$APP_DIR/resources"
 
-# lex-lsp version and repository (keep in sync with shared/src/constants.ts)
-LEX_LSP_VERSION="${LEX_LSP_VERSION:-v0.2.2}"
-LEX_LSP_REPO="lex-fmt/editors"
+# lex-lsp version and repository (keep in sync with shared/src/lex-version.json)
+LEX_CONFIG_SCRIPT="$APP_DIR/scripts/read-lex-config.mjs"
+
+if [[ -z "${LEX_LSP_VERSION:-}" ]]; then
+  if ! LEX_LSP_VERSION="$(node "$LEX_CONFIG_SCRIPT" lexLspVersion)"; then
+    echo "Unable to determine lex-lsp version" >&2
+    exit 1
+  fi
+fi
+
+if [[ -z "${LEX_LSP_REPO:-}" ]]; then
+  if ! LEX_LSP_REPO="$(node "$LEX_CONFIG_SCRIPT" lexLspRepo)"; then
+    echo "Unable to determine lex-lsp repository" >&2
+    exit 1
+  fi
+fi
 
 # Detect platform and architecture
 detect_platform() {
