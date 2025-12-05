@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" data-name="vs/editor/editor.main"
+        href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/editor/editor.main.min.css" />
+</head>
+
+<body>
+    <div id="container" style="width: 800px; height: 600px; border: 1px solid grey"></div>
+    <script>
+        var require = { paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' } };
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+    <script>
+        require(['vs/editor/editor.main'], function () {
+            var monaco = window.monaco;
+            var id = 'lex-debug';
+
+            monaco.languages.register({ id: id });
+
+            monaco.languages.registerDocumentSemanticTokensProvider(id, {
+                getLegend: function () {
+                    console.log('DEBUG getLegend called');
+                    return {
+                        tokenTypes: ['class', 'property', 'comment', 'string', 'number'],
+                        tokenModifiers: ['declaration', 'static']
+                    };
+                },
+                provideDocumentSemanticTokens: function (model, lastResultId, token) {
+                    console.log('DEBUG provideDocumentSemanticTokens called');
+                    var lines = model.getLinesContent();
+                    var data = [];
+                    for (var i = 0; i < lines.length; i++) {
+                        var line = lines[i];
+                        // Highlight "Session Title" as 'class' (index 0)
+                        var index = line.indexOf('Session Title');
+                        if (index !== -1) {
+                            data.push(i, index, 13, 0, 0);
+                        }
+                    }
+                    return {
+                        data: new Uint32Array(data),
+                        resultId: undefined
+                    };
+                },
+                releaseDocumentSemanticTokens: function (resultId) { }
+            });
+
+            monaco.editor.defineTheme('lex-debug-theme', {
+                base: 'vs-dark',
+                inherit: true,
+                rules: [
+                    { token: 'class', foreground: '#FF0000', fontStyle: 'bold' }
+                ],
+                colors: {},
+                semanticHighlighting: true
+            });
+
+            var editor = monaco.editor.create(document.getElementById('container'), {
+                value: 'Session Title\nSome content',
+                language: id,
+                theme: 'lex-debug-theme',
+                'semanticHighlighting.enabled': true
+            });
+
+            console.log('Editor created');
+        });
+    </script>
+</body>
+
+</html>

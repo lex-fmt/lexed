@@ -1,0 +1,75 @@
+
+> lexed@0.0.0 prebuild
+> npm run icons
+
+
+> lexed@0.0.0 icons
+> node ./scripts/generate-icons.mjs
+
+objc[24433]: Class GNotificationCenterDelegate is implemented in both /Users/adebert/h/lex/editors/lexed/node_modules/@img/sharp-libvips-darwin-arm64/lib/libvips-cpp.8.17.3.dylib (0x1281ed978) and /Users/adebert/h/lex/editors/lexed/node_modules/icon-gen/node_modules/@img/sharp-libvips-darwin-arm64/lib/libvips-cpp.42.dylib (0x1292f9a28). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+Created /Users/adebert/h/lex/editors/lexed/build/icons/icons/16.png
+Created /Users/adebert/h/lex/editors/lexed/build/icons/icons/24.png
+Created /Users/adebert/h/lex/editors/lexed/build/icons/icons/32.png
+Created /Users/adebert/h/lex/editors/lexed/build/icons/icons/48.png
+Created /Users/adebert/h/lex/editors/lexed/build/icons/icons/64.png
+Created /Users/adebert/h/lex/editors/lexed/build/icons/icons/128.png
+Created /Users/adebert/h/lex/editors/lexed/build/icons/icons/256.png
+Created /Users/adebert/h/lex/editors/lexed/build/icons/icons/512.png
+Created /Users/adebert/h/lex/editors/lexed/build/icons/icons/1024.png
+Icon generator from PNG:
+  src: /Users/adebert/h/lex/editors/lexed/build/icons/icons
+  dir: /Users/adebert/h/lex/editors/lexed/build/icons/icons
+ICNS:
+  Create: /Users/adebert/h/lex/editors/lexed/build/icons/icons/icon.icns
+Icon generator from PNG:
+  src: /Users/adebert/h/lex/editors/lexed/build/icons/icons
+  dir: /Users/adebert/h/lex/editors/lexed/build/icons/icons
+ICO:
+  Create: /Users/adebert/h/lex/editors/lexed/build/icons/icons/icon.ico
+Renaming PNGs to Electron Format
+Renamed 16.png to 16x16.png
+Renamed 24.png to 24x24.png
+Renamed 32.png to 32x32.png
+Renamed 48.png to 48x48.png
+Renamed 64.png to 64x64.png
+Renamed 128.png to 128x128.png
+Renamed 256.png to 256x256.png
+Renamed 512.png to 512x512.png
+Renamed 1024.png to 1024x1024.png
+
+ ALL DONE
+
+> lexed@0.0.0 build
+> cargo build --manifest-path ../../Cargo.toml --package lex-lsp && tsc && vite build && electron-builder
+
+vite v5.4.21 building for production...
+transforming...
+✓ 2191 modules transformed.
+vite v5.4.21 building for production...
+transforming...
+✓ 5 modules transformed.
+rendering chunks...
+computing gzip size...
+dist-electron/main.js  20.98 kB │ gzip: 5.74 kB
+✓ built in 5.12s
+vite v5.4.21 building for production...
+transforming...
+✓ 1 modules transformed.
+rendering chunks...
+computing gzip size...
+dist-electron/preload.mjs  3.02 kB │ gzip: 0.73 kB
+✓ built in 2.89s
+x Build failed in 9.59s
+error during build:
+[vite]: Rollup failed to resolve import "monaco-editor/esm/vs/base/common/json.js" from "/Users/adebert/h/lex/editors/lexed/node_modules/vscode/extensions.js".
+This is most likely unintended because it can break your application at runtime.
+If you do want to externalize this module explicitly add it to
+`build.rollupOptions.external`
+    at viteWarn (file:///Users/adebert/h/lex/editors/lexed/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:65855:17)
+    at onwarn (file:///Users/adebert/h/lex/editors/lexed/node_modules/@vitejs/plugin-react/dist/index.js:90:7)
+    at onRollupWarning (file:///Users/adebert/h/lex/editors/lexed/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:65885:5)
+    at onwarn (file:///Users/adebert/h/lex/editors/lexed/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:65550:7)
+    at file:///Users/adebert/h/lex/editors/lexed/node_modules/rollup/dist/es/shared/node-entry.js:20975:13
+    at Object.logger [as onLog] (file:///Users/adebert/h/lex/editors/lexed/node_modules/rollup/dist/es/shared/node-entry.js:22848:9)
+    at ModuleLoader.handleInvalidResolvedId (file:///Users/adebert/h/lex/editors/lexed/node_modules/rollup/dist/es/shared/node-entry.js:21592:26)
+    at file:///Users/adebert/h/lex/editors/lexed/node_modules/rollup/dist/es/shared/node-entry.js:21550:26

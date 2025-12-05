@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+/* Geist font (bundled for offline use) */
+@font-face {
+  font-family: 'Geist';
+  src: url('./assets/fonts/Geist-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist';
+  src: url('./assets/fonts/Geist-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Dark theme (default) */
+:root {
+  --color-background: #0d0d0d;
+  --color-foreground: #cccccc;
+  --color-muted: #6e6e6e;
+  --color-muted-foreground: #999999;
+  --color-faintest: #555555;
+  --color-background-faintest: #0f0f0f;
+  --color-border: #2a2a2a;
+  --color-panel: #0c0c0cfc;
+  --color-panel-hover: #2a2d2e;
+  --color-accent: #646464;
+  --color-accent-foreground: #ffffff;
+  --panel-item-padding: 6px;
+  --lex-monaco-tab-size: 32;
+  --locked-content-overlay: rgba(0, 0, 0, 0.9);
+}
+
+/* Light theme */
+[data-theme="light"] {
+  --color-background: #ffffff;
+  --color-foreground: #333333;
+  --color-muted: #999999;
+  --color-muted-foreground: #666666;
+  --color-faintest: #cacaca;
+  --color-background-faintest: #f9f9f9;
+  --color-border: #e0e0e0;
+  --color-panel: #ffffff;
+  --color-panel-hover: #e8e8e8;
+  --color-accent: #2a2a2a;
+  --color-accent-foreground: #ffffff;
+  --panel-item-padding: 6px;
+  --locked-content-overlay: rgba(255, 255, 255, 0.9);
+}
+
+@theme {
+  --color-background: var(--color-background);
+  --color-foreground: var(--color-foreground);
+  --color-muted: var(--color-muted);
+  --color-muted-foreground: var(--color-muted-foreground);
+  --color-faintest: var(--color-faintest);
+  --color-background-faintest: var(--color-background-faintest);
+  --color-border: var(--color-border);
+  --color-panel: var(--color-panel);
+  --color-panel-hover: var(--color-panel-hover);
+  --color-accent: var(--color-accent);
+  --color-accent-foreground: var(--color-accent-foreground);
+  --locked-content-overlay: var(--locked-content-overlay);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  /* Monaco editor gutter border */
+  .monaco-editor .margin {
+    border-right: 1px solid #cacaca;
+  }
+.monaco-editor .margin-view-overlays .line-numbers {
+  font-family: "Geist Mono", monospace;
+  font-size: 12px
+}
+
+  [data-theme="dark"] .monaco-editor .margin {
+    border-right: 1px solid #555555;
+  }
+
+  /* Monaco editor content left margin */
+  .lines-content {
+    padding-left: 40px;
+  }
+
+  /* Visual tab/indent width inside Monaco (4 spaces base * 2) */
+  .monaco-editor .view-line,
+  .monaco-editor .view-lines,
+  .monaco-editor .native-edit-context {
+    tab-size: var(--lex-monaco-tab-size) !important;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+    font-size: 12px;
+  }
+}

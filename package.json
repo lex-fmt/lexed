@@ -1,0 +1,170 @@
+{
+  "name": "lexed",
+  "productName": "LexEd",
+  "private": true,
+  "version": "0.2.1",
+  "description": "LexEd editor for Lex",
+  "author": {
+    "name": "Arthur Debert",
+    "url": "https://lex.ing"
+  },
+  "homepage": "https://lex.ing",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "icons": "node ./scripts/generate-icons.mjs",
+    "prebuild": "npm run icons && npm run build:quicklook",
+    "build:quicklook": "xcodebuild -project quicklook/LexQuickLook.xcodeproj -scheme LexQuickLook -configuration Release build && mkdir -p build/quicklook && cp -R ~/Library/Developer/Xcode/DerivedData/LexQuickLook-*/Build/Products/Release/LexQuickLook.appex build/quicklook/",
+    "build": "cargo build --manifest-path ../../Cargo.toml --package lex-lsp && tsc && vite build && electron-builder",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview",
+    "pretest:e2e": "npm run icons",
+    "test:e2e": "LEX_HIDE_WINDOW=1 PLAYWRIGHT_BROWSERS_PATH=0 LEX_DISABLE_PERSISTENCE=1 npx playwright test tests/e2e",
+    "test:e2e:dev": "LEX_SKIP_E2E_BUILD=1 LEX_DISABLE_PERSISTENCE=1 npx playwright test tests/e2e",
+    "test:unit": "vitest"
+  },
+  "dependencies": {
+    "@lex/shared": "file:../shared",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "electron-log": "^5.4.3",
+    "electron-store": "^11.0.2",
+    "ignore": "^5.3.2",
+    "lucide-react": "^0.344.0",
+    "monaco-editor": "^0.55.1",
+    "monaco-vim": "^0.4.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "sonner": "^2.0.7",
+    "tailwind-merge": "^3.4.0",
+    "vscode-languageserver-protocol": "^3.17.5",
+    "vscode-ws-jsonrpc": "^3.5.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@tailwindcss/vite": "^4.1.17",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "^18.2.64",
+    "@types/react-dom": "^18.2.21",
+    "@typescript-eslint/eslint-plugin": "^7.1.1",
+    "@typescript-eslint/parser": "^7.1.1",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.22",
+    "electron": "^30.0.1",
+    "electron-builder": "^24.13.3",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "icon-gen": "^5.0.0",
+    "jsdom": "^27.2.0",
+    "playwright": "^1.57.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.17",
+    "typescript": "^5.2.2",
+    "vite": "^5.1.6",
+    "vite-plugin-electron": "^0.28.6",
+    "vite-plugin-electron-renderer": "^0.14.5",
+    "vitest": "^4.0.15"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/arthur-debert/lex.git"
+  },
+  "main": "dist-electron/main.js",
+  "build": {
+    "appId": "com.lex.lexed",
+    "productName": "LexEd",
+    "directories": {
+      "output": "release"
+    },
+    "mac": {
+      "icon": "build/icons/icons/icon.icns",
+      "target": [
+        "dmg"
+      ],
+      "extendInfo": {
+        "UTExportedTypeDeclarations": [
+          {
+            "UTTypeIdentifier": "com.lex.document",
+            "UTTypeDescription": "Lex Document",
+            "UTTypeConformsTo": [
+              "public.plain-text"
+            ],
+            "UTTypeTagSpecification": {
+              "public.filename-extension": [
+                "lex"
+              ]
+            }
+          },
+          {
+            "UTTypeIdentifier": "com.lex.extended-document",
+            "UTTypeDescription": "Lex Extended Document",
+            "UTTypeConformsTo": [
+              "public.plain-text"
+            ],
+            "UTTypeTagSpecification": {
+              "public.filename-extension": [
+                "lexx"
+              ]
+            }
+          }
+        ]
+      },
+      "extraFiles": [
+        {
+          "from": "build/quicklook/LexQuickLook.appex",
+          "to": "PlugIns/LexQuickLook.appex"
+        }
+      ]
+    },
+    "win": {
+      "icon": "build/icons/icons/icon.ico",
+      "target": [
+        "nsis",
+        "zip"
+      ]
+    },
+    "linux": {
+      "icon": "build/icons/icons",
+      "target": [
+        "AppImage"
+      ],
+      "category": "Utility"
+    },
+    "fileAssociations": [
+      {
+        "ext": "lex",
+        "name": "Lex Document",
+        "role": "Editor",
+        "mimeType": "text/x-lex"
+      },
+      {
+        "ext": "lexx",
+        "name": "Lex Extended Document",
+        "role": "Editor",
+        "mimeType": "text/x-lexx"
+      }
+    ],
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../../target/debug/lex-lsp",
+        "to": "lex-lsp"
+      },
+      {
+        "from": "welcome",
+        "to": "welcome"
+      },
+      {
+        "from": "dictionaries",
+        "to": "dictionaries"
+      }
+    ]
+  }
+}
