@@ -14,7 +14,20 @@ const macOutputDir = iconsDir;
 const winOutputDir = iconsDir;
 const pngSizes = [16, 32, 64, 128, 256, 512, 1024];
 const windowsIcoSizes = [16, 32, 64, 128, 256];
-const assetsDir = path.join(workspaceRoot, 'assets');
+const candidateAssetDirs = [
+  path.join(projectRoot, 'assets'),
+  path.join(projectRoot, '..', 'assets'),
+  path.join(workspaceRoot, 'assets'),
+];
+
+const assetsDir = candidateAssetDirs.find((dir) => existsSync(dir));
+if (!assetsDir) {
+  throw new Error(
+    `No assets directory found. Checked: ${candidateAssetDirs
+      .map((dir) => path.resolve(dir))
+      .join(', ')}`
+  );
+}
 
 function getPngDimensions(filePath) {
   const buffer = readFileSync(filePath);
