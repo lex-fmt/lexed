@@ -1,3 +1,6 @@
+// Pinned lex-lsp version - binaries downloaded from https://github.com/lex-fmt/editors/releases
+export const LEX_LSP_VERSION = 'v0.2.2';
+export const LEX_LSP_REPO = 'lex-fmt/editors';
 
 export const TOKEN_TYPES = [
     "DocumentTitle",

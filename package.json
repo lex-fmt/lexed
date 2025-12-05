@@ -2,7 +2,7 @@
   "name": "lexed",
   "productName": "LexEd",
   "private": true,
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "LexEd editor for Lex",
   "author": {
     "name": "Arthur Debert",
@@ -15,7 +15,7 @@
     "icons": "node ./scripts/generate-icons.mjs",
     "prebuild": "npm run icons && npm run build:quicklook",
     "build:quicklook": "xcodebuild -project quicklook/LexQuickLook.xcodeproj -scheme LexQuickLook -configuration Release build && mkdir -p build/quicklook && cp -R ~/Library/Developer/Xcode/DerivedData/LexQuickLook-*/Build/Products/Release/LexQuickLook.appex build/quicklook/",
-    "build": "cargo build --manifest-path ../../Cargo.toml --package lex-lsp && tsc && vite build && electron-builder",
+    "build": "bash scripts/download-lex-lsp.sh && tsc && vite build && electron-builder",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "pretest:e2e": "npm run icons",
@@ -24,7 +24,7 @@
     "test:unit": "vitest"
   },
   "dependencies": {
-    "@lex/shared": "file:../shared",
+    "@lex/shared": "file:./shared",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "electron-log": "^5.4.3",
@@ -154,7 +154,7 @@
     ],
     "extraResources": [
       {
-        "from": "../../target/debug/lex-lsp",
+        "from": "resources/lex-lsp",
         "to": "lex-lsp"
       },
       {

@@ -1,8 +1,14 @@
-# Nestjs specific
+# Build output
 /dist
-/node_modules
+/dist-electron
+/release
+node_modules
 /build
 /tmp
+
+# Downloaded binaries
+/resources/lex-lsp
+/resources/lex-lsp.exe
 
 # Logs
 logs
