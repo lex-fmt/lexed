@@ -24,6 +24,7 @@ interface EditorPaneProps {
     tabs: Tab[];
     activeTabId: string | null;
     paneId: string;
+    isActivePane: boolean;
     onTabSelect: (tabId: string) => void;
     onTabClose: (tabId: string) => void;
     onTabDrop?: (data: TabDropData) => void;
@@ -49,7 +50,7 @@ function computeChecksum(content: string): string {
 }
 
 export const EditorPane = forwardRef<EditorPaneHandle, EditorPaneProps>(function EditorPane(
-    { tabs, activeTabId, paneId, onTabSelect, onTabClose, onTabDrop, onFileLoaded, onCursorChange, exportStatus, onActivate },
+    { tabs, activeTabId, paneId, isActivePane, onTabSelect, onTabClose, onTabDrop, onFileLoaded, onCursorChange, exportStatus, onActivate },
     ref
 ) {
     const [fileToOpen, setFileToOpen] = useState<string | null>(null);
@@ -294,14 +295,15 @@ export const EditorPane = forwardRef<EditorPaneHandle, EditorPaneProps>(function
 
     return (
         <div className="flex flex-col flex-1 min-h-0" onMouseDown={() => onActivate?.()}>
-            <TabBar
-                tabs={tabs}
-                activeTabId={activeTabId}
-                paneId={paneId}
-                onTabSelect={handleTabSelect}
-                onTabClose={handleTabClose}
-                onTabDrop={onTabDrop}
-            />
+        <TabBar
+            tabs={tabs}
+            activeTabId={activeTabId}
+            paneId={paneId}
+            isActivePane={isActivePane}
+            onTabSelect={handleTabSelect}
+            onTabClose={handleTabClose}
+            onTabDrop={onTabDrop}
+        />
             <div className="flex-1 min-h-0">
                 {isPreviewTab && activeTab?.previewContent ? (
                     <PreviewPane content={activeTab.previewContent} />

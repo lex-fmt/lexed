@@ -21,6 +21,7 @@ interface TabBarProps {
     tabs: Tab[];
     activeTabId: string | null;
     paneId: string;
+    isActivePane: boolean;
     onTabSelect: (tabId: string) => void;
     onTabClose: (tabId: string) => void;
     onTabDrop?: (data: TabDropData) => void;
@@ -33,7 +34,7 @@ function truncateName(name: string, maxLength: number = 20): string {
 
 const TAB_DRAG_TYPE = 'application/x-lex-tab';
 
-export function TabBar({ tabs, activeTabId, paneId, onTabSelect, onTabClose, onTabDrop }: TabBarProps) {
+export function TabBar({ tabs, activeTabId, paneId, isActivePane, onTabSelect, onTabClose, onTabDrop }: TabBarProps) {
     const [isDragOver, setIsDragOver] = useState(false);
 
     const handleDragStart = useCallback((e: DragEvent<HTMLDivElement>, tab: Tab) => {
@@ -109,13 +110,13 @@ export function TabBar({ tabs, activeTabId, paneId, onTabSelect, onTabClose, onT
                     data-testid="editor-tab"
                     data-tab-id={tab.id}
                     data-tab-path={tab.path}
-                    data-active={activeTabId === tab.id}
+                    data-active={isActivePane && activeTabId === tab.id}
                     draggable
                     onDragStart={(e) => handleDragStart(e, tab)}
                     className={cn(
                         "group flex items-center gap-1.5 h-8 px-3 cursor-pointer border-r border-border",
                         "hover:bg-panel-hover transition-colors",
-                        activeTabId === tab.id
+                        isActivePane && activeTabId === tab.id
                             ? "bg-background text-foreground"
                             : "bg-background-faintest text-muted"
                     )}
@@ -128,7 +129,7 @@ export function TabBar({ tabs, activeTabId, paneId, onTabSelect, onTabClose, onT
                         className={cn(
                             "p-0.5 rounded hover:bg-border transition-colors",
                             "text-muted opacity-0 group-hover:opacity-100",
-                            activeTabId === tab.id && "opacity-100"
+                            isActivePane && activeTabId === tab.id && "opacity-100"
                         )}
                         onClick={(e) => {
                             e.stopPropagation();

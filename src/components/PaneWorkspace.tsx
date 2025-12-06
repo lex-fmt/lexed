@@ -221,6 +221,7 @@ export function PaneWorkspace({
                         tabs={pane.tabs}
                         activeTabId={pane.activeTabId}
                         paneId={pane.id}
+                        isActivePane={pane.id === activePaneId}
                         onTabSelect={(tabId) => onTabSelect(pane.id, tabId)}
                         onTabClose={(tabId) => onTabClose(pane.id, tabId)}
                         onTabDrop={(data) => onTabDrop(pane.id, data)}
