@@ -4,6 +4,7 @@ import path from 'node:path'
 import * as fs from 'fs/promises'
 import * as fsSync from 'fs'
 import log from 'electron-log'
+const DEFAULT_LOG_FILE = 'lexed.log'
 
 import {
   WindowManager,
@@ -18,8 +19,30 @@ import { randomUUID } from 'crypto'
 
 // Configure logging
 log.initialize()
-log.transports.file.level = 'info'
-log.transports.console.level = process.env.NODE_ENV === 'development' ? 'debug' : 'error'
+
+const resolveLogLevel = (fallback: log.LogLevel, devFallback: log.LogLevel) => {
+  const requested = process.env.LEX_LOG_LEVEL?.toLowerCase() as log.LogLevel | undefined
+  if (requested) return requested
+  if (process.env.NODE_ENV === 'development') {
+    return devFallback
+  }
+  return fallback
+}
+
+const fileLogLevel = resolveLogLevel('info', 'debug')
+const consoleLogLevel = (process.env.LEX_LOG_CONSOLE_LEVEL?.toLowerCase() as log.LogLevel) ??
+  (process.env.NODE_ENV === 'development' ? fileLogLevel : 'error')
+
+log.transports.file.resolvePath = () => path.join(app.getPath('logs'), DEFAULT_LOG_FILE)
+log.transports.file.level = fileLogLevel
+log.transports.console.level = consoleLogLevel
+log.transports.console.useStyles = true
+log.info('Logging initialised', {
+  file: log.transports.file.resolvePath?.(),
+  fileLevel: fileLogLevel,
+  consoleLevel: consoleLogLevel,
+  nodeEnv: process.env.NODE_ENV,
+})
 
 // Optional: Catch all unhandled errors
 log.errorHandler.startCatching()

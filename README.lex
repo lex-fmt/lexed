@@ -125,3 +125,11 @@ LexEd ships with a customizable keybinding engine. The combinations below descri
 - Run `npm run test:e2e` inside `editors/lexed/` to execute the Playwright e2e suite (builds the app before running).
 
 Running `npm run test:e2e` hides the Electron window via `LEX_HIDE_WINDOW=1` so tests do not steal focus; unset it to observe the UI.
+
+## Debug Logging
+
+LexEd uses `electron-log` in both main and renderer processes. Logs are always written to
+`~/Library/Logs/LexEd/lexed.log` (macOS) and to the equivalent OS log directory for Windows/Linux. To raise the
+verbosity while developing, export `LEX_LOG_LEVEL=debug` before launching (`NODE_ENV=development LEX_LOG_LEVEL=debug npm run dev`).
+You can also force console verbosity independently via `LEX_LOG_CONSOLE_LEVEL=debug`. The main process announces the
+resolved levels at startup so you can confirm both console and file destinations are active.
