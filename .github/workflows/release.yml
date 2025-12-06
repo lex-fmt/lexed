@@ -117,10 +117,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          shopt -s nullglob
           files=()
-          while IFS= read -r -d '' file; do
+          for file in release/*; do
+            [[ -f "$file" ]] || continue
             files+=("$file")
-          done < <(find release -type f -print0)
+          done
+          shopt -u nullglob
 
           if [[ ${#files[@]} -eq 0 ]]; then
             echo "No release assets found" >&2
