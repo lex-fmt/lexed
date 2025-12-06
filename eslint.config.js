@@ -18,6 +18,7 @@ const browserGlobals = {
   // DOM
   HTMLElement: 'readonly',
   HTMLDivElement: 'readonly',
+  HTMLButtonElement: 'readonly',
   HTMLInputElement: 'readonly',
   Element: 'readonly',
   Node: 'readonly',

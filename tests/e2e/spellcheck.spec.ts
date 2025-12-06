@@ -88,4 +88,54 @@ test.describe('Spellcheck', () => {
 
     await electronApp.close()
   })
+
+  test('allows switching languages from the status bar widget', async () => {
+    const electronApp = await launchApp()
+    const page = await electronApp.firstWindow()
+    await page.waitForLoadState('domcontentloaded')
+
+    try {
+      await page.evaluate(async () => {
+        await (window as any).ipcRenderer.setSpellcheckSettings({
+          enabled: true,
+          language: 'en_US',
+        })
+      })
+
+      await openFixture(page, 'spellcheck-test.lex')
+
+      const spellButton = page.getByTestId('status-spell-button').first()
+      await expect(spellButton).toBeVisible()
+      await expect(spellButton).toContainText('Spell: English (US)')
+
+      await spellButton.click()
+      const menu = page.getByTestId('status-spell-menu').first()
+      await expect(menu).toBeVisible()
+
+      await menu.getByTestId('status-spell-option-off').click()
+      await expect(spellButton).toHaveText('Spell: off')
+
+      await expect
+        .poll(async () => {
+          const settings = await page.evaluate(() => (window as any).ipcRenderer.getAppSettings())
+          return settings.spellcheck.enabled
+        })
+        .toBe(false)
+
+      await spellButton.click()
+      await expect(menu).toBeVisible()
+      await menu.getByTestId('status-spell-option-fr_FR').click()
+
+      await expect(spellButton).toContainText('Spell: French')
+
+      await expect
+        .poll(async () => {
+          const settings = await page.evaluate(() => (window as any).ipcRenderer.getAppSettings())
+          return settings.spellcheck
+        })
+        .toMatchObject({ enabled: true, language: 'fr_FR' })
+    } finally {
+      await electronApp.close()
+    }
+  })
 })
