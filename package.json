@@ -70,10 +70,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/arthur-debert/lex.git"
+    "url": "https://github.com/lex-fmt/lexed.git"
   },
   "main": "dist-electron/main.js",
   "build": {
+    "publish": null,
     "appId": "com.lex.lexed",
     "productName": "LexEd",
     "directories": {

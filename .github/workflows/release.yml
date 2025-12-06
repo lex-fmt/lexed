@@ -108,7 +108,6 @@ jobs:
         env:
           LEX_HIDE_WINDOW: "1"
           NODE_OPTIONS: --max-old-space-size=4096
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run build
 
       - name: Upload release assets
