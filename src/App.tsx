@@ -456,18 +456,28 @@ function AppContent() {
       if (orderedTabs.length === 0) {
         return false
       }
-      const currentIndex = orderedTabs.findIndex(
+      let currentIndex = orderedTabs.findIndex(
         (entry) => entry.paneId === activePaneIdValue && entry.tabId === activeTabId
       )
       if (currentIndex === -1) {
-        return false
+        currentIndex = orderedTabs.findIndex((entry) => entry.paneId === activePaneIdValue)
+        if (currentIndex === -1) {
+          return false
+        }
       }
       const nextIndex = (currentIndex + direction + orderedTabs.length) % orderedTabs.length
       const nextEntry = orderedTabs[nextIndex]
+      if (nextEntry.paneId !== activePaneIdValue) {
+        focusPane(nextEntry.paneId)
+      }
       handleTabSelect(nextEntry.paneId, nextEntry.tabId)
+      if (nextEntry.paneId !== activePaneIdValue) {
+        const handle = paneHandles.current.get(nextEntry.paneId)
+        handle?.getEditor()?.focus()
+      }
       return true
     },
-    [activePaneIdValue, activeTabId, paneRows, panes, handleTabSelect]
+    [activePaneIdValue, activeTabId, paneRows, panes, handleTabSelect, focusPane]
   )
 
   const focusPaneByIndex = useCallback(
