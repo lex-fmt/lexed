@@ -80,6 +80,14 @@ function AppContent() {
   const [lspError, setLspError] = useState<LspErrorInfo | null>(null)
   const [isLspModalOpen, setLspModalOpen] = useState(false)
 
+  const ensureLspAvailable = useCallback(() => {
+    if (lspError) {
+      setLspModalOpen(true)
+      return false
+    }
+    return true
+  }, [lspError])
+
   const activePaneIdValue = resolvedActivePaneId
   const activePaneFile = resolvedActivePane?.currentFile ?? null
   const activeTabId = resolvedActivePane?.activeTabId ?? null
@@ -531,14 +539,6 @@ function AppContent() {
     },
     [activePaneIdValue, openFileInPane]
   )
-
-  const ensureLspAvailable = useCallback(() => {
-    if (lspError) {
-      setLspModalOpen(true)
-      return false
-    }
-    return true
-  }, [lspError])
 
   const selectRelativeTab = useCallback(
     (direction: 1 | -1) => {

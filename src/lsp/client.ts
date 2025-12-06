@@ -17,6 +17,10 @@ export class LspClient {
     }
 
     public start(rootPath?: string): Promise<void> {
+        if (typeof window === 'undefined' || !window.ipcRenderer) {
+            log.warn('[LspClient] ipcRenderer unavailable, skipping startup');
+            return Promise.resolve();
+        }
         if (this.readyPromise) return this.readyPromise;
 
         this.readyPromise = this.initialize(rootPath);
@@ -24,6 +28,10 @@ export class LspClient {
     }
 
     private async initialize(rootPath?: string): Promise<void> {
+        if (typeof window === 'undefined' || !window.ipcRenderer) {
+            log.warn('[LspClient] ipcRenderer unavailable, initialization skipped');
+            return;
+        }
         if (this.isDisposed) return;
 
         log.debug(`[LspClient] Starting SimpleLspClient (Attempt ${this.retryCount + 1}/${this.maxRetries + 1})...`);
