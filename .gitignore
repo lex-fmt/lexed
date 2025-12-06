@@ -32,4 +32,8 @@ lerna-debug.log*
 # Test artifacts
 test-results/
 .padz/
+.padz
 test.lex
+
+# OS-specific artifacts
+.DS_Store
