@@ -20,6 +20,10 @@ export async function launchApp(options: LaunchOptions = {}) {
     ...envOverrides,
   }
 
+  if (!env.LEX_HIDE_WINDOW) {
+    env.LEX_HIDE_WINDOW = '1'
+  }
+
   if (devServerUrl) {
     env.VITE_DEV_SERVER_URL = devServerUrl
   } else {
