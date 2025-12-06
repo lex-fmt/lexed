@@ -25,8 +25,12 @@ export function useRootFolder() {
     if (rootPath) {
       const folderName = rootPath.split('/').pop() || rootPath;
       document.title = `LexEd - ${folderName}`;
+      (window as any).__lexWorkspaceRoot = rootPath;
     } else {
       document.title = 'LexEd';
+      if ((window as any).__lexWorkspaceRoot) {
+        delete (window as any).__lexWorkspaceRoot;
+      }
     }
   }, [rootPath]);
 
