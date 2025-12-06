@@ -31,7 +31,14 @@ import { KeybindingManager } from '@/keybindings/manager'
 import { getVisualPaneOrder, getVisualTabOrder } from '@/panes/order'
 import { CommandPalette } from '@/components/CommandPalette'
 import { ShortcutsModal } from '@/components/ShortcutsModal'
+import { LspErrorModal } from '@/components/LspErrorModal'
 import log from 'electron-log/renderer'
+
+interface LspErrorInfo {
+  title: string
+  message: string
+  suggestion?: string
+}
 
 const createTabFromPath = (path: string): Tab => ({
   id: path,
@@ -70,6 +77,8 @@ function AppContent() {
   const keybindingManager = keybindingManagerRef.current
   const [isCommandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [isShortcutsOpen, setShortcutsOpen] = useState(false)
+  const [lspError, setLspError] = useState<LspErrorInfo | null>(null)
+  const [isLspModalOpen, setLspModalOpen] = useState(false)
 
   const activePaneIdValue = resolvedActivePaneId
   const activePaneFile = resolvedActivePane?.currentFile ?? null
@@ -105,6 +114,58 @@ function AppContent() {
     if (!keybindingManager) return
     keybindingManager.setContext('modal', isCommandPaletteOpen || isShortcutsOpen)
   }, [keybindingManager, isCommandPaletteOpen, isShortcutsOpen])
+
+  useEffect(() => {
+    const unsubscribe = window.ipcRenderer.onLspStatus?.((status) => {
+      if (!status) return
+      if (status.status === 'missing-binary') {
+        setLspError({
+          title: 'Lex Language Server Missing',
+          message:
+            status.message ??
+            `Lex LSP binary was not found${status.path ? ` at ${status.path}` : ''}.`,
+          suggestion: 'Run "npm run build" once or execute scripts/download-lex-lsp.sh to download lex-lsp.',
+        })
+      } else if (status.status === 'error') {
+        setLspError({
+          title: 'Lex Language Server Error',
+          message: status.message ?? 'Unable to launch the Lex language server.',
+          suggestion: 'Check the terminal output for more information.',
+        })
+      } else if (status.status === 'stopped') {
+        setLspError({
+          title: 'Lex Language Server Stopped',
+          message: 'The language server exited unexpectedly.',
+          suggestion: 'Restart LexEd or rebuild lex-lsp to continue.',
+        })
+      }
+    }) ?? (() => {})
+
+    const handleReady = () => setLspError(null)
+    const handleFatal = (event: Event) => {
+      const detail = (event as CustomEvent<{ message?: string }>).detail
+      setLspError({
+        title: 'Lex Language Server Unavailable',
+        message: detail?.message ?? 'The language server is not responding.',
+        suggestion: 'Restart LexEd or rebuild lex-lsp to continue.',
+      })
+    }
+
+    window.addEventListener('lexed:lsp-ready', handleReady as EventListener)
+    window.addEventListener('lexed:lsp-fatal', handleFatal as EventListener)
+
+    return () => {
+      unsubscribe()
+      window.removeEventListener('lexed:lsp-ready', handleReady as EventListener)
+      window.removeEventListener('lexed:lsp-fatal', handleFatal as EventListener)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (lspError) {
+      setLspModalOpen(true)
+    }
+  }, [lspError])
 
   useMenuStateSync(Boolean(activePaneFile), isActiveFileLex)
 
@@ -197,10 +258,11 @@ function AppContent() {
 
   const handleFormat = useCallback(async () => {
     log.info('Action: Format')
+    if (!ensureLspAvailable()) return
     if (!activePaneIdValue) return
     const handle = paneHandles.current.get(activePaneIdValue)
     await handle?.format()
-  }, [activePaneIdValue])
+  }, [activePaneIdValue, ensureLspAvailable])
 
   const handleFind = useCallback(() => {
     if (!activePaneIdValue) return
@@ -226,6 +288,9 @@ function AppContent() {
   }, [activeEditor])
 
   const handleConvertToLex = useCallback(async () => {
+    if (!ensureLspAvailable()) {
+      return
+    }
     if (!activePaneFile || !activePaneIdValue) {
       toast.error('No file open to convert')
       return
@@ -258,10 +323,13 @@ function AppContent() {
     } finally {
       setExportStatus({ isExporting: false, format: null })
     }
-  }, [activePaneFile, activePaneIdValue, openFileInPane])
+  }, [activePaneFile, activePaneIdValue, openFileInPane, ensureLspAvailable])
 
   const handleExport = useCallback(
     async (format: string) => {
+      if (!ensureLspAvailable()) {
+        return
+      }
       if (!activePaneFile) {
         toast.error('No file open to export')
         return
@@ -303,10 +371,13 @@ function AppContent() {
         setExportStatus({ isExporting: false, format: null })
       }
     },
-    [activePaneFile, activePaneIdValue]
+    [activePaneFile, activePaneIdValue, ensureLspAvailable]
   )
 
   const handlePreview = useCallback(async () => {
+    if (!ensureLspAvailable()) {
+      return
+    }
     if (!activePaneFile || !isLexFile(activePaneFile)) {
       toast.error('Preview requires a .lex file')
       return
@@ -340,7 +411,15 @@ function AppContent() {
       const message = error instanceof Error ? error.message : 'Preview failed'
       toast.error(message)
     }
-  }, [activePaneFile, activePaneIdValue, panes, setActivePaneId, setPaneRows, setPanes])
+  }, [
+    activePaneFile,
+    activePaneIdValue,
+    panes,
+    setActivePaneId,
+    setPaneRows,
+    setPanes,
+    ensureLspAvailable,
+  ])
 
   const handleFileSelect = useCallback(
     (path: string) => {
@@ -353,6 +432,7 @@ function AppContent() {
   const handleInsertAsset = useCallback(async () => {
     log.info('Action: Insert Asset')
     console.log('handleInsertAsset called')
+    if (!ensureLspAvailable()) return
     if (!activeEditor) {
       console.log('handleInsertAsset: no active editor')
       return
@@ -365,9 +445,10 @@ function AppContent() {
     if (path) {
       await insertAsset(activeEditor, path)
     }
-  }, [activeEditor])
+  }, [activeEditor, ensureLspAvailable])
 
   const handleInsertVerbatim = useCallback(async () => {
+    if (!ensureLspAvailable()) return
     if (!activeEditor) return
     const path = (await window.ipcRenderer.invoke('file-pick', {
       title: 'Select File for Verbatim Block',
@@ -376,9 +457,10 @@ function AppContent() {
     if (path) {
       await insertVerbatim(activeEditor, path)
     }
-  }, [activeEditor])
+  }, [activeEditor, ensureLspAvailable])
 
   const handleNextAnnotation = useCallback(async () => {
+    if (!ensureLspAvailable()) return
     if (!activeEditor) return
     const location = await nextAnnotation(activeEditor)
     if (location) {
@@ -407,9 +489,10 @@ function AppContent() {
       log.info('No more annotations')
       toast.info('No more annotations')
     }
-  }, [activeEditor])
+  }, [activeEditor, ensureLspAvailable])
 
   const handlePrevAnnotation = useCallback(async () => {
+    if (!ensureLspAvailable()) return
     if (!activeEditor) return
     const location = await previousAnnotation(activeEditor)
     if (location) {
@@ -427,17 +510,19 @@ function AppContent() {
     } else {
       toast.info('No previous annotations')
     }
-  }, [activeEditor])
+  }, [activeEditor, ensureLspAvailable])
 
   const handleResolveAnnotation = useCallback(async () => {
+    if (!ensureLspAvailable()) return
     if (!activeEditor) return
     await resolveAnnotation(activeEditor)
-  }, [activeEditor])
+  }, [activeEditor, ensureLspAvailable])
 
   const handleToggleAnnotations = useCallback(async () => {
+    if (!ensureLspAvailable()) return
     if (!activeEditor) return
     await toggleAnnotations(activeEditor)
-  }, [activeEditor])
+  }, [activeEditor, ensureLspAvailable])
 
   const handleOpenFilePath = useCallback(
     (filePath: string) => {
@@ -446,6 +531,14 @@ function AppContent() {
     },
     [activePaneIdValue, openFileInPane]
   )
+
+  const ensureLspAvailable = useCallback(() => {
+    if (lspError) {
+      setLspModalOpen(true)
+      return false
+    }
+    return true
+  }, [lspError])
 
   const selectRelativeTab = useCallback(
     (direction: 1 | -1) => {
@@ -656,6 +749,15 @@ function AppContent() {
         shortcuts={keybindingDescriptors}
         onClose={() => setShortcutsOpen(false)}
       />
+      {lspError && (
+        <LspErrorModal
+          isOpen={isLspModalOpen}
+          title={lspError.title}
+          message={lspError.message}
+          suggestion={lspError.suggestion}
+          onClose={() => setLspModalOpen(false)}
+        />
+      )}
     </>
   )
 }

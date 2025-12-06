@@ -133,6 +133,11 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
     ipcRenderer.on('open-file-path', handler);
     return () => ipcRenderer.removeListener('open-file-path', handler);
   },
+  onLspStatus: (callback: (status: any) => void) => {
+    const handler = (_event: IpcRendererEvent, status: any) => callback(status);
+    ipcRenderer.on('lsp-status', handler);
+    return () => ipcRenderer.removeListener('lsp-status', handler);
+  },
   getAppSettings: () => ipcRenderer.invoke('get-app-settings'),
   setEditorSettings: (settings: { showRuler: boolean; rulerWidth: number; vimMode: boolean }) => ipcRenderer.invoke('set-editor-settings', settings),
   setFormatterSettings: (

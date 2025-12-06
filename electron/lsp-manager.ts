@@ -1,5 +1,5 @@
 import { spawn, ChildProcess } from 'child_process'
-import { WebContents, app } from 'electron'
+import { WebContents, app, dialog } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
 
@@ -37,6 +37,13 @@ function resolveLogFile(): string {
   return path.join(app.getPath('userData'), 'lexed-lsp.log')
 }
 
+interface LspStatusPayload {
+  status: 'starting' | 'missing-binary' | 'error' | 'stopped'
+  message?: string
+  path?: string
+  code?: number | null
+}
+
 function log(message: string) {
   const write = () => {
     const target = resolveLogFile()
@@ -65,6 +72,12 @@ export class LspManager {
     log('LspManager initialized')
   }
 
+  private sendStatus(payload: LspStatusPayload) {
+    if (this.webContents && !this.webContents.isDestroyed()) {
+      this.webContents.send('lsp-status', payload)
+    }
+  }
+
   setWebContents(webContents: WebContents) {
     this.webContents = webContents
     // Clear reference when webContents is destroyed to prevent errors
@@ -89,6 +102,14 @@ export class LspManager {
       lspPath = resolveDevBinary(binaryName)
     }
 
+    if (!fs.existsSync(lspPath)) {
+      const message = `Lex language server binary not found at ${lspPath}. Run "npm run build" once or execute scripts/download-lex-lsp.sh to fetch it.`
+      log(message)
+      dialog.showErrorBox('Lex LSP Missing', message)
+      this.sendStatus({ status: 'missing-binary', message, path: lspPath })
+      return
+    }
+
     // TODO: Pass rootPath to LSP process if supported via args or env
     const env = { ...process.env }
     if (this.rootPath) {
@@ -96,6 +117,8 @@ export class LspManager {
     }
 
     const lspCwd = app.isPackaged ? process.resourcesPath : (process.env.APP_ROOT ?? process.cwd())
+
+    this.sendStatus({ status: 'starting' })
 
     this.lspProcess = spawn(lspPath, [], {
       env,
@@ -123,11 +146,15 @@ export class LspManager {
     this.lspProcess.on('exit', (code) => {
       console.log(`LSP exited with code ${code}`)
       log(`LSP exited with code ${code}`)
+      this.sendStatus({ status: 'stopped', code: code ?? null })
       this.lspProcess = null
     })
 
     this.lspProcess.on('error', (err) => {
-      console.error('Failed to start LSP process:', err)
+      const message = `Failed to start LSP process: ${err?.message ?? 'unknown error'}`
+      console.error(message)
+      log(message)
+      this.sendStatus({ status: 'error', message })
     })
   }
 

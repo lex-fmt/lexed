@@ -56,6 +56,7 @@ interface Window {
     onMenuSplitHorizontal: (callback: () => void) => () => void
     onMenuPreview: (callback: () => void) => () => void
     onOpenFilePath: (callback: (filePath: string) => void) => () => void
+    onLspStatus: (callback: (status: { status: string; message?: string; path?: string; code?: number | null }) => void) => () => void
     getAppSettings: () => Promise<any>
     setEditorSettings: (settings: {
       showRuler: boolean

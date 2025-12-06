@@ -161,6 +161,7 @@ export class LspClient {
 
             await this.connection.sendNotification(InitializedNotification.type, {});
             log.info('[LspClient] Initialized');
+            window.dispatchEvent(new CustomEvent('lexed:lsp-ready'));
 
             // Reset retry count on successful connection
             this.retryCount = 0;
@@ -246,7 +247,9 @@ export class LspClient {
                 this.start().catch(err => log.error('[LspClient] Reconnection failed:', err));
             }, delay);
         } else {
-            log.error('[LspClient] Max retries exceeded. Giving up.');
+            const message = 'Lex language server unavailable after multiple attempts.';
+            log.error(`[LspClient] Max retries exceeded. Giving up.`);
+            window.dispatchEvent(new CustomEvent('lexed:lsp-fatal', { detail: { message } }));
         }
     }
 

@@ -33,7 +33,7 @@ const fileLogLevel = resolveLogLevel('info', 'debug')
 const consoleLogLevel = (process.env.LEX_LOG_CONSOLE_LEVEL?.toLowerCase() as log.LogLevel) ??
   (process.env.NODE_ENV === 'development' ? fileLogLevel : 'error')
 
-log.transports.file.resolvePath = () => path.join(app.getPath('logs'), DEFAULT_LOG_FILE)
+log.transports.file.resolvePathFn = () => path.join(app.getPath('logs'), DEFAULT_LOG_FILE)
 log.transports.file.level = fileLogLevel
 log.transports.console.level = consoleLogLevel
 log.transports.console.useStyles = true
