@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import * as monaco from 'monaco-editor'
 import { toast } from 'sonner'
 import type { EditorPaneHandle } from './components/EditorPane'
@@ -9,7 +9,12 @@ import type { Tab } from './components/TabBar'
 import { PaneWorkspace } from './components/PaneWorkspace'
 import { usePersistedPaneLayout } from '@/panes/usePersistedPaneLayout'
 import { usePaneManager } from '@/panes/usePaneManager'
-import { insertAsset, insertVerbatim, resolveAnnotation, toggleAnnotations } from './features/editing'
+import {
+  insertAsset,
+  insertVerbatim,
+  resolveAnnotation,
+  toggleAnnotations,
+} from './features/editing'
 import { nextAnnotation, previousAnnotation } from './features/navigation'
 import { exportContent, importContent, convertToHtml } from './features/interop'
 import { isLexFile } from '@/lib/files'
@@ -18,17 +23,23 @@ import { useRootFolder } from '@/hooks/useRootFolder'
 import { useMenuStateSync } from '@/hooks/useMenuStateSync'
 import { useLexTestBridge } from '@/hooks/useLexTestBridge'
 import { useMenuHandlers } from '@/hooks/useMenuHandlers'
-import { SettingsProvider } from '@/contexts/SettingsContext'
+import { SettingsProvider, useSettings } from '@/contexts/SettingsContext'
 import { dispatchFileTreeRefresh } from '@/lib/events'
-import log from 'electron-log/renderer';
+import { KEYBINDING_DEFINITIONS } from '@/keybindings/definitions'
+import { detectKeybindingPlatform } from '@/keybindings/platform'
+import { KeybindingManager } from '@/keybindings/manager'
+import { getVisualPaneOrder, getVisualTabOrder } from '@/panes/order'
+import { CommandPalette } from '@/components/CommandPalette'
+import { ShortcutsModal } from '@/components/ShortcutsModal'
+import log from 'electron-log/renderer'
 
 const createTabFromPath = (path: string): Tab => ({
   id: path,
   path,
   name: path.split('/').pop() || path,
-});
+})
 
-function App() {
+function AppContent() {
   const {
     panes,
     paneRows,
@@ -37,48 +48,88 @@ function App() {
     setActivePaneId,
     resolvedActivePane,
     resolvedActivePaneId,
-  } = usePersistedPaneLayout(createTabFromPath);
-  const { rootPath, setRootPath } = useRootFolder();
-  const [exportStatus, setExportStatus] = useState<ExportStatus>({ isExporting: false, format: null });
-  const paneHandles = useRef(new Map<string, EditorPaneHandle | null>());
-  const panesRef = useRef(panes);
+  } = usePersistedPaneLayout(createTabFromPath)
+  const { settings } = useSettings()
+  const { rootPath, setRootPath } = useRootFolder()
+  const [exportStatus, setExportStatus] = useState<ExportStatus>({
+    isExporting: false,
+    format: null,
+  })
+  const paneHandles = useRef(new Map<string, EditorPaneHandle | null>())
+  const panesRef = useRef(panes)
+  const platform = useMemo(() => detectKeybindingPlatform(), [])
+  const keybindingManagerRef = useRef<KeybindingManager | null>(null)
 
-  const activePaneIdValue = resolvedActivePaneId;
-  const activePaneFile = resolvedActivePane?.currentFile ?? null;
-  const isActiveFileLex = isLexFile(activePaneFile ?? null);
-  const activeCursorLine = resolvedActivePane?.cursorLine ?? 0;
+  if (!keybindingManagerRef.current) {
+    keybindingManagerRef.current = new KeybindingManager(KEYBINDING_DEFINITIONS, {
+      platform,
+      overrides: settings.keybindings,
+    })
+  }
+
+  const keybindingManager = keybindingManagerRef.current
+  const [isCommandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  const [isShortcutsOpen, setShortcutsOpen] = useState(false)
+
+  const activePaneIdValue = resolvedActivePaneId
+  const activePaneFile = resolvedActivePane?.currentFile ?? null
+  const activeTabId = resolvedActivePane?.activeTabId ?? null
+  const isActiveFileLex = isLexFile(activePaneFile ?? null)
+  const activeCursorLine = resolvedActivePane?.cursorLine ?? 0
   const activeEditor = activePaneIdValue
-    ? paneHandles.current.get(activePaneIdValue)?.getEditor() ?? null
-    : null;
+    ? (paneHandles.current.get(activePaneIdValue)?.getEditor() ?? null)
+    : null
 
   useEffect(() => {
-    panesRef.current = panes;
-  }, [panes]);
+    panesRef.current = panes
+  }, [panes])
 
-  useMenuStateSync(Boolean(activePaneFile), isActiveFileLex);
+  useEffect(() => {
+    keybindingManagerRef.current?.updateOverrides(settings.keybindings)
+  }, [settings.keybindings])
+
+  useEffect(() => {
+    if (!keybindingManager) return
+    keybindingManager.setContext(
+      'workspace',
+      panes.some((pane) => pane.tabs.length > 0)
+    )
+  }, [keybindingManager, panes])
+
+  useEffect(() => {
+    if (!keybindingManager) return
+    keybindingManager.setContext('editor', Boolean(activeEditor))
+  }, [keybindingManager, activeEditor])
+
+  useEffect(() => {
+    if (!keybindingManager) return
+    keybindingManager.setContext('modal', isCommandPaletteOpen || isShortcutsOpen)
+  }, [keybindingManager, isCommandPaletteOpen, isShortcutsOpen])
+
+  useMenuStateSync(Boolean(activePaneFile), isActiveFileLex)
 
   const registerPaneHandle = useCallback(
     (paneId: string) => (instance: EditorPaneHandle | null) => {
       if (!instance) {
-        return;
+        return
       }
-      const currentInstance = paneHandles.current.get(paneId) ?? null;
+      const currentInstance = paneHandles.current.get(paneId) ?? null
       if (currentInstance === instance) {
-        return;
+        return
       }
-      paneHandles.current.set(paneId, instance);
+      paneHandles.current.set(paneId, instance)
     },
     []
-  );
+  )
 
   useEffect(() => {
-    const ids = new Set(panes.map(pane => pane.id));
+    const ids = new Set(panes.map((pane) => pane.id))
     for (const [paneId] of paneHandles.current) {
       if (!ids.has(paneId)) {
-        paneHandles.current.delete(paneId);
+        paneHandles.current.delete(paneId)
       }
     }
-  }, [panes]);
+  }, [panes])
 
   const {
     focusPane,
@@ -97,7 +148,7 @@ function App() {
     setPanes,
     setPaneRows,
     createTabFromPath,
-  });
+  })
 
   useLexTestBridge({
     activePaneId: activePaneIdValue,
@@ -105,175 +156,178 @@ function App() {
     panesRef,
     panes,
     openFileInPane,
-  });
+  })
 
   const handleNewFile = useCallback(async () => {
-    log.info('Action: New File');
-    if (!activePaneIdValue) return;
-    const result = await window.ipcRenderer.fileNew(rootPath);
+    log.info('Action: New File')
+    if (!activePaneIdValue) return
+    const result = await window.ipcRenderer.fileNew(rootPath)
     if (result) {
-      log.debug('New file created', result.filePath);
-      openFileInPane(activePaneIdValue, result.filePath);
-      dispatchFileTreeRefresh();
+      log.debug('New file created', result.filePath)
+      openFileInPane(activePaneIdValue, result.filePath)
+      dispatchFileTreeRefresh()
     }
-  }, [rootPath, activePaneIdValue, openFileInPane]);
+  }, [rootPath, activePaneIdValue, openFileInPane])
 
   const handleOpenFolder = useCallback(async () => {
-    log.info('Action: Open Folder');
-    const result = await window.ipcRenderer.invoke('folder-open') as string | null;
+    log.info('Action: Open Folder')
+    const result = (await window.ipcRenderer.invoke('folder-open')) as string | null
     if (result) {
-      setRootPath(result);
-      await window.ipcRenderer.setLastFolder(result);
+      setRootPath(result)
+      await window.ipcRenderer.setLastFolder(result)
     }
-  }, [setRootPath]);
+  }, [setRootPath])
 
   const handleOpenFile = useCallback(async () => {
-    log.info('Action: Open File');
-    if (!activePaneIdValue) return;
-    const result = await window.ipcRenderer.fileOpen();
+    log.info('Action: Open File')
+    if (!activePaneIdValue) return
+    const result = await window.ipcRenderer.fileOpen()
     if (result) {
-      log.debug('File opened', result.filePath);
-      openFileInPane(activePaneIdValue, result.filePath);
+      log.debug('File opened', result.filePath)
+      openFileInPane(activePaneIdValue, result.filePath)
     }
-  }, [activePaneIdValue, openFileInPane]);
+  }, [activePaneIdValue, openFileInPane])
 
   const handleSave = useCallback(async () => {
-    log.info('Action: Save');
-    if (!activePaneIdValue) return;
-    const handle = paneHandles.current.get(activePaneIdValue);
-    await handle?.save();
-  }, [activePaneIdValue]);
+    log.info('Action: Save')
+    if (!activePaneIdValue) return
+    const handle = paneHandles.current.get(activePaneIdValue)
+    await handle?.save()
+  }, [activePaneIdValue])
 
   const handleFormat = useCallback(async () => {
-    log.info('Action: Format');
-    if (!activePaneIdValue) return;
-    const handle = paneHandles.current.get(activePaneIdValue);
-    await handle?.format();
-  }, [activePaneIdValue]);
+    log.info('Action: Format')
+    if (!activePaneIdValue) return
+    const handle = paneHandles.current.get(activePaneIdValue)
+    await handle?.format()
+  }, [activePaneIdValue])
 
   const handleFind = useCallback(() => {
-    if (!activePaneIdValue) return;
-    paneHandles.current.get(activePaneIdValue)?.find();
-  }, [activePaneIdValue]);
+    if (!activePaneIdValue) return
+    paneHandles.current.get(activePaneIdValue)?.find()
+  }, [activePaneIdValue])
 
   const handleReplace = useCallback(() => {
-    if (!activePaneIdValue) return;
-    paneHandles.current.get(activePaneIdValue)?.replace();
-  }, [activePaneIdValue]);
+    if (!activePaneIdValue) return
+    paneHandles.current.get(activePaneIdValue)?.replace()
+  }, [activePaneIdValue])
 
   const handleShareWhatsApp = useCallback(async () => {
     if (!activeEditor) {
-      toast.error('No document to share');
-      return;
+      toast.error('No document to share')
+      return
     }
-    const content = activeEditor.getValue();
+    const content = activeEditor.getValue()
     if (!content.trim()) {
-      toast.error('Document is empty');
-      return;
+      toast.error('Document is empty')
+      return
     }
-    await window.ipcRenderer.shareWhatsApp(content);
-  }, [activeEditor]);
+    await window.ipcRenderer.shareWhatsApp(content)
+  }, [activeEditor])
 
   const handleConvertToLex = useCallback(async () => {
     if (!activePaneFile || !activePaneIdValue) {
-      toast.error('No file open to convert');
-      return;
+      toast.error('No file open to convert')
+      return
     }
 
-    const handle = paneHandles.current.get(activePaneIdValue);
-    const editor = handle?.getEditor();
+    const handle = paneHandles.current.get(activePaneIdValue)
+    const editor = handle?.getEditor()
     if (!editor) {
-      toast.error('No active editor');
-      return;
+      toast.error('No active editor')
+      return
     }
 
-    setExportStatus({ isExporting: true, format: 'lex' });
+    setExportStatus({ isExporting: true, format: 'lex' })
 
     try {
       // Import markdown content to lex via LSP
-      const content = editor.getValue();
-      const lexContent = await importContent(content, 'markdown');
+      const content = editor.getValue()
+      const lexContent = await importContent(content, 'markdown')
 
       // Write to file with .lex extension
-      const outputPath = activePaneFile.replace(/\.(md|markdown)$/i, '.lex');
-      await window.ipcRenderer.invoke('file-save', outputPath, lexContent);
+      const outputPath = activePaneFile.replace(/\.(md|markdown)$/i, '.lex')
+      await window.ipcRenderer.invoke('file-save', outputPath, lexContent)
 
-      const fileName = outputPath.split('/').pop() || outputPath;
-      toast.success(`Converted to ${fileName}`);
-      openFileInPane(activePaneIdValue, outputPath);
+      const fileName = outputPath.split('/').pop() || outputPath
+      toast.success(`Converted to ${fileName}`)
+      openFileInPane(activePaneIdValue, outputPath)
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Conversion failed';
-      toast.error(message);
+      const message = error instanceof Error ? error.message : 'Conversion failed'
+      toast.error(message)
     } finally {
-      setExportStatus({ isExporting: false, format: null });
+      setExportStatus({ isExporting: false, format: null })
     }
-  }, [activePaneFile, activePaneIdValue, openFileInPane]);
+  }, [activePaneFile, activePaneIdValue, openFileInPane])
 
-  const handleExport = useCallback(async (format: string) => {
-    if (!activePaneFile) {
-      toast.error('No file open to export');
-      return;
-    }
-
-    if (!activePaneIdValue) return;
-    const handle = paneHandles.current.get(activePaneIdValue);
-    const editor = handle?.getEditor();
-    if (!editor) {
-      toast.error('No active editor');
-      return;
-    }
-
-    setExportStatus({ isExporting: true, format });
-
-    try {
-      const content = editor.getValue();
-      const sourceUri = `file://${activePaneFile}`;
-
-      // Calculate output path
-      const ext = format === 'markdown' ? 'md' : format;
-      const outputPath = activePaneFile.replace(/\.lex$/i, `.${ext}`);
-
-      if (format === 'pdf') {
-        // PDF is binary - LSP writes directly to file
-        await exportContent(content, 'pdf', sourceUri, outputPath);
-      } else {
-        // Text formats - get content from LSP and write to file
-        const result = await exportContent(content, format as 'markdown' | 'html', sourceUri);
-        await window.ipcRenderer.invoke('file-save', outputPath, result);
+  const handleExport = useCallback(
+    async (format: string) => {
+      if (!activePaneFile) {
+        toast.error('No file open to export')
+        return
       }
 
-      const fileName = outputPath.split('/').pop() || outputPath;
-      toast.success(`Exported to ${fileName}`);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Export failed';
-      toast.error(message);
-    } finally {
-      setExportStatus({ isExporting: false, format: null });
-    }
-  }, [activePaneFile, activePaneIdValue]);
+      if (!activePaneIdValue) return
+      const handle = paneHandles.current.get(activePaneIdValue)
+      const editor = handle?.getEditor()
+      if (!editor) {
+        toast.error('No active editor')
+        return
+      }
+
+      setExportStatus({ isExporting: true, format })
+
+      try {
+        const content = editor.getValue()
+        const sourceUri = `file://${activePaneFile}`
+
+        // Calculate output path
+        const ext = format === 'markdown' ? 'md' : format
+        const outputPath = activePaneFile.replace(/\.lex$/i, `.${ext}`)
+
+        if (format === 'pdf') {
+          // PDF is binary - LSP writes directly to file
+          await exportContent(content, 'pdf', sourceUri, outputPath)
+        } else {
+          // Text formats - get content from LSP and write to file
+          const result = await exportContent(content, format as 'markdown' | 'html', sourceUri)
+          await window.ipcRenderer.invoke('file-save', outputPath, result)
+        }
+
+        const fileName = outputPath.split('/').pop() || outputPath
+        toast.success(`Exported to ${fileName}`)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Export failed'
+        toast.error(message)
+      } finally {
+        setExportStatus({ isExporting: false, format: null })
+      }
+    },
+    [activePaneFile, activePaneIdValue]
+  )
 
   const handlePreview = useCallback(async () => {
     if (!activePaneFile || !isLexFile(activePaneFile)) {
-      toast.error('Preview requires a .lex file');
-      return;
+      toast.error('Preview requires a .lex file')
+      return
     }
 
     if (!activePaneIdValue) {
-      return;
+      return
     }
 
-    const handle = paneHandles.current.get(activePaneIdValue);
-    const editor = handle?.getEditor();
+    const handle = paneHandles.current.get(activePaneIdValue)
+    const editor = handle?.getEditor()
     if (!editor) {
-      toast.error('No active editor');
-      return;
+      toast.error('No active editor')
+      return
     }
 
     try {
       // Get content from editor and convert to HTML via LSP
-      const content = editor.getValue();
-      const htmlContent = await convertToHtml(content);
-      const previewTab = createPreviewTab(activePaneFile, htmlContent);
+      const content = editor.getValue()
+      const htmlContent = await convertToHtml(content)
+      const previewTab = createPreviewTab(activePaneFile, htmlContent)
       placePreviewTab({
         activePaneId: activePaneIdValue,
         panes,
@@ -281,49 +335,52 @@ function App() {
         setPanes,
         setPaneRows,
         setActivePaneId,
-      });
+      })
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Preview failed';
-      toast.error(message);
+      const message = error instanceof Error ? error.message : 'Preview failed'
+      toast.error(message)
     }
-  }, [activePaneFile, activePaneIdValue, panes, setActivePaneId, setPaneRows, setPanes]);
+  }, [activePaneFile, activePaneIdValue, panes, setActivePaneId, setPaneRows, setPanes])
 
-  const handleFileSelect = useCallback((path: string) => {
-    if (!activePaneIdValue) return;
-    openFileInPane(activePaneIdValue, path);
-  }, [activePaneIdValue, openFileInPane]);
+  const handleFileSelect = useCallback(
+    (path: string) => {
+      if (!activePaneIdValue) return
+      openFileInPane(activePaneIdValue, path)
+    },
+    [activePaneIdValue, openFileInPane]
+  )
 
   const handleInsertAsset = useCallback(async () => {
-    log.info('Action: Insert Asset');
-    console.log('handleInsertAsset called');
+    log.info('Action: Insert Asset')
+    console.log('handleInsertAsset called')
     if (!activeEditor) {
-      console.log('handleInsertAsset: no active editor');
-      return;
+      console.log('handleInsertAsset: no active editor')
+      return
     }
-    const path = await window.ipcRenderer.invoke('file-pick', {
+    const path = (await window.ipcRenderer.invoke('file-pick', {
       title: 'Select Asset',
-      filters: [{ name: 'All Files', extensions: ['*'] }]
-    }) as string | null;
-    console.log('handleInsertAsset: path selected', path);
+      filters: [{ name: 'All Files', extensions: ['*'] }],
+    })) as string | null
+    console.log('handleInsertAsset: path selected', path)
     if (path) {
-      await insertAsset(activeEditor, path);
+      await insertAsset(activeEditor, path)
     }
-  }, [activeEditor]);
+  }, [activeEditor])
 
   const handleInsertVerbatim = useCallback(async () => {
-    if (!activeEditor) return;
-    const path = await window.ipcRenderer.invoke('file-pick', {
+    if (!activeEditor) return
+    const path = (await window.ipcRenderer.invoke('file-pick', {
       title: 'Select File for Verbatim Block',
-      filters: [{ name: 'All Files', extensions: ['*'] }]
-    }) as string | null;
+      filters: [{ name: 'All Files', extensions: ['*'] }],
+    })) as string | null
     if (path) {
-      await insertVerbatim(activeEditor, path);
+      await insertVerbatim(activeEditor, path)
     }
-  }, [activeEditor]);
+  }, [activeEditor])
 
   const handleNextAnnotation = useCallback(async () => {
-    if (!activeEditor) return;
-    const location = await nextAnnotation(activeEditor);
+    if (!activeEditor) return
+    const location = await nextAnnotation(activeEditor)
     if (location) {
       // If location is in another file, we might need to open it.
       // For now, assuming same file navigation or that LSP handles file switching if we implement it fully.
@@ -333,53 +390,179 @@ function App() {
       // If it's a different file, we need to open it.
 
       // Check if URI matches current model
-      const currentUri = activeEditor.getModel()?.uri.toString();
+      const currentUri = activeEditor.getModel()?.uri.toString()
       if (location.uri === currentUri) {
-        const pos = new monaco.Position(location.range.start.line + 1, location.range.start.character + 1);
-        activeEditor.setPosition(pos);
-        activeEditor.revealPosition(pos);
+        const pos = new monaco.Position(
+          location.range.start.line + 1,
+          location.range.start.character + 1
+        )
+        activeEditor.setPosition(pos)
+        activeEditor.revealPosition(pos)
       } else {
         // TODO: Handle navigation to other files
         // For now, let's just log it or toast
-        toast.info('Annotation is in another file: ' + location.uri);
+        toast.info('Annotation is in another file: ' + location.uri)
       }
     } else {
-      log.info('No more annotations');
-      toast.info('No more annotations');
+      log.info('No more annotations')
+      toast.info('No more annotations')
     }
-  }, [activeEditor]);
+  }, [activeEditor])
 
   const handlePrevAnnotation = useCallback(async () => {
-    if (!activeEditor) return;
-    const location = await previousAnnotation(activeEditor);
+    if (!activeEditor) return
+    const location = await previousAnnotation(activeEditor)
     if (location) {
-      const currentUri = activeEditor.getModel()?.uri.toString();
+      const currentUri = activeEditor.getModel()?.uri.toString()
       if (location.uri === currentUri) {
-        const pos = new monaco.Position(location.range.start.line + 1, location.range.start.character + 1);
-        activeEditor.setPosition(pos);
-        activeEditor.revealPosition(pos);
+        const pos = new monaco.Position(
+          location.range.start.line + 1,
+          location.range.start.character + 1
+        )
+        activeEditor.setPosition(pos)
+        activeEditor.revealPosition(pos)
       } else {
-        toast.info('Annotation is in another file: ' + location.uri);
+        toast.info('Annotation is in another file: ' + location.uri)
       }
     } else {
-      toast.info('No previous annotations');
+      toast.info('No previous annotations')
     }
-  }, [activeEditor]);
+  }, [activeEditor])
 
   const handleResolveAnnotation = useCallback(async () => {
-    if (!activeEditor) return;
-    await resolveAnnotation(activeEditor);
-  }, [activeEditor]);
+    if (!activeEditor) return
+    await resolveAnnotation(activeEditor)
+  }, [activeEditor])
 
   const handleToggleAnnotations = useCallback(async () => {
-    if (!activeEditor) return;
-    await toggleAnnotations(activeEditor);
-  }, [activeEditor]);
+    if (!activeEditor) return
+    await toggleAnnotations(activeEditor)
+  }, [activeEditor])
 
-  const handleOpenFilePath = useCallback((filePath: string) => {
-    if (!activePaneIdValue) return;
-    openFileInPane(activePaneIdValue, filePath);
-  }, [activePaneIdValue, openFileInPane]);
+  const handleOpenFilePath = useCallback(
+    (filePath: string) => {
+      if (!activePaneIdValue) return
+      openFileInPane(activePaneIdValue, filePath)
+    },
+    [activePaneIdValue, openFileInPane]
+  )
+
+  const selectRelativeTab = useCallback(
+    (direction: 1 | -1) => {
+      if (!activePaneIdValue || !activeTabId) {
+        return false
+      }
+      const orderedTabs = getVisualTabOrder(paneRows, panes)
+      if (orderedTabs.length === 0) {
+        return false
+      }
+      const currentIndex = orderedTabs.findIndex(
+        (entry) => entry.paneId === activePaneIdValue && entry.tabId === activeTabId
+      )
+      if (currentIndex === -1) {
+        return false
+      }
+      const nextIndex = (currentIndex + direction + orderedTabs.length) % orderedTabs.length
+      const nextEntry = orderedTabs[nextIndex]
+      handleTabSelect(nextEntry.paneId, nextEntry.tabId)
+      return true
+    },
+    [activePaneIdValue, activeTabId, paneRows, panes, handleTabSelect]
+  )
+
+  const focusPaneByIndex = useCallback(
+    (position: number) => {
+      if (Number.isNaN(position) || position < 1) {
+        return false
+      }
+      const orderedPanes = getVisualPaneOrder(paneRows, panes)
+      const target = orderedPanes[position - 1]
+      if (!target) {
+        return false
+      }
+      const pane = target.pane
+      if (pane.tabs.length > 0) {
+        const nextTabId = pane.activeTabId ?? pane.tabs[0].id
+        handleTabSelect(pane.id, nextTabId)
+      } else {
+        focusPane(pane.id)
+      }
+      return true
+    },
+    [paneRows, panes, handleTabSelect, focusPane]
+  )
+
+  const handleKeybindingAction = useCallback(
+    (actionId: string) => {
+      if (actionId === 'workspace.tab.next') {
+        return selectRelativeTab(1)
+      }
+      if (actionId === 'workspace.tab.previous') {
+        return selectRelativeTab(-1)
+      }
+      if (actionId.startsWith('workspace.pane.focus.')) {
+        const position = Number(actionId.split('.').pop())
+        return focusPaneByIndex(position)
+      }
+      if (actionId === 'workspace.pane.split.horizontal') {
+        handleSplitHorizontal()
+        return true
+      }
+      if (actionId === 'workspace.pane.split.vertical') {
+        handleSplitVertical()
+        return true
+      }
+      if (actionId === 'editor.showReplace') {
+        handleReplace()
+        return true
+      }
+      if (actionId === 'commandPalette.show') {
+        setCommandPaletteOpen((prev) => !prev)
+        return true
+      }
+      if (actionId === 'workspace.shortcuts.show') {
+        setShortcutsOpen((prev) => !prev)
+        return true
+      }
+      return false
+    },
+    [
+      focusPaneByIndex,
+      handleReplace,
+      handleSplitHorizontal,
+      handleSplitVertical,
+      selectRelativeTab,
+      setCommandPaletteOpen,
+      setShortcutsOpen,
+    ]
+  )
+
+  useEffect(() => {
+    if (!keybindingManager) return
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const match = keybindingManager.handleEvent({
+        code: event.code,
+        key: event.key,
+        metaKey: event.metaKey,
+        ctrlKey: event.ctrlKey,
+        altKey: event.altKey,
+        shiftKey: event.shiftKey,
+        targetTagName: (event.target as HTMLElement | null)?.tagName,
+      })
+      if (!match) {
+        return
+      }
+      const handled = handleKeybindingAction(match.id)
+      if (handled) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [keybindingManager, handleKeybindingAction])
 
   useMenuHandlers({
     onNewFile: handleNewFile,
@@ -400,12 +583,15 @@ function App() {
     onResolveAnnotation: handleResolveAnnotation,
     onToggleAnnotations: handleToggleAnnotations,
     onOpenFilePath: handleOpenFilePath,
-  });
+  })
 
-  // ... imports
+  const keybindingDescriptors = keybindingManager?.getDescriptors() ?? []
+  const paletteCommands = keybindingDescriptors.filter(
+    (descriptor) => descriptor.id !== 'commandPalette.show'
+  )
 
   return (
-    <SettingsProvider>
+    <>
       <Layout
         rootPath={rootPath}
         onFileSelect={handleFileSelect}
@@ -447,6 +633,27 @@ function App() {
           onPaneRowsChange={setPaneRows}
         />
       </Layout>
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        commands={paletteCommands}
+        onClose={() => setCommandPaletteOpen(false)}
+        onSelect={(commandId) => {
+          handleKeybindingAction(commandId)
+        }}
+      />
+      <ShortcutsModal
+        isOpen={isShortcutsOpen}
+        shortcuts={keybindingDescriptors}
+        onClose={() => setShortcutsOpen(false)}
+      />
+    </>
+  )
+}
+
+function App() {
+  return (
+    <SettingsProvider>
+      <AppContent />
     </SettingsProvider>
   )
 }

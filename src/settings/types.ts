@@ -21,10 +21,23 @@ export interface SpellcheckSettings {
   language: string
 }
 
+export type KeybindingPlatform = 'mac' | 'windows' | 'linux'
+
+export interface KeybindingOverride {
+  mac?: string | null
+  windows?: string | null
+  linux?: string | null
+}
+
+export interface KeybindingSettings {
+  overrides: Record<string, KeybindingOverride>
+}
+
 export interface AppSettings {
   editor: EditorSettings
   formatter: FormatterSettings
   spellcheck: SpellcheckSettings
+  keybindings: KeybindingSettings
   lastFolder?: string
 }
 
@@ -51,9 +64,14 @@ export const defaultSpellcheckSettings: SpellcheckSettings = {
   language: 'en_US',
 }
 
+export const defaultKeybindingSettings: KeybindingSettings = {
+  overrides: {},
+}
+
 export const defaultAppSettings: AppSettings = {
   editor: defaultEditorSettings,
   formatter: defaultFormatterSettings,
   spellcheck: defaultSpellcheckSettings,
+  keybindings: defaultKeybindingSettings,
   lastFolder: undefined,
 }

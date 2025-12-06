@@ -1,10 +1,20 @@
-import type { AppSettings, EditorSettings, FormatterSettings, SpellcheckSettings } from './types'
+import type {
+  AppSettings,
+  EditorSettings,
+  FormatterSettings,
+  KeybindingSettings,
+  SpellcheckSettings,
+} from './types'
 import { defaultAppSettings } from './types'
 
 let currentSettings: AppSettings = {
   editor: { ...defaultAppSettings.editor },
   formatter: { ...defaultAppSettings.formatter },
   spellcheck: { ...defaultAppSettings.spellcheck },
+  keybindings: {
+    ...defaultAppSettings.keybindings,
+    overrides: { ...defaultAppSettings.keybindings.overrides },
+  },
   lastFolder: defaultAppSettings.lastFolder,
 }
 
@@ -31,10 +41,15 @@ const cloneSpellcheck = (spellcheck: SpellcheckSettings): SpellcheckSettings => 
   language: spellcheck.language,
 })
 
+const cloneKeybindings = (keybindings: KeybindingSettings): KeybindingSettings => ({
+  overrides: { ...keybindings.overrides },
+})
+
 const cloneSettings = (settings: AppSettings): AppSettings => ({
   editor: cloneEditor(settings.editor),
   formatter: cloneFormatter(settings.formatter),
   spellcheck: cloneSpellcheck(settings.spellcheck),
+  keybindings: cloneKeybindings(settings.keybindings),
   lastFolder: settings.lastFolder,
 })
 
@@ -56,4 +71,8 @@ export function getEditorSettingsSnapshot(): EditorSettings {
 
 export function getSpellcheckSettingsSnapshot(): SpellcheckSettings {
   return cloneSpellcheck(currentSettings.spellcheck)
+}
+
+export function getKeybindingSettingsSnapshot(): KeybindingSettings {
+  return cloneKeybindings(currentSettings.keybindings)
 }

@@ -145,6 +145,23 @@ const store = new Store<AppSettings>({
       },
       default: {},
     },
+    keybindings: {
+      type: 'object',
+      properties: {
+        overrides: {
+          type: 'object',
+          additionalProperties: {
+            type: 'object',
+            properties: {
+              mac: { type: ['string', 'null'] },
+              windows: { type: ['string', 'null'] },
+              linux: { type: ['string', 'null'] },
+            },
+          },
+        },
+      },
+      default: {},
+    },
   },
 })
 
@@ -881,8 +898,8 @@ function createMenu() {
           click: (_, focusedWindow) => focusedWindow?.webContents.send('menu-preview'),
         },
         { type: 'separator' },
-        { role: 'reload' },
-        { role: 'forceReload' },
+        { role: 'reload', accelerator: 'CmdOrCtrl+Alt+R' },
+        { role: 'forceReload', accelerator: 'CmdOrCtrl+Shift+Alt+R' },
         { role: 'toggleDevTools' },
         { type: 'separator' },
         { role: 'resetZoom' },

@@ -108,6 +108,18 @@ Lex LexEd Architecture
 
     This aligns with the design philosophy of Lex as a distraction-free, prose-focused format.
 
+## Keyboard Shortcuts
+
+LexEd ships with a customizable keybinding engine. The combinations below describe the macOS gestures; on Windows and Linux the `Cmd` modifier automatically maps to `Ctrl` and `Option` maps to `Alt`.
+
+- `Cmd+Shift+]` / `Cmd+Shift+[` — cycle forward/backward through all editor tabs across panes (wraps around).
+- `Cmd+1` … `Cmd+9` — focus the corresponding pane using the visual layout order (top-left to bottom-right).
+- `Cmd+R` — open Monaco's find box with replace controls expanded.
+- `Cmd+K` — toggle the LexEd command palette for fuzzy command search.
+- `Cmd+Shift+H` — split the active pane into a new horizontal row and focus the new editor.
+- `Cmd+Shift+V` — split the active pane vertically, placing the current editor side-by-side with the new one.
+- `Cmd+Shift+?` — display the in-app shortcuts reference modal; press again or hit `Esc` to close.
+
 ## Testing
 
 - Run `npm run test:e2e` inside `editors/lexed/` to execute the Playwright e2e suite (builds the app before running).
