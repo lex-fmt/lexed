@@ -30,7 +30,20 @@ function resolveDevBinary(binaryName: string): string {
   if (override) {
     return path.resolve(override)
   }
-  return path.join(DEV_WORKSPACE_ROOT, 'target', 'debug', binaryName)
+  const resourcesRoot = path.join(process.env.APP_ROOT ?? DEV_WORKSPACE_ROOT, 'resources')
+  const resourcesBinary = process.platform === 'win32' ? `${binaryName}` : 'lex-lsp'
+  const candidates: string[] = [
+    path.join(DEV_WORKSPACE_ROOT, 'target', 'debug', binaryName),
+    path.join(resourcesRoot, resourcesBinary),
+  ]
+
+  for (const candidate of candidates) {
+    if (candidate && fs.existsSync(candidate)) {
+      return candidate
+    }
+  }
+
+  return candidates[0]
 }
 
 function resolveLogFile(): string {
