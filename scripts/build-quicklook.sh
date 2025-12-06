@@ -16,13 +16,11 @@ DERIVED_DATA="$HOME/Library/Developer/Xcode/DerivedData"
 
 xcodebuild -project "$PROJECT_PATH" -scheme "$SCHEME" -configuration "$CONFIGURATION" build
 
-mapfile -t build_dirs < <(ls -dt "$DERIVED_DATA"/LexQuickLook-*/Build/Products/Release 2>/dev/null || true)
-if [[ ${#build_dirs[@]} -eq 0 ]]; then
+LATEST_BUILD_DIR="$(ls -dt "$DERIVED_DATA"/LexQuickLook-*/Build/Products/Release 2>/dev/null | head -n 1 || true)"
+if [[ -z "$LATEST_BUILD_DIR" ]]; then
   echo "Unable to locate LexQuickLook build artifacts in DerivedData" >&2
   exit 1
 fi
-
-LATEST_BUILD_DIR="${build_dirs[0]}"
 SOURCE_APPEX="$LATEST_BUILD_DIR/LexQuickLook.appex"
 
 if [[ ! -d "$SOURCE_APPEX" ]]; then
