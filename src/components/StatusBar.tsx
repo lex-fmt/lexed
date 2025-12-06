@@ -29,10 +29,11 @@ export function StatusBar({ editor, exportStatus, onVimStatusNodeChange }: Statu
     selected: 0,
     selectedLines: 0,
   })
-  const { settings, updateSpellcheckSettings } = useSettings()
+  const { settings, updateSpellcheckSettings, updateEditorSettings } = useSettings()
   const [isSpellMenuOpen, setIsSpellMenuOpen] = useState(false)
   const spellButtonRef = useRef<HTMLButtonElement | null>(null)
   const spellMenuRef = useRef<HTMLDivElement | null>(null)
+  const [isUpdatingVim, setIsUpdatingVim] = useState(false)
 
   const handleVimStatusRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -123,6 +124,17 @@ export function StatusBar({ editor, exportStatus, onVimStatusNodeChange }: Statu
   const spellLabel = settings.spellcheck.enabled
     ? (activeSpellLanguage?.label ?? settings.spellcheck.language)
     : 'off'
+  const vimLabel = settings.editor.vimMode ? 'On' : 'Off'
+
+  const handleToggleVim = useCallback(async () => {
+    if (isUpdatingVim) return
+    setIsUpdatingVim(true)
+    try {
+      await updateEditorSettings({ ...settings.editor, vimMode: !settings.editor.vimMode })
+    } finally {
+      setIsUpdatingVim(false)
+    }
+  }, [isUpdatingVim, settings.editor, updateEditorSettings])
 
   return (
     <div className="h-6 flex items-center px-3 bg-panel border-t border-border text-xs text-muted-foreground shrink-0 gap-4">
@@ -192,6 +204,18 @@ export function StatusBar({ editor, exportStatus, onVimStatusNodeChange }: Statu
             </div>
           )}
         </div>
+        <button
+          type="button"
+          data-testid="status-vim-button"
+          aria-pressed={settings.editor.vimMode}
+          disabled={isUpdatingVim}
+          onClick={() => {
+            void handleToggleVim()
+          }}
+          className="flex items-center gap-1 px-2 py-0.5 rounded border border-transparent hover:border-border/70 hover:bg-panel-hover transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50"
+        >
+          Vim: {vimLabel}
+        </button>
         <span>Lex</span>
       </div>
     </div>
