@@ -25,6 +25,7 @@
     "pretest:e2e": "npm run icons",
     "test:e2e": "LEX_HIDE_WINDOW=1 PLAYWRIGHT_BROWSERS_PATH=0 LEX_DISABLE_PERSISTENCE=1 npx playwright test tests/e2e",
     "test:e2e:dev": "LEX_SKIP_E2E_BUILD=1 LEX_DISABLE_PERSISTENCE=1 npx playwright test tests/e2e",
+    "test:e2e:built": "LEX_E2E_USE_BUILD=1 LEX_SKIP_E2E_BUILD=1 LEX_HIDE_WINDOW=1 PLAYWRIGHT_BROWSERS_PATH=0 LEX_DISABLE_PERSISTENCE=1 npx playwright test tests/e2e",
     "test:unit": "vitest",
     "prepare": "husky"
   },
