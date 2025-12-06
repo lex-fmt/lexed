@@ -4,6 +4,7 @@ import { FileTree } from './FileTree';
 import { ButtonGroup, ButtonGroupSeparator } from './ui/button-group';
 import { FolderOpen, Settings, PanelLeftClose, PanelLeft, FileText, FilePlus, Save, ChevronDown, ChevronRight, FileCode, MessageCircle, FileType, Search, Replace, SplitSquareVertical, SplitSquareHorizontal, Eye, AlignLeft } from 'lucide-react';
 import { isLexFile } from '@/lib/files';
+import log from 'electron-log/renderer';
 
 interface LayoutProps {
   children: ReactNode;
@@ -48,6 +49,24 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
   const [isDragging, setIsDragging] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const logButtonClick = useCallback((label: string) => {
+    log.info(`[Button] ${label}`);
+  }, []);
+
+  const toggleSidebar = useCallback(() => {
+    logButtonClick('Toggle sidebar');
+    setLeftPanelCollapsed(prev => !prev);
+  }, [logButtonClick]);
+
+  const openSettings = useCallback(() => {
+    logButtonClick('Open settings dialog');
+    setIsSettingsOpen(true);
+  }, [logButtonClick]);
+
+  const closeSettings = useCallback(() => {
+    log.info('[Settings] Close dialog');
+    setIsSettingsOpen(false);
+  }, []);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -112,7 +131,7 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
       {/* Top Toolbar */}
       <div className="h-14 flex items-center px-3 bg-panel border-b border-border shrink-0 gap-1">
         <button
-          onClick={() => setLeftPanelCollapsed(!leftPanelCollapsed)}
+          onClick={toggleSidebar}
           className={cn(
             "p-1.5 rounded",
             "hover:bg-panel-hover transition-colors"
@@ -129,7 +148,10 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
           <span className="text-[10px] text-muted-foreground">File</span>
           <ButtonGroup>
             <button
-              onClick={onNewFile}
+              onClick={() => {
+                logButtonClick('New File button')
+                onNewFile?.()
+              }}
               className={cn(
                 "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
                 "hover:bg-panel-hover transition-colors"
@@ -140,7 +162,10 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
             </button>
             <ButtonGroupSeparator />
             <button
-              onClick={onOpenFile}
+              onClick={() => {
+                logButtonClick('Open File button')
+                onOpenFile?.()
+              }}
               className={cn(
                 "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
                 "hover:bg-panel-hover transition-colors"
@@ -151,7 +176,10 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
             </button>
             <ButtonGroupSeparator />
             <button
-              onClick={onOpenFolder}
+              onClick={() => {
+                logButtonClick('Open Folder button')
+                onOpenFolder?.()
+              }}
               className={cn(
                 "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
                 "hover:bg-panel-hover transition-colors"
@@ -162,7 +190,10 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
             </button>
             <ButtonGroupSeparator />
             <button
-              onClick={onSave}
+              onClick={() => {
+                logButtonClick('Save button')
+                onSave?.()
+              }}
               disabled={!currentFile}
               className={cn(
                 "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
@@ -183,7 +214,10 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
           <span className="text-[10px] text-muted-foreground">Document</span>
           <ButtonGroup>
             <button
-              onClick={() => onExport?.('markdown')}
+              onClick={() => {
+                logButtonClick('Export Markdown button')
+                onExport?.('markdown')
+              }}
               disabled={!canExport}
               className={cn(
                 "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
@@ -196,7 +230,10 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
             </button>
             <ButtonGroupSeparator />
             <button
-              onClick={() => onExport?.('html')}
+              onClick={() => {
+                logButtonClick('Export HTML button')
+                onExport?.('html')
+              }}
               disabled={!canExport}
               className={cn(
                 "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
@@ -209,7 +246,10 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
             </button>
             <ButtonGroupSeparator />
             <button
-              onClick={onPreview}
+              onClick={() => {
+                logButtonClick('Preview button')
+                onPreview?.()
+              }}
               disabled={!canPreview}
               className={cn(
                 "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
@@ -222,7 +262,10 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
             </button>
             <ButtonGroupSeparator />
             <button
-              onClick={onConvertToLex}
+              onClick={() => {
+                logButtonClick('Convert to Lex button')
+                onConvertToLex?.()
+              }}
               disabled={!canConvertToLex}
               className={cn(
                 "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
@@ -235,7 +278,10 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
             </button>
             <ButtonGroupSeparator />
             <button
-              onClick={onShareWhatsApp}
+              onClick={() => {
+                logButtonClick('Share WhatsApp button')
+                onShareWhatsApp?.()
+              }}
               disabled={!canShare}
               className={cn(
                 "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
@@ -256,7 +302,10 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
           <span className="text-[10px] text-muted-foreground">Edit</span>
           <ButtonGroup>
             <button
-              onClick={onFormat}
+              onClick={() => {
+                logButtonClick('Format button')
+                onFormat?.()
+              }}
               disabled={!canFormat}
               className={cn(
                 "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
@@ -269,7 +318,10 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
             </button>
             <ButtonGroupSeparator />
             <button
-              onClick={onFind}
+              onClick={() => {
+                logButtonClick('Find button')
+                onFind?.()
+              }}
               disabled={!canFind}
               className={cn(
                 "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
@@ -282,7 +334,10 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
             </button>
             <ButtonGroupSeparator />
             <button
-              onClick={onReplace}
+              onClick={() => {
+                logButtonClick('Replace button')
+                onReplace?.()
+              }}
               disabled={!canReplace}
               className={cn(
                 "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
@@ -303,7 +358,10 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
           <span className="text-[10px] text-muted-foreground">View</span>
           <ButtonGroup>
             <button
-              onClick={onSplitVertical}
+              onClick={() => {
+                logButtonClick('Split vertical button')
+                onSplitVertical?.()
+              }}
               disabled={!onSplitVertical}
               className={cn(
                 "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
@@ -316,7 +374,10 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
             </button>
             <ButtonGroupSeparator />
             <button
-              onClick={onSplitHorizontal}
+              onClick={() => {
+                logButtonClick('Split horizontal button')
+                onSplitHorizontal?.()
+              }}
               disabled={!onSplitHorizontal}
               className={cn(
                 "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
@@ -333,7 +394,7 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
         <div className="flex-1" />
 
         <button
-          onClick={() => setIsSettingsOpen(true)}
+          onClick={openSettings}
           className={cn(
             "p-1.5 rounded",
             "hover:bg-panel-hover transition-colors"
@@ -344,7 +405,7 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
         </button>
       </div>
 
-      <SettingsDialog isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <SettingsDialog isOpen={isSettingsOpen} onClose={closeSettings} />
 
       {/* Main Content Area */}
       <div className="flex flex-1 min-h-0">
@@ -374,7 +435,10 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
                   {/* Outline Header (collapsible) */}
                   <div
                     className="flex items-center gap-1 px-2.5 py-2 text-xs font-semibold border-b border-border cursor-pointer hover:bg-panel-hover"
-                    onClick={() => setOutlineCollapsed(!outlineCollapsed)}
+                    onClick={() => {
+                      logButtonClick('Toggle outline panel')
+                      setOutlineCollapsed(!outlineCollapsed)
+                    }}
                   >
                     {outlineCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
                     <span>Outline</span>

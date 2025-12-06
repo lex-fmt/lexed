@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import log from 'electron-log/renderer';
 
 interface MenuHandlers {
   onNewFile?: () => void;
@@ -52,23 +53,125 @@ export function useMenuHandlers(handlers: MenuHandlers) {
       }
     };
 
-    if (onNewFile) register(window.ipcRenderer.onMenuNewFile(onNewFile));
-    if (onOpenFile) register(window.ipcRenderer.onMenuOpenFile(onOpenFile));
-    if (onOpenFolder) register(window.ipcRenderer.onMenuOpenFolder(onOpenFolder));
-    if (onSave) register(window.ipcRenderer.onMenuSave(onSave));
-    if (onFormat) register(window.ipcRenderer.onMenuFormat(onFormat));
-    if (onExport) register(window.ipcRenderer.onMenuExport(onExport));
-    if (onFind) register(window.ipcRenderer.onMenuFind(onFind));
-    if (onReplace) register(window.ipcRenderer.onMenuReplace(onReplace));
-    if (onSplitVertical) register(window.ipcRenderer.onMenuSplitVertical(onSplitVertical));
-    if (onSplitHorizontal) register(window.ipcRenderer.onMenuSplitHorizontal(onSplitHorizontal));
-    if (onPreview) register(window.ipcRenderer.onMenuPreview(onPreview));
-    if (onInsertAsset) register(window.ipcRenderer.on('menu-insert-asset', onInsertAsset));
-    if (onInsertVerbatim) register(window.ipcRenderer.on('menu-insert-verbatim', onInsertVerbatim));
-    if (onNextAnnotation) register(window.ipcRenderer.on('menu-next-annotation', onNextAnnotation));
-    if (onPrevAnnotation) register(window.ipcRenderer.on('menu-prev-annotation', onPrevAnnotation));
-    if (onResolveAnnotation) register(window.ipcRenderer.on('menu-resolve-annotation', onResolveAnnotation));
-    if (onToggleAnnotations) register(window.ipcRenderer.on('menu-toggle-annotations', onToggleAnnotations));
+    if (onNewFile)
+      register(
+        window.ipcRenderer.onMenuNewFile(() => {
+          log.info('[Menu] New File')
+          onNewFile()
+        })
+      )
+    if (onOpenFile)
+      register(
+        window.ipcRenderer.onMenuOpenFile(() => {
+          log.info('[Menu] Open File')
+          onOpenFile()
+        })
+      )
+    if (onOpenFolder)
+      register(
+        window.ipcRenderer.onMenuOpenFolder(() => {
+          log.info('[Menu] Open Folder')
+          onOpenFolder()
+        })
+      )
+    if (onSave)
+      register(
+        window.ipcRenderer.onMenuSave(() => {
+          log.info('[Menu] Save')
+          onSave()
+        })
+      )
+    if (onFormat)
+      register(
+        window.ipcRenderer.onMenuFormat(() => {
+          log.info('[Menu] Format Document')
+          onFormat()
+        })
+      )
+    if (onExport)
+      register(
+        window.ipcRenderer.onMenuExport((format) => {
+          log.info(`[Menu] Export (${format})`)
+          onExport(format)
+        })
+      )
+    if (onFind)
+      register(
+        window.ipcRenderer.onMenuFind(() => {
+          log.info('[Menu] Find')
+          onFind()
+        })
+      )
+    if (onReplace)
+      register(
+        window.ipcRenderer.onMenuReplace(() => {
+          log.info('[Menu] Replace')
+          onReplace()
+        })
+      )
+    if (onSplitVertical)
+      register(
+        window.ipcRenderer.onMenuSplitVertical(() => {
+          log.info('[Menu] Split Vertical')
+          onSplitVertical()
+        })
+      )
+    if (onSplitHorizontal)
+      register(
+        window.ipcRenderer.onMenuSplitHorizontal(() => {
+          log.info('[Menu] Split Horizontal')
+          onSplitHorizontal()
+        })
+      )
+    if (onPreview)
+      register(
+        window.ipcRenderer.onMenuPreview(() => {
+          log.info('[Menu] Preview')
+          onPreview()
+        })
+      )
+    if (onInsertAsset)
+      register(
+        window.ipcRenderer.on('menu-insert-asset', () => {
+          log.info('[Menu] Insert Asset')
+          onInsertAsset()
+        })
+      )
+    if (onInsertVerbatim)
+      register(
+        window.ipcRenderer.on('menu-insert-verbatim', () => {
+          log.info('[Menu] Insert Verbatim')
+          onInsertVerbatim()
+        })
+      )
+    if (onNextAnnotation)
+      register(
+        window.ipcRenderer.on('menu-next-annotation', () => {
+          log.info('[Menu] Next Annotation')
+          onNextAnnotation()
+        })
+      )
+    if (onPrevAnnotation)
+      register(
+        window.ipcRenderer.on('menu-prev-annotation', () => {
+          log.info('[Menu] Previous Annotation')
+          onPrevAnnotation()
+        })
+      )
+    if (onResolveAnnotation)
+      register(
+        window.ipcRenderer.on('menu-resolve-annotation', () => {
+          log.info('[Menu] Resolve Annotation')
+          onResolveAnnotation()
+        })
+      )
+    if (onToggleAnnotations)
+      register(
+        window.ipcRenderer.on('menu-toggle-annotations', () => {
+          log.info('[Menu] Toggle Annotations')
+          onToggleAnnotations()
+        })
+      )
     if (onOpenFilePath) register(window.ipcRenderer.onOpenFilePath(onOpenFilePath));
 
     return () => {

@@ -79,6 +79,12 @@ function AppContent() {
   const [isShortcutsOpen, setShortcutsOpen] = useState(false)
   const [lspError, setLspError] = useState<LspErrorInfo | null>(null)
   const [isLspModalOpen, setLspModalOpen] = useState(false)
+  const handleShortcutsClose = useCallback(() => {
+    if (isShortcutsOpen) {
+      log.info('[Keybindings] Close shortcuts modal')
+    }
+    setShortcutsOpen(false)
+  }, [isShortcutsOpen])
 
   const ensureLspAvailable = useCallback(() => {
     if (lspError) {
@@ -624,7 +630,11 @@ function AppContent() {
         return true
       }
       if (actionId === 'workspace.shortcuts.show') {
-        setShortcutsOpen((prev) => !prev)
+        setShortcutsOpen((prev) => {
+          const next = !prev
+          log.info(next ? '[Keybindings] Open shortcuts modal' : '[Keybindings] Close shortcuts modal')
+          return next
+        })
         return true
       }
       return false
@@ -747,7 +757,7 @@ function AppContent() {
       <ShortcutsModal
         isOpen={isShortcutsOpen}
         shortcuts={keybindingDescriptors}
-        onClose={() => setShortcutsOpen(false)}
+        onClose={handleShortcutsClose}
       />
       {lspError && (
         <LspErrorModal
