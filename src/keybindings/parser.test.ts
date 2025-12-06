@@ -18,13 +18,13 @@ describe('parseShortcut', () => {
     expect(win?.display).toBe('Ctrl+Shift+]')
   })
 
-  it('parses punctuation shortcuts like question mark', () => {
-    const parsed = parseShortcut('cmd+shift+?', 'mac')
+  it('parses punctuation shortcuts like slash/question mark', () => {
+    const parsed = parseShortcut('cmd+shift+/', 'mac')
     expect(parsed).toBeTruthy()
     expect(parsed?.chords[0].code).toBe('Slash')
     expect(parsed?.chords[0].modifiers.meta).toBe(true)
     expect(parsed?.chords[0].modifiers.shift).toBe(true)
-    expect(parsed?.display).toBe('Cmd+Shift+?')
+    expect(parsed?.display).toBe('Cmd+Shift+/')
   })
 
   it('supports digit shortcuts', () => {

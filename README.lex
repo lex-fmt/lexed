@@ -118,7 +118,7 @@ LexEd ships with a customizable keybinding engine. The combinations below descri
 - `Cmd+K` — toggle the LexEd command palette for fuzzy command search.
 - `Cmd+Shift+H` — split the active pane into a new horizontal row and focus the new editor.
 - `Cmd+Shift+V` — split the active pane vertically, placing the current editor side-by-side with the new one.
-- `Cmd+Shift+?` — display the in-app shortcuts reference modal; press again or hit `Esc` to close.
+- `Cmd+Shift+/` — display the in-app shortcuts reference modal; press again or hit `Esc` to close.
 
 ## Testing
 

@@ -68,6 +68,6 @@ export const KEYBINDING_DEFINITIONS: KeybindingDefinition[] = [
     description: 'Display all available keyboard shortcuts',
     category: 'General',
     contexts: ['global', 'modal'],
-    shortcut: 'cmd+shift+?',
+    shortcut: 'cmd+shift+/',
   },
 ]
