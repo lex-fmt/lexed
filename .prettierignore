@@ -1,0 +1,9 @@
+dist
+dist-electron
+release
+node_modules
+build
+shared
+*.md
+*.lex
+package-lock.json
