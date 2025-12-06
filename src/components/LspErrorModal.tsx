@@ -1,12 +1,26 @@
+import { useEffect } from 'react'
+
 interface LspErrorModalProps {
   isOpen: boolean
   title: string
   message: string
   suggestion?: string
   onClose: () => void
+  autoDismissMs?: number
 }
 
-export function LspErrorModal({ isOpen, title, message, suggestion, onClose }: LspErrorModalProps) {
+export function LspErrorModal({ isOpen, title, message, suggestion, onClose, autoDismissMs = 15000 }: LspErrorModalProps) {
+  useEffect(() => {
+    if (!isOpen) return
+    if (!autoDismissMs || autoDismissMs <= 0) {
+      return
+    }
+    const timer = setTimeout(() => {
+      onClose()
+    }, autoDismissMs)
+    return () => clearTimeout(timer)
+  }, [isOpen, autoDismissMs, onClose])
+
   if (!isOpen) return null
 
   return (

@@ -756,6 +756,7 @@ function AppContent() {
           message={lspError.message}
           suggestion={lspError.suggestion}
           onClose={() => setLspModalOpen(false)}
+          autoDismissMs={15000}
         />
       )}
     </>
