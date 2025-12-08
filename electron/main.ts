@@ -931,6 +931,13 @@ function createMenu() {
           click: (_, focusedWindow) => focusedWindow?.webContents.send('menu-preview'),
         },
         { type: 'separator' },
+        {
+          label: 'Show Keyboard Shortcuts',
+          accelerator: 'CmdOrCtrl+Shift+/',
+          click: (_, focusedWindow) =>
+            getTargetWindow(focusedWindow)?.webContents.send('menu-show-shortcuts'),
+        },
+        { type: 'separator' },
         { role: 'reload', accelerator: 'CmdOrCtrl+Alt+R' },
         { role: 'forceReload', accelerator: 'CmdOrCtrl+Shift+Alt+R' },
         { role: 'toggleDevTools' },

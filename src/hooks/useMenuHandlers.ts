@@ -20,6 +20,7 @@ interface MenuHandlers {
   onResolveAnnotation?: () => void;
   onToggleAnnotations?: () => void;
   onOpenFilePath?: (filePath: string) => void;
+  onShowShortcuts?: () => void;
 }
 
 export function useMenuHandlers(handlers: MenuHandlers) {
@@ -42,6 +43,7 @@ export function useMenuHandlers(handlers: MenuHandlers) {
     onResolveAnnotation,
     onToggleAnnotations,
     onOpenFilePath,
+    onShowShortcuts,
   } = handlers;
 
   useEffect(() => {
@@ -172,6 +174,13 @@ export function useMenuHandlers(handlers: MenuHandlers) {
           onToggleAnnotations()
         })
       )
+    if (onShowShortcuts)
+      register(
+        window.ipcRenderer.on('menu-show-shortcuts', () => {
+          log.info('[Menu] Show Shortcuts')
+          onShowShortcuts()
+        })
+      )
     if (onOpenFilePath) register(window.ipcRenderer.onOpenFilePath(onOpenFilePath));
 
     return () => {
@@ -196,5 +205,6 @@ export function useMenuHandlers(handlers: MenuHandlers) {
     onResolveAnnotation,
     onToggleAnnotations,
     onOpenFilePath,
+    onShowShortcuts,
   ]);
 }

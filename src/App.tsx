@@ -749,6 +749,7 @@ function AppContent() {
     onResolveAnnotation: handleResolveAnnotation,
     onToggleAnnotations: handleToggleAnnotations,
     onOpenFilePath: handleOpenFilePath,
+    onShowShortcuts: () => setShortcutsOpen(true),
   })
 
   // File context menu handlers - these operate on a file path directly (e.g., from right-click menu)
