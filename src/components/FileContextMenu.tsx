@@ -14,6 +14,8 @@ export interface FileContextMenuHandlers {
   onConvertToLex?: (path: string) => void
   onFormat?: (path: string) => void
   onShareWhatsApp?: (path: string) => void
+  onCopyPath?: (path: string) => void
+  onCopyRelativePath?: (path: string) => void
   onRevealInFolder?: (path: string) => void
 }
 
@@ -89,6 +91,12 @@ export function FileContextMenu({ position, onClose, handlers }: FileContextMenu
         case 'shareWhatsApp':
           handlers.onShareWhatsApp?.(path)
           break
+        case 'copyPath':
+          handlers.onCopyPath?.(path)
+          break
+        case 'copyRelativePath':
+          handlers.onCopyRelativePath?.(path)
+          break
         case 'revealInFolder':
           handlers.onRevealInFolder?.(path)
           break
@@ -100,13 +108,21 @@ export function FileContextMenu({ position, onClose, handlers }: FileContextMenu
 
   if (!position || !actions) return null
 
-  const menuItems: { id: FileActionId; label: string; enabled: boolean; separator?: boolean }[] = [
+  const menuItems: {
+    id: FileActionId
+    label: string
+    enabled: boolean
+    separator?: boolean
+    shortcut?: string
+  }[] = [
     { ...actions.exportMarkdown, separator: false },
     { ...actions.exportHtml, separator: false },
     { ...actions.preview, separator: true },
     { ...actions.convertToLex, separator: true },
     { ...actions.format, separator: false },
     { ...actions.shareWhatsApp, separator: true },
+    { ...actions.copyPath, separator: false, shortcut: isMac ? '⌘P' : 'Ctrl+P' },
+    { ...actions.copyRelativePath, separator: false, shortcut: isMac ? '⇧⌘P' : 'Ctrl+Shift+P' },
     { ...actions.revealInFolder, separator: false },
   ]
 
@@ -120,13 +136,16 @@ export function FileContextMenu({ position, onClose, handlers }: FileContextMenu
         <div key={item.id}>
           <button
             className={cn(
-              'w-full px-3 py-1.5 text-left text-sm',
+              'w-full px-3 py-1.5 text-left text-sm flex items-center justify-between gap-4',
               item.enabled ? 'hover:bg-panel-hover cursor-pointer' : 'opacity-50 cursor-not-allowed'
             )}
             disabled={!item.enabled}
             onClick={() => item.enabled && handleAction(item.id)}
           >
-            {item.label}
+            <span>{item.label}</span>
+            {item.shortcut && (
+              <span className="text-xs text-muted-foreground">{item.shortcut}</span>
+            )}
           </button>
           {item.separator && index < menuItems.length - 1 && (
             <div className="h-px bg-border mx-2 my-1" />

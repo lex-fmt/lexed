@@ -604,6 +604,37 @@ function AppContent() {
     [paneRows, panes, handleTabSelect, focusPane]
   )
 
+  const handleCopyPath = useCallback(async (path: string) => {
+    try {
+      await navigator.clipboard.writeText(path)
+      toast.success('Path copied to clipboard')
+    } catch {
+      toast.error('Failed to copy path')
+    }
+  }, [])
+
+  const handleCopyRelativePath = useCallback(
+    async (path: string) => {
+      try {
+        let relativePath = path
+        if (rootPath) {
+          const normalizedRoot = rootPath.replace(/\\/g, '/').replace(/\/+$/, '')
+          const normalizedPath = path.replace(/\\/g, '/')
+          if (normalizedPath.startsWith(normalizedRoot + '/')) {
+            relativePath = normalizedPath.slice(normalizedRoot.length + 1)
+          } else if (normalizedPath.startsWith(normalizedRoot)) {
+            relativePath = normalizedPath.slice(normalizedRoot.length)
+          }
+        }
+        await navigator.clipboard.writeText(relativePath)
+        toast.success('Relative path copied to clipboard')
+      } catch {
+        toast.error('Failed to copy path')
+      }
+    },
+    [rootPath]
+  )
+
   const handleKeybindingAction = useCallback(
     (actionId: string) => {
       if (actionId === 'workspace.tab.next') {
@@ -642,10 +673,27 @@ function AppContent() {
         })
         return true
       }
+      if (actionId === 'file.copyPath') {
+        if (activePaneFile) {
+          void handleCopyPath(activePaneFile)
+          return true
+        }
+        return false
+      }
+      if (actionId === 'file.copyRelativePath') {
+        if (activePaneFile) {
+          void handleCopyRelativePath(activePaneFile)
+          return true
+        }
+        return false
+      }
       return false
     },
     [
+      activePaneFile,
       focusPaneByIndex,
+      handleCopyPath,
+      handleCopyRelativePath,
       handleReplace,
       handleSplitHorizontal,
       handleSplitVertical,
@@ -820,10 +868,14 @@ function AppContent() {
           toast.error(message)
         }
       },
+      onCopyPath: handleCopyPath,
+      onCopyRelativePath: handleCopyRelativePath,
     }),
     [
       activePaneIdValue,
       ensureLspAvailable,
+      handleCopyPath,
+      handleCopyRelativePath,
       openFileInPane,
       panes,
       setActivePaneId,

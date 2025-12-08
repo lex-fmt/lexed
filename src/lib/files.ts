@@ -35,6 +35,8 @@ export type FileActionId =
   | 'convertToLex'
   | 'format'
   | 'shareWhatsApp'
+  | 'copyPath'
+  | 'copyRelativePath'
   | 'revealInFolder'
 
 export interface FileAction {
@@ -50,6 +52,8 @@ export interface FileActions {
   convertToLex: FileAction
   format: FileAction
   shareWhatsApp: FileAction
+  copyPath: FileAction
+  copyRelativePath: FileAction
   revealInFolder: FileAction
 }
 
@@ -92,6 +96,16 @@ export function getFileActions(path: string | null | undefined): FileActions {
       id: 'shareWhatsApp',
       label: 'Share via WhatsApp',
       enabled: isLex,
+    },
+    copyPath: {
+      id: 'copyPath',
+      label: 'Copy Path',
+      enabled: hasFile,
+    },
+    copyRelativePath: {
+      id: 'copyRelativePath',
+      label: 'Copy Relative Path',
+      enabled: hasFile,
     },
     revealInFolder: {
       id: 'revealInFolder',

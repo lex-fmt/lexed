@@ -70,4 +70,20 @@ export const KEYBINDING_DEFINITIONS: KeybindingDefinition[] = [
     contexts: ['global', 'modal'],
     shortcut: 'cmd+shift+/',
   },
+  {
+    id: 'file.copyPath',
+    title: 'Copy Path',
+    description: 'Copy the absolute path of the current file to clipboard',
+    category: 'File',
+    contexts: ['editor'],
+    shortcut: 'cmd+p',
+  },
+  {
+    id: 'file.copyRelativePath',
+    title: 'Copy Relative Path',
+    description: 'Copy the relative path of the current file to clipboard',
+    category: 'File',
+    contexts: ['editor'],
+    shortcut: 'cmd+shift+p',
+  },
 ]
