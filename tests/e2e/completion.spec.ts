@@ -64,7 +64,7 @@ test.describe('Path completion', () => {
 
       const assetPath = path.join(workspace, 'assets', 'image.png')
       const expectedRelative = await page.evaluate(
-        ({ modelDir, assetPath }) => {
+        ({ modelDir, assetPath: _assetPath }) => {
           return (window as any).__lexPathTestHelpers?.computeRelativeInsertText(
             'assets/image.png',
             'assets/image.png',

@@ -25,10 +25,13 @@ export function useRootFolder() {
     if (rootPath) {
       const folderName = rootPath.split('/').pop() || rootPath;
       document.title = `LexEd - ${folderName}`;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).__lexWorkspaceRoot = rootPath;
     } else {
       document.title = 'LexEd';
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if ((window as any).__lexWorkspaceRoot) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         delete (window as any).__lexWorkspaceRoot;
       }
     }
