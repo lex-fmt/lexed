@@ -39,7 +39,7 @@ log.transports.file.level = fileLogLevel
 log.transports.console.level = consoleLogLevel
 log.transports.console.useStyles = true
 log.info('Logging initialised', {
-  file: log.transports.file.resolvePath?.(),
+  file: log.transports.file.getFile()?.path,
   fileLevel: fileLogLevel,
   consoleLevel: consoleLogLevel,
   nodeEnv: process.env.NODE_ENV,
