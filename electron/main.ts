@@ -1070,7 +1070,7 @@ if (!gotTheLock) {
     const initialFiles = extractLexFilesFromArgv(process.argv)
     if (initialFiles.length > 0) {
       pendingFilesToOpen.push(...initialFiles)
-      windowManager.createWindow()
+      windowManager.createWindow(undefined, { showSplash: true })
     } else {
       windowManager.restoreWindows()
     }

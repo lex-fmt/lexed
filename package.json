@@ -180,6 +180,10 @@
       {
         "from": "dictionaries",
         "to": "dictionaries"
+      },
+      {
+        "from": "assets/logo-full.png",
+        "to": "assets/logo-full.png"
       }
     ]
   },

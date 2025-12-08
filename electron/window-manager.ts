@@ -1,4 +1,4 @@
-import { BrowserWindow } from 'electron'
+import { app, BrowserWindow, nativeTheme } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -6,6 +6,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 import { randomUUID } from 'crypto'
 import { LspManager } from './lsp-manager'
 import Store from 'electron-store'
+
+const SPLASH_WIDTH = 300
+const SPLASH_HEIGHT = 300
 
 // Re-using types from main.ts (will be moved/shared later if needed)
 // For now, defining them here to avoid circular deps or complex refactors
@@ -96,9 +99,85 @@ export class WindowManager {
     new Map()
   private store: Store<AppSettings>
   private isQuitting = false
+  private splashWindow: BrowserWindow | null = null
 
   constructor(store: Store<AppSettings>) {
     this.store = store
+  }
+
+  private getLogoPath(): string {
+    // In packaged app, assets are in resources/assets
+    // In dev, they're in APP_ROOT/assets
+    if (app.isPackaged) {
+      return path.join(process.resourcesPath, 'assets', 'logo-full.png')
+    }
+    const APP_ROOT = process.env.APP_ROOT || path.join(__dirname, '..')
+    return path.join(APP_ROOT, 'assets', 'logo-full.png')
+  }
+
+  private createSplashWindow(): BrowserWindow {
+    const isDark = nativeTheme.shouldUseDarkColors
+    const bgColor = isDark ? '#1e1e1e' : '#ffffff'
+
+    const splash = new BrowserWindow({
+      width: SPLASH_WIDTH,
+      height: SPLASH_HEIGHT,
+      frame: false,
+      transparent: false,
+      backgroundColor: bgColor,
+      center: true,
+      resizable: false,
+      movable: false,
+      minimizable: false,
+      maximizable: false,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      show: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+      },
+    })
+
+    const logoPath = this.getLogoPath().replace(/\\/g, '/')
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: ${bgColor};
+      overflow: hidden;
+    }
+    img {
+      max-width: 80%;
+      max-height: 80%;
+      object-fit: contain;
+    }
+  </style>
+</head>
+<body>
+  <img src="file://${logoPath}" alt="LexEd" />
+</body>
+</html>`
+
+    splash.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
+    splash.once('ready-to-show', () => splash.show())
+
+    return splash
+  }
+
+  private closeSplash() {
+    if (this.splashWindow && !this.splashWindow.isDestroyed()) {
+      this.splashWindow.close()
+    }
+    this.splashWindow = null
   }
 
   public getWindow(id: number) {
@@ -124,10 +203,15 @@ export class WindowManager {
     win.setTitle(title)
   }
 
-  public async createWindow(restoreState?: WindowState) {
+  public async createWindow(restoreState?: WindowState, options?: { showSplash?: boolean }) {
     const hideWindow = process.env.LEX_HIDE_WINDOW === '1'
     const stateId = restoreState?.id || randomUUID()
-    // const initialTheme = 'dark'; // TODO: Get from main.ts or pass in
+    const showSplash = options?.showSplash && !hideWindow
+
+    // Show splash screen immediately if requested and no windows exist yet
+    if (showSplash && this.windows.size === 0 && !this.splashWindow) {
+      this.splashWindow = this.createSplashWindow()
+    }
 
     // Determine bounds
     const width = restoreState?.width || DEFAULT_WINDOW_STATE.width
@@ -140,15 +224,17 @@ export class WindowManager {
         ? `LexEd - ${path.basename(restoreState.lastFolder)}`
         : 'LexEd'
 
+      const isDark = nativeTheme.shouldUseDarkColors
+      const bgColor = isDark ? '#1e1e1e' : '#ffffff'
+
       const win = new BrowserWindow({
         title: initialTitle,
-        // icon: ... (passed from main or hardcoded)
         x,
         y,
         width,
         height,
         show: false, // Show after ready-to-show
-        backgroundColor: '#1e1e1e', // Default dark
+        backgroundColor: bgColor,
         webPreferences: {
           preload: path.join(__dirname, 'preload.mjs'),
           backgroundThrottling: false,
@@ -161,12 +247,13 @@ export class WindowManager {
 
       const lsp = new LspManager()
       lsp.setWebContents(win.webContents)
-      // TODO: Start LSP with specific root if we have one
       lsp.start()
 
       this.windows.set(win.id, { window: win, lsp, stateId })
 
       win.once('ready-to-show', () => {
+        // Close splash and show main window
+        this.closeSplash()
         if (!hideWindow) {
           win.show()
         }
@@ -267,7 +354,7 @@ export class WindowManager {
 
   public restoreWindows() {
     if (process.env.LEX_DISABLE_PERSISTENCE === '1') {
-      this.createWindow()
+      this.createWindow(undefined, { showSplash: true })
       return
     }
 
@@ -275,10 +362,11 @@ export class WindowManager {
     const openWindows = settings.openWindows || []
 
     if (openWindows.length === 0) {
-      this.createWindow()
+      this.createWindow(undefined, { showSplash: true })
     } else {
-      for (const winState of openWindows) {
-        this.createWindow(winState)
+      // Show splash for first window only
+      for (let i = 0; i < openWindows.length; i++) {
+        this.createWindow(openWindows[i], { showSplash: i === 0 })
       }
     }
   }
