@@ -7,8 +7,7 @@ import { randomUUID } from 'crypto'
 import { LspManager } from './lsp-manager'
 import Store from 'electron-store'
 
-const SPLASH_WIDTH = 300
-const SPLASH_HEIGHT = 300
+const SPLASH_SIZE = 256
 
 // Re-using types from main.ts (will be moved/shared later if needed)
 // For now, defining them here to avoid circular deps or complex refactors
@@ -120,8 +119,8 @@ export class WindowManager {
     const bgColor = isDark ? '#1e1e1e' : '#ffffff'
 
     const splash = new BrowserWindow({
-      width: SPLASH_WIDTH,
-      height: SPLASH_HEIGHT,
+      width: SPLASH_SIZE,
+      height: SPLASH_SIZE,
       frame: false,
       transparent: false,
       backgroundColor: bgColor,
@@ -156,8 +155,8 @@ export class WindowManager {
       overflow: hidden;
     }
     img {
-      max-width: 80%;
-      max-height: 80%;
+      width: 100%;
+      height: 100%;
       object-fit: contain;
     }
   </style>
