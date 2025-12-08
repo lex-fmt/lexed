@@ -32,6 +32,34 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
     }
   }, [settings.editor, settings.formatter, settings.spellcheck, isOpen])
 
+  // Handle keyboard shortcuts to close dialog
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Always close on Escape
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+        return
+      }
+      // Close on 'q' if vim mode is enabled and not focused on an input
+      if (
+        e.key === 'q' &&
+        settings.editor.vimMode &&
+        !(e.target instanceof HTMLInputElement) &&
+        !(e.target instanceof HTMLSelectElement) &&
+        !(e.target instanceof HTMLTextAreaElement)
+      ) {
+        e.preventDefault()
+        onClose()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose, settings.editor.vimMode])
+
   if (!isOpen) return null
 
   const handleSave = async () => {
