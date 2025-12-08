@@ -111,7 +111,7 @@ jobs:
           NODE_OPTIONS: --max-old-space-size=4096
         run: npm run build
 
-      - name: Upload release assets
+      - name: Upload release assets (non-macOS or skip latest-mac.yml)
         if: ${{ steps.target-filter.outputs.skip == 'false' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -122,6 +122,10 @@ jobs:
           files=()
           for file in release/*; do
             [[ -f "$file" ]] || continue
+            # Skip latest-mac.yml for macOS builds - will be merged later
+            if [[ "${{ matrix.platform }}" == macos-* && "$(basename "$file")" == "latest-mac.yml" ]]; then
+              continue
+            fi
             files+=("$file")
           done
           shopt -u nullglob
@@ -133,6 +137,14 @@ jobs:
 
           gh release upload "$RELEASE_TAG" "${files[@]}" --clobber
 
+      - name: Upload macOS yml artifact for merging
+        if: ${{ steps.target-filter.outputs.skip == 'false' && startsWith(matrix.platform, 'macos-') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: latest-mac-yml-${{ matrix.platform }}
+          path: release/latest-mac.yml
+          if-no-files-found: error
+
       - name: Upload workflow artifact (debug)
         if: ${{ steps.target-filter.outputs.skip == 'false' }}
         uses: actions/upload-artifact@v4
@@ -142,3 +154,74 @@ jobs:
             release/**
             dist/**
           if-no-files-found: error
+
+  merge-mac-yml:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    if: ${{ needs.prepare.outputs.manual_target == '' || startsWith(needs.prepare.outputs.manual_target, 'macos-') }}
+    env:
+      RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
+    steps:
+      - name: Download macOS x64 yml
+        uses: actions/download-artifact@v4
+        with:
+          name: latest-mac-yml-macos-x64
+          path: yml-x64
+        continue-on-error: true
+
+      - name: Download macOS arm64 yml
+        uses: actions/download-artifact@v4
+        with:
+          name: latest-mac-yml-macos-arm64
+          path: yml-arm64
+        continue-on-error: true
+
+      - name: Merge latest-mac.yml files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Check which files exist
+          X64_FILE="yml-x64/latest-mac.yml"
+          ARM64_FILE="yml-arm64/latest-mac.yml"
+
+          if [[ -f "$X64_FILE" && -f "$ARM64_FILE" ]]; then
+            echo "Merging both architectures into latest-mac.yml"
+
+            # Extract version and releaseDate from x64 (they should be the same)
+            VERSION=$(grep '^version:' "$X64_FILE" | head -1)
+            RELEASE_DATE=$(grep '^releaseDate:' "$X64_FILE" | head -1)
+
+            # Extract files entries from both
+            X64_FILES=$(sed -n '/^files:/,/^path:/p' "$X64_FILE" | grep -v '^path:' | tail -n +2)
+            ARM64_FILES=$(sed -n '/^files:/,/^path:/p' "$ARM64_FILE" | grep -v '^path:' | tail -n +2)
+
+            # Create merged file
+            cat > latest-mac.yml << EOF
+          $VERSION
+          files:
+          $X64_FILES
+          $ARM64_FILES
+          $RELEASE_DATE
+          EOF
+
+          elif [[ -f "$X64_FILE" ]]; then
+            echo "Only x64 yml found, using as-is"
+            cp "$X64_FILE" latest-mac.yml
+          elif [[ -f "$ARM64_FILE" ]]; then
+            echo "Only arm64 yml found, using as-is"
+            cp "$ARM64_FILE" latest-mac.yml
+          else
+            echo "No macOS yml files found, skipping merge"
+            exit 0
+          fi
+
+          echo "Final latest-mac.yml:"
+          cat latest-mac.yml
+
+      - name: Upload merged latest-mac.yml
+        if: ${{ hashFiles('latest-mac.yml') != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "$RELEASE_TAG" latest-mac.yml --clobber --repo "${{ github.repository }}"
