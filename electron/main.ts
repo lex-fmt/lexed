@@ -4,6 +4,7 @@ import path from 'node:path'
 import * as fs from 'fs/promises'
 import * as fsSync from 'fs'
 import log from 'electron-log'
+import { autoUpdater } from 'electron-updater'
 const DEFAULT_LOG_FILE = 'lexed.log'
 
 import {
@@ -996,6 +997,52 @@ if (!gotTheLock) {
 
   app.whenReady().then(() => {
     createMenu()
+
+    // Configure auto-updater
+    autoUpdater.logger = log
+    autoUpdater.autoDownload = true
+    autoUpdater.autoInstallOnAppQuit = true
+
+    // Auto-updater event handlers
+    autoUpdater.on('checking-for-update', () => {
+      log.info('[AutoUpdater] Checking for updates...')
+    })
+
+    autoUpdater.on('update-available', (info) => {
+      log.info('[AutoUpdater] Update available:', info.version)
+    })
+
+    autoUpdater.on('update-not-available', () => {
+      log.info('[AutoUpdater] No updates available')
+    })
+
+    autoUpdater.on('download-progress', (progress) => {
+      log.info(`[AutoUpdater] Download progress: ${progress.percent.toFixed(1)}%`)
+    })
+
+    autoUpdater.on('update-downloaded', (info) => {
+      log.info('[AutoUpdater] Update downloaded:', info.version)
+      // Notify all windows that an update is ready
+      windowManager.getAllWindows().forEach((win) => {
+        if (!win.isDestroyed()) {
+          win.webContents.send('update-downloaded', info.version)
+        }
+      })
+    })
+
+    autoUpdater.on('error', (error) => {
+      log.error('[AutoUpdater] Error:', error.message)
+    })
+
+    // Check for updates (only in production)
+    if (app.isPackaged) {
+      // Delay initial check to avoid slowing down startup
+      setTimeout(() => {
+        autoUpdater.checkForUpdatesAndNotify().catch((error) => {
+          log.error('[AutoUpdater] Failed to check for updates:', error.message)
+        })
+      }, 3000)
+    }
 
     // Migration logic (run once on startup)
     const settings = store.store
