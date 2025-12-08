@@ -17,7 +17,8 @@ import {
 } from './features/editing'
 import { nextAnnotation, previousAnnotation } from './features/navigation'
 import { exportContent, importContent, convertToHtml } from './features/interop'
-import { isLexFile } from '@/lib/files'
+import { isLexFile, isMarkdownFile } from '@/lib/files'
+import type { FileContextMenuHandlers } from './components/FileContextMenu'
 import { createPreviewTab, placePreviewTab } from '@/features/preview'
 import { useRootFolder } from '@/hooks/useRootFolder'
 import { useMenuStateSync } from '@/hooks/useMenuStateSync'
@@ -130,30 +131,32 @@ function AppContent() {
   }, [keybindingManager, isCommandPaletteOpen, isShortcutsOpen])
 
   useEffect(() => {
-    const unsubscribe = window.ipcRenderer.onLspStatus?.((status) => {
-      if (!status) return
-      if (status.status === 'missing-binary') {
-        setLspError({
-          title: 'Lex Language Server Missing',
-          message:
-            status.message ??
-            `Lex LSP binary was not found${status.path ? ` at ${status.path}` : ''}.`,
-          suggestion: 'Run "npm run build" once or execute scripts/download-lex-lsp.sh to download lex-lsp.',
-        })
-      } else if (status.status === 'error') {
-        setLspError({
-          title: 'Lex Language Server Error',
-          message: status.message ?? 'Unable to launch the Lex language server.',
-          suggestion: 'Check the terminal output for more information.',
-        })
-      } else if (status.status === 'stopped') {
-        setLspError({
-          title: 'Lex Language Server Stopped',
-          message: 'The language server exited unexpectedly.',
-          suggestion: 'Restart LexEd or rebuild lex-lsp to continue.',
-        })
-      }
-    }) ?? (() => {})
+    const unsubscribe =
+      window.ipcRenderer.onLspStatus?.((status) => {
+        if (!status) return
+        if (status.status === 'missing-binary') {
+          setLspError({
+            title: 'Lex Language Server Missing',
+            message:
+              status.message ??
+              `Lex LSP binary was not found${status.path ? ` at ${status.path}` : ''}.`,
+            suggestion:
+              'Run "npm run build" once or execute scripts/download-lex-lsp.sh to download lex-lsp.',
+          })
+        } else if (status.status === 'error') {
+          setLspError({
+            title: 'Lex Language Server Error',
+            message: status.message ?? 'Unable to launch the Lex language server.',
+            suggestion: 'Check the terminal output for more information.',
+          })
+        } else if (status.status === 'stopped') {
+          setLspError({
+            title: 'Lex Language Server Stopped',
+            message: 'The language server exited unexpectedly.',
+            suggestion: 'Restart LexEd or rebuild lex-lsp to continue.',
+          })
+        }
+      }) ?? (() => {})
 
     const handleReady = () => setLspError(null)
     const handleFatal = (event: Event) => {
@@ -632,7 +635,9 @@ function AppContent() {
       if (actionId === 'workspace.shortcuts.show') {
         setShortcutsOpen((prev) => {
           const next = !prev
-          log.info(next ? '[Keybindings] Open shortcuts modal' : '[Keybindings] Close shortcuts modal')
+          log.info(
+            next ? '[Keybindings] Open shortcuts modal' : '[Keybindings] Close shortcuts modal'
+          )
           return next
         })
         return true
@@ -698,6 +703,135 @@ function AppContent() {
     onOpenFilePath: handleOpenFilePath,
   })
 
+  // File context menu handlers - these operate on a file path directly (e.g., from right-click menu)
+  const fileContextMenuHandlers = useMemo(
+    (): FileContextMenuHandlers => ({
+      onExport: async (format, path) => {
+        if (!ensureLspAvailable()) return
+        if (!isLexFile(path)) {
+          toast.error('Export requires a .lex file')
+          return
+        }
+
+        setExportStatus({ isExporting: true, format })
+
+        try {
+          const content = await window.ipcRenderer.fileRead(path)
+          if (!content) {
+            toast.error('Could not read file')
+            return
+          }
+          const sourceUri = `file://${path}`
+          const ext = format === 'markdown' ? 'md' : format
+          const outputPath = path.replace(/\.lex$/i, `.${ext}`)
+
+          const result = await exportContent(content, format, sourceUri)
+          await window.ipcRenderer.invoke('file-save', outputPath, result)
+
+          const fileName = outputPath.split('/').pop() || outputPath
+          toast.success(`Exported to ${fileName}`)
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Export failed'
+          toast.error(message)
+        } finally {
+          setExportStatus({ isExporting: false, format: null })
+        }
+      },
+      onPreview: async (path) => {
+        if (!ensureLspAvailable()) return
+        if (!isLexFile(path)) {
+          toast.error('Preview requires a .lex file')
+          return
+        }
+        if (!activePaneIdValue) return
+
+        try {
+          const content = await window.ipcRenderer.fileRead(path)
+          if (!content) {
+            toast.error('Could not read file')
+            return
+          }
+          const htmlContent = await convertToHtml(content)
+          const previewTab = createPreviewTab(path, htmlContent)
+          placePreviewTab({
+            activePaneId: activePaneIdValue,
+            panes,
+            previewTab,
+            setPanes,
+            setPaneRows,
+            setActivePaneId,
+          })
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Preview failed'
+          toast.error(message)
+        }
+      },
+      onConvertToLex: async (path) => {
+        if (!ensureLspAvailable()) return
+        if (!isMarkdownFile(path)) {
+          toast.error('Convert to Lex requires a markdown file')
+          return
+        }
+        if (!activePaneIdValue) return
+
+        setExportStatus({ isExporting: true, format: 'lex' })
+
+        try {
+          const content = await window.ipcRenderer.fileRead(path)
+          if (!content) {
+            toast.error('Could not read file')
+            return
+          }
+          const lexContent = await importContent(content, 'markdown')
+          const outputPath = path.replace(/\.(md|markdown)$/i, '.lex')
+          await window.ipcRenderer.invoke('file-save', outputPath, lexContent)
+
+          const fileName = outputPath.split('/').pop() || outputPath
+          toast.success(`Converted to ${fileName}`)
+          openFileInPane(activePaneIdValue, outputPath)
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Conversion failed'
+          toast.error(message)
+        } finally {
+          setExportStatus({ isExporting: false, format: null })
+        }
+      },
+      onFormat: async (path) => {
+        // Format requires an open editor, so open the file first
+        if (!activePaneIdValue) return
+        openFileInPane(activePaneIdValue, path)
+        // After opening, the user can use the toolbar Format button
+        toast.info('File opened - use Format button or Ctrl/Cmd+Shift+F to format')
+      },
+      onShareWhatsApp: async (path) => {
+        if (!isLexFile(path)) {
+          toast.error('Share requires a .lex file')
+          return
+        }
+        try {
+          const content = await window.ipcRenderer.fileRead(path)
+          if (!content?.trim()) {
+            toast.error('Document is empty')
+            return
+          }
+          await window.ipcRenderer.shareWhatsApp(content)
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Share failed'
+          toast.error(message)
+        }
+      },
+    }),
+    [
+      activePaneIdValue,
+      ensureLspAvailable,
+      openFileInPane,
+      panes,
+      setActivePaneId,
+      setPaneRows,
+      setPanes,
+    ]
+  )
+
   const keybindingDescriptors = keybindingManager?.getDescriptors() ?? []
   const paletteCommands = keybindingDescriptors.filter(
     (descriptor) => descriptor.id !== 'commandPalette.show'
@@ -722,6 +856,7 @@ function AppContent() {
         onSplitHorizontal={handleSplitHorizontal}
         onPreview={handlePreview}
         currentFile={activePaneFile}
+        fileContextMenuHandlers={fileContextMenuHandlers}
         panel={
           <Outline
             currentFile={activePaneFile}
@@ -744,6 +879,7 @@ function AppContent() {
           onFileLoaded={handlePaneFileLoaded}
           onCursorChange={handlePaneCursorChange}
           onPaneRowsChange={setPaneRows}
+          fileContextMenuHandlers={fileContextMenuHandlers}
         />
       </Layout>
       <CommandPalette

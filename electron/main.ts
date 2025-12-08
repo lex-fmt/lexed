@@ -30,7 +30,8 @@ const resolveLogLevel = (fallback: log.LogLevel, devFallback: log.LogLevel) => {
 }
 
 const fileLogLevel = resolveLogLevel('info', 'debug')
-const consoleLogLevel = (process.env.LEX_LOG_CONSOLE_LEVEL?.toLowerCase() as log.LogLevel) ??
+const consoleLogLevel =
+  (process.env.LEX_LOG_CONSOLE_LEVEL?.toLowerCase() as log.LogLevel) ??
   (process.env.NODE_ENV === 'development' ? fileLogLevel : 'error')
 
 log.transports.file.resolvePathFn = () => path.join(app.getPath('logs'), DEFAULT_LOG_FILE)
@@ -666,8 +667,16 @@ ipcMain.handle('share-whatsapp', async (_, content: string): Promise<void> => {
 })
 
 // Show item in system file manager
-ipcMain.handle('show-item-in-folder', (_, fullPath: string) => {
-  shell.showItemInFolder(fullPath)
+ipcMain.handle('show-item-in-folder', async (_, fullPath: string) => {
+  // On macOS, use 'open -R' to reveal file in Finder with selection
+  // (shell.showItemInFolder doesn't always bring Finder to foreground)
+  if (process.platform === 'darwin') {
+    const { exec } = await import('child_process')
+    const escapedPath = fullPath.replace(/"/g, '\\"')
+    exec(`open -R "${escapedPath}"`)
+  } else {
+    shell.showItemInFolder(fullPath)
+  }
 })
 
 // Theme detection

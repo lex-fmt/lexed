@@ -1,130 +1,174 @@
-import { ReactNode, useEffect, useState, useRef, useCallback } from 'react';
-import { cn } from '@/lib/utils';
-import { FileTree } from './FileTree';
-import { ButtonGroup, ButtonGroupSeparator } from './ui/button-group';
-import { FolderOpen, Settings, PanelLeftClose, PanelLeft, FileText, FilePlus, Save, ChevronDown, ChevronRight, FileCode, MessageCircle, FileType, Search, Replace, SplitSquareVertical, SplitSquareHorizontal, Eye, AlignLeft } from 'lucide-react';
-import { isLexFile } from '@/lib/files';
-import log from 'electron-log/renderer';
+import { ReactNode, useEffect, useState, useRef, useCallback } from 'react'
+import { cn } from '@/lib/utils'
+import { FileTree } from './FileTree'
+import { ButtonGroup, ButtonGroupSeparator } from './ui/button-group'
+import {
+  FolderOpen,
+  Settings,
+  PanelLeftClose,
+  PanelLeft,
+  FileText,
+  FilePlus,
+  Save,
+  ChevronDown,
+  ChevronRight,
+  FileCode,
+  MessageCircle,
+  FileType,
+  Search,
+  Replace,
+  SplitSquareVertical,
+  SplitSquareHorizontal,
+  Eye,
+  AlignLeft,
+} from 'lucide-react'
+import { isLexFile } from '@/lib/files'
+import type { FileContextMenuHandlers } from './FileContextMenu'
+import log from 'electron-log/renderer'
 
 interface LayoutProps {
-  children: ReactNode;
-  panel?: ReactNode;
-  rootPath?: string;
-  currentFile?: string | null;
-  onFileSelect: (path: string) => void;
-  onNewFile?: () => void;
-  onOpenFolder?: () => void;
-  onOpenFile?: () => void;
-  onSave?: () => void;
-  onFormat?: () => void;
-  onExport?: (format: string) => void;
-  onShareWhatsApp?: () => void;
-  onConvertToLex?: () => void;
-  onFind?: () => void;
-  onReplace?: () => void;
-  onSplitVertical?: () => void;
-  onSplitHorizontal?: () => void;
-  onPreview?: () => void;
+  children: ReactNode
+  panel?: ReactNode
+  rootPath?: string
+  currentFile?: string | null
+  onFileSelect: (path: string) => void
+  onNewFile?: () => void
+  onOpenFolder?: () => void
+  onOpenFile?: () => void
+  onSave?: () => void
+  onFormat?: () => void
+  onExport?: (format: string) => void
+  onShareWhatsApp?: () => void
+  onConvertToLex?: () => void
+  onFind?: () => void
+  onReplace?: () => void
+  onSplitVertical?: () => void
+  onSplitHorizontal?: () => void
+  onPreview?: () => void
+  fileContextMenuHandlers?: FileContextMenuHandlers
 }
 
-const MIN_OUTLINE_HEIGHT = 100;
-const DEFAULT_OUTLINE_HEIGHT = 200;
+const MIN_OUTLINE_HEIGHT = 100
+const DEFAULT_OUTLINE_HEIGHT = 200
 
-import { SettingsDialog } from './SettingsDialog';
+import { SettingsDialog } from './SettingsDialog'
 
-export function Layout({ children, panel, rootPath, currentFile, onFileSelect, onNewFile, onOpenFolder, onOpenFile, onSave, onFormat, onExport, onShareWhatsApp, onConvertToLex, onFind, onReplace, onSplitVertical, onSplitHorizontal, onPreview }: LayoutProps) {
-  const isCurrentFileLex = isLexFile(currentFile ?? null);
-  const hasCurrentFile = Boolean(currentFile);
-  const canLexActions = hasCurrentFile && isCurrentFileLex;
-  const canExport = canLexActions && Boolean(onExport);
-  const canShare = canLexActions && Boolean(onShareWhatsApp);
-  const canFind = hasCurrentFile && Boolean(onFind);
-  const canReplace = hasCurrentFile && Boolean(onReplace);
-  const canFormat = canLexActions && Boolean(onFormat);
-  const canPreview = canLexActions && Boolean(onPreview);
-  const canConvertToLex = hasCurrentFile && !isCurrentFileLex && Boolean(onConvertToLex);
-  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
-  const [outlineCollapsed, setOutlineCollapsed] = useState(false);
-  const [outlineHeight, setOutlineHeight] = useState(DEFAULT_OUTLINE_HEIGHT);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const sidebarRef = useRef<HTMLDivElement>(null);
+export function Layout({
+  children,
+  panel,
+  rootPath,
+  currentFile,
+  onFileSelect,
+  onNewFile,
+  onOpenFolder,
+  onOpenFile,
+  onSave,
+  onFormat,
+  onExport,
+  onShareWhatsApp,
+  onConvertToLex,
+  onFind,
+  onReplace,
+  onSplitVertical,
+  onSplitHorizontal,
+  onPreview,
+  fileContextMenuHandlers,
+}: LayoutProps) {
+  const isCurrentFileLex = isLexFile(currentFile ?? null)
+  const hasCurrentFile = Boolean(currentFile)
+  const canLexActions = hasCurrentFile && isCurrentFileLex
+  const canExport = canLexActions && Boolean(onExport)
+  const canShare = canLexActions && Boolean(onShareWhatsApp)
+  const canFind = hasCurrentFile && Boolean(onFind)
+  const canReplace = hasCurrentFile && Boolean(onReplace)
+  const canFormat = canLexActions && Boolean(onFormat)
+  const canPreview = canLexActions && Boolean(onPreview)
+  const canConvertToLex = hasCurrentFile && !isCurrentFileLex && Boolean(onConvertToLex)
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false)
+  const [outlineCollapsed, setOutlineCollapsed] = useState(false)
+  const [outlineHeight, setOutlineHeight] = useState(DEFAULT_OUTLINE_HEIGHT)
+  const [isDragging, setIsDragging] = useState(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const sidebarRef = useRef<HTMLDivElement>(null)
   const logButtonClick = useCallback((label: string) => {
-    log.info(`[Button] ${label}`);
-  }, []);
+    log.info(`[Button] ${label}`)
+  }, [])
 
   const toggleSidebar = useCallback(() => {
-    logButtonClick('Toggle sidebar');
-    setLeftPanelCollapsed(prev => !prev);
-  }, [logButtonClick]);
+    logButtonClick('Toggle sidebar')
+    setLeftPanelCollapsed((prev) => !prev)
+  }, [logButtonClick])
 
   const openSettings = useCallback(() => {
-    logButtonClick('Open settings dialog');
-    setIsSettingsOpen(true);
-  }, [logButtonClick]);
+    logButtonClick('Open settings dialog')
+    setIsSettingsOpen(true)
+  }, [logButtonClick])
 
   const closeSettings = useCallback(() => {
-    log.info('[Settings] Close dialog');
-    setIsSettingsOpen(false);
-  }, []);
+    log.info('[Settings] Close dialog')
+    setIsSettingsOpen(false)
+  }, [])
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
+    e.preventDefault()
+    setIsDragging(true)
+  }, [])
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging || !sidebarRef.current) return;
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isDragging || !sidebarRef.current) return
 
-    const sidebarRect = sidebarRef.current.getBoundingClientRect();
-    const newHeight = sidebarRect.bottom - e.clientY;
-    const maxHeight = sidebarRect.height - MIN_OUTLINE_HEIGHT;
+      const sidebarRect = sidebarRef.current.getBoundingClientRect()
+      const newHeight = sidebarRect.bottom - e.clientY
+      const maxHeight = sidebarRect.height - MIN_OUTLINE_HEIGHT
 
-    setOutlineHeight(Math.max(MIN_OUTLINE_HEIGHT, Math.min(newHeight, maxHeight)));
-  }, [isDragging]);
+      setOutlineHeight(Math.max(MIN_OUTLINE_HEIGHT, Math.min(newHeight, maxHeight)))
+    },
+    [isDragging]
+  )
 
   const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
+    setIsDragging(false)
+  }, [])
 
   useEffect(() => {
     if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'ns-resize';
-      document.body.style.userSelect = 'none';
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = 'ns-resize'
+      document.body.style.userSelect = 'none'
     } else {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
     }
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+  }, [isDragging, handleMouseMove, handleMouseUp])
 
   useEffect(() => {
     const applyTheme = (mode: 'dark' | 'light') => {
       // Set data-theme attribute on document root for CSS variable switching
-      document.documentElement.setAttribute('data-theme', mode);
-    };
-
-    const initialTheme = document.documentElement.getAttribute('data-theme');
-    if (initialTheme === 'dark' || initialTheme === 'light') {
-      applyTheme(initialTheme);
-    } else {
-      void window.ipcRenderer.getNativeTheme().then(applyTheme);
+      document.documentElement.setAttribute('data-theme', mode)
     }
 
-    const unsubscribe = window.ipcRenderer.onNativeThemeChanged(applyTheme);
+    const initialTheme = document.documentElement.getAttribute('data-theme')
+    if (initialTheme === 'dark' || initialTheme === 'light') {
+      applyTheme(initialTheme)
+    } else {
+      void window.ipcRenderer.getNativeTheme().then(applyTheme)
+    }
 
-    return unsubscribe;
-  }, []);
+    const unsubscribe = window.ipcRenderer.onNativeThemeChanged(applyTheme)
+
+    return unsubscribe
+  }, [])
 
   return (
     <div className="flex flex-col w-screen h-screen overflow-hidden bg-background text-foreground">
@@ -132,11 +176,8 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
       <div className="h-14 flex items-center px-3 bg-panel border-b border-border shrink-0 gap-1">
         <button
           onClick={toggleSidebar}
-          className={cn(
-            "p-1.5 rounded",
-            "hover:bg-panel-hover transition-colors"
-          )}
-          title={leftPanelCollapsed ? "Show sidebar" : "Hide sidebar"}
+          className={cn('p-1.5 rounded', 'hover:bg-panel-hover transition-colors')}
+          title={leftPanelCollapsed ? 'Show sidebar' : 'Hide sidebar'}
         >
           {leftPanelCollapsed ? <PanelLeft size={16} /> : <PanelLeftClose size={16} />}
         </button>
@@ -153,8 +194,8 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
                 onNewFile?.()
               }}
               className={cn(
-                "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
-                "hover:bg-panel-hover transition-colors"
+                'flex items-center gap-2 px-2 py-1.5 rounded text-sm',
+                'hover:bg-panel-hover transition-colors'
               )}
               title="New File"
             >
@@ -167,8 +208,8 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
                 onOpenFile?.()
               }}
               className={cn(
-                "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
-                "hover:bg-panel-hover transition-colors"
+                'flex items-center gap-2 px-2 py-1.5 rounded text-sm',
+                'hover:bg-panel-hover transition-colors'
               )}
               title="Open File"
             >
@@ -181,8 +222,8 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
                 onOpenFolder?.()
               }}
               className={cn(
-                "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
-                "hover:bg-panel-hover transition-colors"
+                'flex items-center gap-2 px-2 py-1.5 rounded text-sm',
+                'hover:bg-panel-hover transition-colors'
               )}
               title="Open Folder"
             >
@@ -196,9 +237,9 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
               }}
               disabled={!currentFile}
               className={cn(
-                "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
-                "hover:bg-panel-hover transition-colors",
-                !currentFile && "opacity-50 cursor-not-allowed"
+                'flex items-center gap-2 px-2 py-1.5 rounded text-sm',
+                'hover:bg-panel-hover transition-colors',
+                !currentFile && 'opacity-50 cursor-not-allowed'
               )}
               title="Save"
             >
@@ -220,9 +261,9 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
               }}
               disabled={!canExport}
               className={cn(
-                "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
-                "hover:bg-panel-hover transition-colors",
-                !canExport && "opacity-50 cursor-not-allowed"
+                'flex items-center gap-2 px-2 py-1.5 rounded text-sm',
+                'hover:bg-panel-hover transition-colors',
+                !canExport && 'opacity-50 cursor-not-allowed'
               )}
               title="Export to Markdown"
             >
@@ -236,9 +277,9 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
               }}
               disabled={!canExport}
               className={cn(
-                "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
-                "hover:bg-panel-hover transition-colors",
-                !canExport && "opacity-50 cursor-not-allowed"
+                'flex items-center gap-2 px-2 py-1.5 rounded text-sm',
+                'hover:bg-panel-hover transition-colors',
+                !canExport && 'opacity-50 cursor-not-allowed'
               )}
               title="Export to HTML"
             >
@@ -252,9 +293,9 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
               }}
               disabled={!canPreview}
               className={cn(
-                "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
-                "hover:bg-panel-hover transition-colors",
-                !canPreview && "opacity-50 cursor-not-allowed"
+                'flex items-center gap-2 px-2 py-1.5 rounded text-sm',
+                'hover:bg-panel-hover transition-colors',
+                !canPreview && 'opacity-50 cursor-not-allowed'
               )}
               title="Preview"
             >
@@ -268,9 +309,9 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
               }}
               disabled={!canConvertToLex}
               className={cn(
-                "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
-                "hover:bg-panel-hover transition-colors",
-                !canConvertToLex && "opacity-50 cursor-not-allowed"
+                'flex items-center gap-2 px-2 py-1.5 rounded text-sm',
+                'hover:bg-panel-hover transition-colors',
+                !canConvertToLex && 'opacity-50 cursor-not-allowed'
               )}
               title="Convert to Lex"
             >
@@ -284,9 +325,9 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
               }}
               disabled={!canShare}
               className={cn(
-                "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
-                "hover:bg-panel-hover transition-colors",
-                !canShare && "opacity-50 cursor-not-allowed"
+                'flex items-center gap-2 px-2 py-1.5 rounded text-sm',
+                'hover:bg-panel-hover transition-colors',
+                !canShare && 'opacity-50 cursor-not-allowed'
               )}
               title="Share via WhatsApp"
             >
@@ -308,9 +349,9 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
               }}
               disabled={!canFormat}
               className={cn(
-                "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
-                "hover:bg-panel-hover transition-colors",
-                !canFormat && "opacity-50 cursor-not-allowed"
+                'flex items-center gap-2 px-2 py-1.5 rounded text-sm',
+                'hover:bg-panel-hover transition-colors',
+                !canFormat && 'opacity-50 cursor-not-allowed'
               )}
               title="Format Document"
             >
@@ -324,9 +365,9 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
               }}
               disabled={!canFind}
               className={cn(
-                "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
-                "hover:bg-panel-hover transition-colors",
-                !canFind && "opacity-50 cursor-not-allowed"
+                'flex items-center gap-2 px-2 py-1.5 rounded text-sm',
+                'hover:bg-panel-hover transition-colors',
+                !canFind && 'opacity-50 cursor-not-allowed'
               )}
               title="Find (⌘F)"
             >
@@ -340,9 +381,9 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
               }}
               disabled={!canReplace}
               className={cn(
-                "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
-                "hover:bg-panel-hover transition-colors",
-                !canReplace && "opacity-50 cursor-not-allowed"
+                'flex items-center gap-2 px-2 py-1.5 rounded text-sm',
+                'hover:bg-panel-hover transition-colors',
+                !canReplace && 'opacity-50 cursor-not-allowed'
               )}
               title="Replace (⌘H)"
             >
@@ -364,9 +405,9 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
               }}
               disabled={!onSplitVertical}
               className={cn(
-                "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
-                "hover:bg-panel-hover transition-colors",
-                !onSplitVertical && "opacity-50 cursor-not-allowed"
+                'flex items-center gap-2 px-2 py-1.5 rounded text-sm',
+                'hover:bg-panel-hover transition-colors',
+                !onSplitVertical && 'opacity-50 cursor-not-allowed'
               )}
               title="Split vertically"
             >
@@ -380,9 +421,9 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
               }}
               disabled={!onSplitHorizontal}
               className={cn(
-                "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
-                "hover:bg-panel-hover transition-colors",
-                !onSplitHorizontal && "opacity-50 cursor-not-allowed"
+                'flex items-center gap-2 px-2 py-1.5 rounded text-sm',
+                'hover:bg-panel-hover transition-colors',
+                !onSplitHorizontal && 'opacity-50 cursor-not-allowed'
               )}
               title="Split horizontally"
             >
@@ -395,10 +436,7 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
 
         <button
           onClick={openSettings}
-          className={cn(
-            "p-1.5 rounded",
-            "hover:bg-panel-hover transition-colors"
-          )}
+          className={cn('p-1.5 rounded', 'hover:bg-panel-hover transition-colors')}
           title="Settings"
         >
           <Settings size={16} />
@@ -413,15 +451,20 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
         <div
           ref={sidebarRef}
           className={cn(
-            "flex flex-col border-r border-border bg-panel transition-all",
-            leftPanelCollapsed ? "w-0" : "w-64"
+            'flex flex-col border-r border-border bg-panel transition-all',
+            leftPanelCollapsed ? 'w-0' : 'w-64'
           )}
         >
           {!leftPanelCollapsed && (
             <>
               {/* File Tree Section */}
               <div className="flex-1 min-h-0 overflow-auto">
-                <FileTree rootPath={rootPath} selectedFile={currentFile} onFileSelect={onFileSelect} />
+                <FileTree
+                  rootPath={rootPath}
+                  selectedFile={currentFile}
+                  onFileSelect={onFileSelect}
+                  contextMenuHandlers={fileContextMenuHandlers}
+                />
               </div>
 
               {/* Outline Section */}
@@ -445,10 +488,7 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
                   </div>
                   {/* Outline Content */}
                   {!outlineCollapsed && (
-                    <div
-                      className="overflow-auto"
-                      style={{ height: outlineHeight }}
-                    >
+                    <div className="overflow-auto" style={{ height: outlineHeight }}>
                       {panel}
                     </div>
                   )}
@@ -459,10 +499,8 @@ export function Layout({ children, panel, rootPath, currentFile, onFileSelect, o
         </div>
 
         {/* Editor Area */}
-        <div className="flex-1 flex flex-col min-w-0">
-          {children}
-        </div>
+        <div className="flex-1 flex flex-col min-w-0">{children}</div>
       </div>
     </div>
-  );
+  )
 }
