@@ -204,6 +204,59 @@ function getWelcomeFolderPath(): string {
   return path.join(process.env.APP_ROOT!, 'welcome')
 }
 
+/**
+ * Get the default user project directory path.
+ * - macOS: ~/Documents/LexEd
+ * - Windows: %USERPROFILE%\Documents\LexEd
+ * - Linux: ~/Documents/LexEd (or ~/LexEd if Documents doesn't exist)
+ */
+function getDefaultProjectPath(): string {
+  const documentsPath = app.getPath('documents')
+  return path.join(documentsPath, 'LexEd')
+}
+
+/**
+ * Sets up the default project directory and copies welcome document on first launch.
+ * Returns the path to the welcome file if this is first launch, null otherwise.
+ * Skipped during tests (LEX_DISABLE_PERSISTENCE=1).
+ */
+async function setupFirstLaunch(): Promise<string | null> {
+  // Skip first-launch setup during tests
+  if (process.env.LEX_DISABLE_PERSISTENCE === '1') {
+    return null
+  }
+
+  const projectPath = getDefaultProjectPath()
+  const welcomeFilePath = path.join(projectPath, 'welcome-to-lex.lex')
+
+  // Check if this is first launch by checking if our project folder exists
+  try {
+    await fs.access(projectPath)
+    // Folder exists, not first launch
+    return null
+  } catch {
+    // Folder doesn't exist, this is first launch
+  }
+
+  log.info('[FirstLaunch] Setting up default project directory:', projectPath)
+
+  try {
+    // Create the LexEd directory
+    await fs.mkdir(projectPath, { recursive: true })
+
+    // Copy welcome document from bundled resources
+    const bundledWelcomePath = path.join(getWelcomeFolderPath(), 'welcome-to-lex.lex')
+    const welcomeContent = await fs.readFile(bundledWelcomePath, 'utf-8')
+    await fs.writeFile(welcomeFilePath, welcomeContent, 'utf-8')
+
+    log.info('[FirstLaunch] Created project directory and copied welcome document')
+    return welcomeFilePath
+  } catch (error) {
+    log.error('[FirstLaunch] Failed to setup project directory:', error)
+    return null
+  }
+}
+
 // ... (rest of the file)
 
 // The built directory structure
@@ -232,9 +285,6 @@ let currentMenuState: MenuState = {
   isLexFile: false,
 }
 
-// Track files to open (from command line or open-file events before app is ready)
-const pendingFilesToOpen: string[] = []
-
 /**
  * Extract .lex file paths from command line arguments.
  * Filters out Electron flags and non-.lex files.
@@ -255,15 +305,13 @@ function extractLexFilesFromArgv(argv: string[]): string[] {
 
 /**
  * Open files in the renderer by sending IPC messages.
- * If window isn't ready yet, queues files for later.
+ * If no windows exist, creates a new one.
  */
 function openFilesInWindow(filePaths: string[]) {
   if (filePaths.length === 0) return
 
-  // For now, open in the most recently focused window or create a new one
-  // TODO: Improve logic to find "best" window or open new one
   const windows = windowManager.getAllWindows()
-  const targetWin = windows[0] // Simple fallback
+  const targetWin = windows[0]
 
   if (targetWin && !targetWin.isDestroyed()) {
     for (const filePath of filePaths) {
@@ -271,7 +319,8 @@ function openFilesInWindow(filePaths: string[]) {
       app.addRecentDocument(filePath)
     }
   } else {
-    pendingFilesToOpen.push(...filePaths)
+    // No windows exist, create a new one with the files
+    windowManager.createWindow(undefined, { showSplash: true, openFiles: filePaths })
   }
 }
 
@@ -460,6 +509,11 @@ ipcMain.handle('folder-open', async (event) => {
 })
 
 ipcMain.handle('get-initial-folder', async (event) => {
+  // During tests, always use the welcome folder to avoid contamination from user settings
+  if (process.env.LEX_DISABLE_PERSISTENCE === '1') {
+    return getWelcomeFolderPath()
+  }
+
   const win = BrowserWindow.fromWebContents(event.sender)
   if (!win) return getWelcomeFolderPath()
 
@@ -1021,7 +1075,7 @@ if (!gotTheLock) {
     }
   })
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     createMenu()
 
     // Configure auto-updater
@@ -1092,11 +1146,18 @@ if (!gotTheLock) {
       store.set('openWindows', [legacyState])
     }
 
+    // Handle first launch setup (create Documents/LexEd and copy welcome doc)
+    const welcomeFilePath = await setupFirstLaunch()
+
     // Handle files passed via command line on initial launch
     const initialFiles = extractLexFilesFromArgv(process.argv)
     if (initialFiles.length > 0) {
-      pendingFilesToOpen.push(...initialFiles)
-      windowManager.createWindow(undefined, { showSplash: true })
+      windowManager.createWindow(undefined, { showSplash: true, openFiles: initialFiles })
+    } else if (welcomeFilePath) {
+      // First launch: set the LexEd folder as workspace and open welcome file
+      const projectPath = getDefaultProjectPath()
+      store.set('lastFolder', projectPath)
+      windowManager.createWindow(undefined, { showSplash: true, openFiles: [welcomeFilePath] })
     } else {
       windowManager.restoreWindows()
     }

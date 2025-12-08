@@ -44,12 +44,14 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
         return
       }
       // Close on 'q' if vim mode is enabled and not focused on an input
+      const target = e.target as Element | null
+      const tagName = target?.tagName?.toLowerCase()
       if (
         e.key === 'q' &&
         settings.editor.vimMode &&
-        !(e.target instanceof HTMLInputElement) &&
-        !(e.target instanceof HTMLSelectElement) &&
-        !(e.target instanceof HTMLTextAreaElement)
+        tagName !== 'input' &&
+        tagName !== 'select' &&
+        tagName !== 'textarea'
       ) {
         e.preventDefault()
         onClose()

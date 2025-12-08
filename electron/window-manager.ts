@@ -211,7 +211,10 @@ export class WindowManager {
     win.setTitle(title)
   }
 
-  public async createWindow(restoreState?: WindowState, options?: { showSplash?: boolean }) {
+  public async createWindow(
+    restoreState?: WindowState,
+    options?: { showSplash?: boolean; openFiles?: string[] }
+  ) {
     const hideWindow = process.env.LEX_HIDE_WINDOW === '1'
     const stateId = restoreState?.id || randomUUID()
     const showSplash = options?.showSplash && !hideWindow
@@ -294,6 +297,15 @@ export class WindowManager {
         win.loadURL(VITE_DEV_SERVER_URL)
       } else {
         win.loadFile(path.join(RENDERER_DIST, 'index.html'))
+      }
+
+      // If files need to be opened, send them after the renderer is ready
+      if (options?.openFiles && options.openFiles.length > 0) {
+        win.webContents.once('did-finish-load', () => {
+          for (const filePath of options.openFiles!) {
+            win.webContents.send('open-file-path', filePath)
+          }
+        })
       }
 
       return win
