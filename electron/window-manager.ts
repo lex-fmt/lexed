@@ -146,7 +146,7 @@ export class WindowManager {
       const logoBuffer = readFileSync(logoPath)
       logoDataUrl = `data:image/png;base64,${logoBuffer.toString('base64')}`
     } catch (e) {
-      console.error('Failed to load splash logo:', e)
+      console.error('[Splash] Failed to load logo:', logoPath, e)
     }
 
     const html = `<!DOCTYPE html>
