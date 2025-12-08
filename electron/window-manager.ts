@@ -1,6 +1,7 @@
 import { app, BrowserWindow, nativeTheme } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { readFileSync } from 'node:fs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 import { randomUUID } from 'crypto'
@@ -138,7 +139,15 @@ export class WindowManager {
       },
     })
 
-    const logoPath = this.getLogoPath().replace(/\\/g, '/')
+    // Read logo and embed as base64 to avoid file:// URL issues
+    const logoPath = this.getLogoPath()
+    let logoDataUrl = ''
+    try {
+      const logoBuffer = readFileSync(logoPath)
+      logoDataUrl = `data:image/png;base64,${logoBuffer.toString('base64')}`
+    } catch (e) {
+      console.error('Failed to load splash logo:', e)
+    }
 
     const html = `<!DOCTYPE html>
 <html>
@@ -162,7 +171,7 @@ export class WindowManager {
   </style>
 </head>
 <body>
-  <img src="file://${logoPath}" alt="LexEd" />
+  <img src="${logoDataUrl}" alt="LexEd" />
 </body>
 </html>`
 
