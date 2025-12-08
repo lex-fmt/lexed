@@ -109,6 +109,15 @@ export function Layout({
     setIsSettingsOpen(false)
   }, [])
 
+  // Listen for menu-show-settings IPC from main process
+  useEffect(() => {
+    const unsubscribe = window.ipcRenderer.on('menu-show-settings', () => {
+      log.info('[Menu] Show Settings')
+      setIsSettingsOpen(true)
+    })
+    return unsubscribe
+  }, [])
+
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     setIsDragging(true)

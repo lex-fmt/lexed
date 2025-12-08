@@ -789,6 +789,13 @@ function createMenu() {
             submenu: [
               { role: 'about' as const },
               { type: 'separator' as const },
+              {
+                label: 'Settings...',
+                accelerator: 'CmdOrCtrl+,' as const,
+                click: (_: Electron.MenuItem, focusedWindow: BrowserWindow | undefined) =>
+                  getTargetWindow(focusedWindow)?.webContents.send('menu-show-settings'),
+              },
+              { type: 'separator' as const },
               { role: 'services' as const },
               { type: 'separator' as const },
               { role: 'hide' as const },
@@ -918,6 +925,18 @@ function createMenu() {
           click: (_, focusedWindow) =>
             getTargetWindow(focusedWindow)?.webContents.send('menu-insert-verbatim'),
         },
+        // Settings in Edit menu for non-macOS platforms
+        ...(!isMac
+          ? [
+              { type: 'separator' as const },
+              {
+                label: 'Settings',
+                accelerator: 'CmdOrCtrl+,' as const,
+                click: (_: Electron.MenuItem, focusedWindow: BrowserWindow | undefined) =>
+                  getTargetWindow(focusedWindow)?.webContents.send('menu-show-settings'),
+              },
+            ]
+          : []),
       ],
     },
     {
