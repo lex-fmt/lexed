@@ -106,6 +106,7 @@ jobs:
       - name: Build Electron package
         if: ${{ steps.target-filter.outputs.skip == 'false' }}
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LEX_HIDE_WINDOW: "1"
           NODE_OPTIONS: --max-old-space-size=4096
         run: npm run build
