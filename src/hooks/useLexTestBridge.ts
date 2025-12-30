@@ -123,6 +123,14 @@ export function useLexTestBridge({
         if (!model) return []
         return monaco.editor.getModelMarkers({ resource: model.uri })
       },
+      setCursor: (line: number, col: number) => {
+        const editorInstance = getActiveEditorInstance()
+        if (!editorInstance) return false
+        editorInstance.setPosition({ lineNumber: line, column: col })
+        // Also reveal the position to be safe
+        editorInstance.revealPosition({ lineNumber: line, column: col })
+        return true
+      },
     }
     window.lexTest = api
     return () => {
