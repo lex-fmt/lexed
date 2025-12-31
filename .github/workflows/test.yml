@@ -34,5 +34,8 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      # Note: Electron/Playwright tests require display and lex-lsp binary
-      # These are run manually or in a dedicated test environment
+      - name: Unit tests
+        run: npm run test:unit -- --run
+
+      # Note: E2E tests require display and lex-lsp binary
+      # These are run locally via pre-commit hook
