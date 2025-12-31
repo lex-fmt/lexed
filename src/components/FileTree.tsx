@@ -13,6 +13,7 @@ import {
   ChevronDown,
 } from 'lucide-react'
 import { FILE_TREE_REFRESH_EVENT } from '@/lib/events'
+import { useSettings } from '@/contexts/SettingsContext'
 import {
   FileContextMenu,
   type FileContextMenuHandlers,
@@ -76,6 +77,7 @@ export function FileTree({
   const [files, setFiles] = useState<FileEntry[]>([])
   const [contextMenu, setContextMenu] = useState<FileContextMenuPosition | null>(null)
   const [gitignoreMatcher, setGitignoreMatcher] = useState<Ignore | null>(null)
+  const { settings } = useSettings()
 
   const normalizedSelectedFile = useMemo(() => {
     return selectedFile ? normalizePath(selectedFile) : null
@@ -133,7 +135,10 @@ export function FileTree({
     async (path: string): Promise<FileEntry[]> => {
       const entries = await window.ipcRenderer.fileReadDir(path)
       return entries
-        .filter((entry) => shouldIncludeEntry(entry.path, entry.isDirectory))
+        .filter((entry) => {
+          if (!settings.fileTree.showHiddenFiles && entry.name.startsWith('.')) return false
+          return shouldIncludeEntry(entry.path, entry.isDirectory)
+        })
         .sort((a, b) => {
           if (a.isDirectory === b.isDirectory) {
             return a.name.localeCompare(b.name)
@@ -141,7 +146,7 @@ export function FileTree({
           return a.isDirectory ? -1 : 1
         })
     },
-    [shouldIncludeEntry]
+    [shouldIncludeEntry, settings.fileTree.showHiddenFiles]
   )
 
   const refreshTree = useCallback(() => {

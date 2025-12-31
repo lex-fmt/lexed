@@ -1,26 +1,28 @@
-import { useEffect } from 'react';
-import log from 'electron-log/renderer';
+import { useEffect } from 'react'
+import log from 'electron-log/renderer'
 
 interface MenuHandlers {
-  onNewFile?: () => void;
-  onOpenFile?: () => void;
-  onOpenFolder?: () => void;
-  onSave?: () => void;
-  onFormat?: () => void;
-  onExport?: (format: string) => void;
-  onFind?: () => void;
-  onReplace?: () => void;
-  onSplitVertical?: () => void;
-  onSplitHorizontal?: () => void;
-  onPreview?: () => void;
-  onInsertAsset?: () => void;
-  onInsertVerbatim?: () => void;
-  onNextAnnotation?: () => void;
-  onPrevAnnotation?: () => void;
-  onResolveAnnotation?: () => void;
-  onToggleAnnotations?: () => void;
-  onOpenFilePath?: (filePath: string) => void;
-  onShowShortcuts?: () => void;
+  onNewFile?: () => void
+  onOpenFile?: () => void
+  onOpenFolder?: () => void
+  onSave?: () => void
+  onFormat?: () => void
+  onExport?: (format: string) => void
+  onFind?: () => void
+  onReplace?: () => void
+  onSplitVertical?: () => void
+  onSplitHorizontal?: () => void
+  onPreview?: () => void
+  onInsertAsset?: () => void
+  onInsertVerbatim?: () => void
+  onNextAnnotation?: () => void
+  onPrevAnnotation?: () => void
+  onResolveAnnotation?: () => void
+  onToggleAnnotations?: () => void
+  onReorderFootnotes?: () => void
+  onToggleHiddenFiles?: () => void
+  onOpenFilePath?: (filePath: string) => void
+  onShowShortcuts?: () => void
 }
 
 export function useMenuHandlers(handlers: MenuHandlers) {
@@ -42,18 +44,20 @@ export function useMenuHandlers(handlers: MenuHandlers) {
     onPrevAnnotation,
     onResolveAnnotation,
     onToggleAnnotations,
+    onReorderFootnotes,
+    onToggleHiddenFiles,
     onOpenFilePath,
     onShowShortcuts,
-  } = handlers;
+  } = handlers
 
   useEffect(() => {
-    const subscriptions: Array<() => void> = [];
+    const subscriptions: Array<() => void> = []
 
     const register = (unsubscribe?: () => void) => {
       if (unsubscribe) {
-        subscriptions.push(unsubscribe);
+        subscriptions.push(unsubscribe)
       }
-    };
+    }
 
     if (onNewFile)
       register(
@@ -174,6 +178,20 @@ export function useMenuHandlers(handlers: MenuHandlers) {
           onToggleAnnotations()
         })
       )
+    if (onReorderFootnotes)
+      register(
+        window.ipcRenderer.on('menu-reorder-footnotes', () => {
+          log.info('[Menu] Reorder Footnotes')
+          onReorderFootnotes()
+        })
+      )
+    if (onToggleHiddenFiles)
+      register(
+        window.ipcRenderer.on('menu-toggle-hidden-files', () => {
+          log.info('[Menu] Toggle Hidden Files')
+          onToggleHiddenFiles()
+        })
+      )
     if (onShowShortcuts)
       register(
         window.ipcRenderer.on('menu-show-shortcuts', () => {
@@ -181,11 +199,11 @@ export function useMenuHandlers(handlers: MenuHandlers) {
           onShowShortcuts()
         })
       )
-    if (onOpenFilePath) register(window.ipcRenderer.onOpenFilePath(onOpenFilePath));
+    if (onOpenFilePath) register(window.ipcRenderer.onOpenFilePath(onOpenFilePath))
 
     return () => {
-      subscriptions.forEach(unsub => unsub());
-    };
+      subscriptions.forEach((unsub) => unsub())
+    }
   }, [
     onNewFile,
     onOpenFile,
@@ -204,7 +222,9 @@ export function useMenuHandlers(handlers: MenuHandlers) {
     onPrevAnnotation,
     onResolveAnnotation,
     onToggleAnnotations,
+    onReorderFootnotes,
     onOpenFilePath,
     onShowShortcuts,
-  ]);
+    onToggleHiddenFiles,
+  ])
 }

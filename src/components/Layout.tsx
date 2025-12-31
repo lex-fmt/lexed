@@ -21,6 +21,9 @@ import {
   SplitSquareHorizontal,
   Eye,
   AlignLeft,
+  Lightbulb,
+  Image,
+  FileCode2,
 } from 'lucide-react'
 import { isLexFile } from '@/lib/files'
 import type { FileContextMenuHandlers } from './FileContextMenu'
@@ -45,6 +48,9 @@ interface LayoutProps {
   onSplitVertical?: () => void
   onSplitHorizontal?: () => void
   onPreview?: () => void
+  onInsertAsset?: () => void
+  onInsertVerbatim?: () => void
+  onTriggerAction?: () => void
   fileContextMenuHandlers?: FileContextMenuHandlers
 }
 
@@ -72,6 +78,9 @@ export function Layout({
   onSplitVertical,
   onSplitHorizontal,
   onPreview,
+  onInsertAsset,
+  onInsertVerbatim,
+  onTriggerAction,
   fileContextMenuHandlers,
 }: LayoutProps) {
   const isCurrentFileLex = isLexFile(currentFile ?? null)
@@ -437,6 +446,62 @@ export function Layout({
               title="Split horizontally"
             >
               <SplitSquareHorizontal size={16} />
+            </button>
+          </ButtonGroup>
+        </div>
+
+        <div className="w-px h-5 bg-border mx-1" />
+
+        {/* Actions Button Group */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] text-muted-foreground">Actions</span>
+          <ButtonGroup>
+            <button
+              onClick={() => {
+                logButtonClick('Available Actions button')
+                onTriggerAction?.()
+              }}
+              disabled={!canLexActions}
+              className={cn(
+                'flex items-center gap-2 px-2 py-1.5 rounded text-sm',
+                'hover:bg-panel-hover transition-colors',
+                !canLexActions && 'opacity-50 cursor-not-allowed'
+              )}
+              title="Available Actions (Quick Fix)"
+            >
+              <Lightbulb size={16} />
+            </button>
+            <ButtonGroupSeparator />
+            <button
+              onClick={() => {
+                logButtonClick('Insert Asset button')
+                onInsertAsset?.()
+              }}
+              disabled={!canLexActions}
+              className={cn(
+                'flex items-center gap-2 px-2 py-1.5 rounded text-sm',
+                'hover:bg-panel-hover transition-colors',
+                !canLexActions && 'opacity-50 cursor-not-allowed'
+              )}
+              title="Insert Asset"
+            >
+              <Image size={16} />
+            </button>
+            <ButtonGroupSeparator />
+            <button
+              onClick={() => {
+                logButtonClick('Insert Verbatim button')
+                onInsertVerbatim?.()
+              }}
+              disabled={!canLexActions}
+              className={cn(
+                'flex items-center gap-2 px-2 py-1.5 rounded text-sm',
+                'hover:bg-panel-hover transition-colors',
+                !canLexActions && 'opacity-50 cursor-not-allowed'
+              )}
+              title="Insert Verbatim Block"
+            >
+              <FileCode2 size={16} />
             </button>
           </ButtonGroup>
         </div>

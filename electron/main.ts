@@ -14,6 +14,7 @@ import {
   PaneRowLayout,
   EditorSettings,
   FormatterSettings,
+  FileTreeSettings,
 } from './window-manager'
 import { randomUUID } from 'crypto'
 // LspManager import removed as it is managed by WindowManager
@@ -167,6 +168,13 @@ const store = new Store<AppSettings>({
       properties: {
         enabled: { type: 'boolean', default: true },
         language: { type: 'string', default: 'en_US' },
+      },
+      default: {},
+    },
+    fileTree: {
+      type: 'object',
+      properties: {
+        showHiddenFiles: { type: 'boolean', default: false },
       },
       default: {},
     },
@@ -350,6 +358,7 @@ function applyMenuState(state: MenuState) {
   setEnabled('menu-preview', hasOpenFile && isLexFileOpen)
   setEnabled('menu-insert-asset', hasOpenFile && isLexFileOpen)
   setEnabled('menu-insert-verbatim', hasOpenFile && isLexFileOpen)
+  setEnabled('menu-reorder-footnotes', hasOpenFile && isLexFileOpen)
   setEnabled('menu-next-annotation', hasOpenFile && isLexFileOpen)
   setEnabled('menu-prev-annotation', hasOpenFile && isLexFileOpen)
   setEnabled('menu-resolve-annotation', hasOpenFile && isLexFileOpen)
@@ -772,6 +781,14 @@ ipcMain.handle(
   }
 )
 
+ipcMain.handle('set-filetree-settings', (_event, settings: FileTreeSettings) => {
+  store.set('fileTree', settings)
+  BrowserWindow.getAllWindows().forEach((w) => {
+    w.webContents.send('settings-changed', store.store)
+  })
+  return true
+})
+
 ipcMain.on('get-native-theme-sync', (event) => {
   event.returnValue = getSystemTheme()
 })
@@ -979,6 +996,39 @@ function createMenu() {
           click: (_, focusedWindow) =>
             getTargetWindow(focusedWindow)?.webContents.send('menu-insert-verbatim'),
         },
+        { type: 'separator' },
+        {
+          label: 'Reorder Footnotes',
+          id: 'menu-reorder-footnotes',
+          enabled: false,
+          click: (_, focusedWindow) =>
+            getTargetWindow(focusedWindow)?.webContents.send('menu-reorder-footnotes'),
+        },
+        { type: 'separator' },
+        {
+          label: 'Resolve Annotation',
+          accelerator: 'CmdOrCtrl+Shift+Enter',
+          id: 'menu-resolve-annotation',
+          enabled: false,
+          click: (_, focusedWindow) =>
+            getTargetWindow(focusedWindow)?.webContents.send('menu-resolve-annotation'),
+        },
+        {
+          label: 'Next Annotation',
+          accelerator: 'Ctrl+PgDown',
+          id: 'menu-next-annotation',
+          enabled: false,
+          click: (_, focusedWindow) =>
+            getTargetWindow(focusedWindow)?.webContents.send('menu-next-annotation'),
+        },
+        {
+          label: 'Previous Annotation',
+          accelerator: 'Ctrl+PgUp',
+          id: 'menu-prev-annotation',
+          enabled: false,
+          click: (_, focusedWindow) =>
+            getTargetWindow(focusedWindow)?.webContents.send('menu-prev-annotation'),
+        },
         // Settings in Edit menu for non-macOS platforms
         ...(!isMac
           ? [
@@ -1002,6 +1052,19 @@ function createMenu() {
           id: 'menu-preview',
           enabled: false,
           click: (_, focusedWindow) => focusedWindow?.webContents.send('menu-preview'),
+        },
+        {
+          label: 'Toggle Annotations',
+          id: 'menu-toggle-annotations',
+          enabled: false,
+          click: (_, focusedWindow) =>
+            getTargetWindow(focusedWindow)?.webContents.send('menu-toggle-annotations'),
+        },
+        {
+          label: 'Toggle Hidden Files',
+          id: 'menu-toggle-hidden-files',
+          click: (_, focusedWindow) =>
+            getTargetWindow(focusedWindow)?.webContents.send('menu-toggle-hidden-files'),
         },
         { type: 'separator' },
         {
@@ -1076,6 +1139,12 @@ if (!gotTheLock) {
   })
 
   app.whenReady().then(async () => {
+    app.setAboutPanelOptions({
+      applicationName: 'LexEd',
+      applicationVersion: app.getVersion(),
+      copyright: 'Copyright © 2024 Lex',
+      credits: 'Developed by the Lex Team',
+    })
     createMenu()
 
     // Configure auto-updater

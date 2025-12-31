@@ -5,17 +5,19 @@ import {
   EditorSettings,
   FormatterSettings,
   defaultAppSettings,
+  defaultFileTreeSettings,
 } from '@/settings/types'
 import { setSettingsSnapshot } from '@/settings/snapshot'
 
 import { lspClient } from '@/lsp/client'
-import { SpellcheckSettings } from '@/settings/types'
+import { SpellcheckSettings, FileTreeSettings } from '@/settings/types'
 
 interface SettingsContextType {
   settings: AppSettings
   updateEditorSettings: (settings: EditorSettings) => Promise<void>
   updateFormatterSettings: (settings: FormatterSettings) => Promise<void>
   updateSpellcheckSettings: (settings: SpellcheckSettings) => Promise<void>
+  updateFileTreeSettings: (settings: FileTreeSettings) => Promise<void>
 }
 
 const defaultSettings: AppSettings = defaultAppSettings
@@ -42,6 +44,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           editor: { ...prev.editor, ...(loadedSettings?.editor ?? {}) },
           formatter: { ...prev.formatter, ...(loadedSettings?.formatter ?? {}) },
           spellcheck: { ...prev.spellcheck, ...(loadedSettings?.spellcheck ?? {}) },
+          fileTree: {
+            ...defaultFileTreeSettings,
+            ...prev.fileTree,
+            ...(loadedSettings?.fileTree ?? {}),
+          },
           keybindings: {
             overrides: {
               ...prev.keybindings.overrides,
@@ -69,6 +76,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           editor: { ...prev.editor, ...(newSettings?.editor ?? {}) },
           formatter: { ...prev.formatter, ...(newSettings?.formatter ?? {}) },
           spellcheck: { ...prev.spellcheck, ...(newSettings?.spellcheck ?? {}) },
+          fileTree: {
+            ...defaultFileTreeSettings,
+            ...prev.fileTree,
+            ...(newSettings?.fileTree ?? {}),
+          },
           keybindings: {
             overrides: {
               ...prev.keybindings.overrides,
@@ -131,9 +143,24 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     })
   }
 
+  const updateFileTreeSettings = async (fileTreeSettings: FileTreeSettings) => {
+    await window.ipcRenderer.setFileTreeSettings(fileTreeSettings)
+    setSettings((prev) => {
+      const next = { ...prev, fileTree: fileTreeSettings } satisfies AppSettings
+      setSettingsSnapshot(next)
+      return next
+    })
+  }
+
   return (
     <SettingsContext.Provider
-      value={{ settings, updateEditorSettings, updateFormatterSettings, updateSpellcheckSettings }}
+      value={{
+        settings,
+        updateEditorSettings,
+        updateFormatterSettings,
+        updateSpellcheckSettings,
+        updateFileTreeSettings,
+      }}
     >
       {children}
     </SettingsContext.Provider>

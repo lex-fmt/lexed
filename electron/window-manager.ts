@@ -62,6 +62,10 @@ export interface SpellcheckSettings {
   language: string
 }
 
+export interface FileTreeSettings {
+  showHiddenFiles: boolean
+}
+
 export interface KeybindingOverride {
   mac?: string | null
   windows?: string | null
@@ -79,6 +83,7 @@ export interface AppSettings {
   formatter?: FormatterSettings
   spellcheck?: SpellcheckSettings
   keybindings?: KeybindingSettings
+  fileTree?: FileTreeSettings
   // Legacy fields (for migration)
   lastFolder?: string
   openTabs?: string[]

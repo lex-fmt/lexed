@@ -21,6 +21,14 @@ export interface SpellcheckSettings {
   language: string
 }
 
+export interface FileTreeSettings {
+  showHiddenFiles: boolean
+}
+
+export const defaultFileTreeSettings: FileTreeSettings = {
+  showHiddenFiles: false,
+}
+
 export type KeybindingPlatform = 'mac' | 'windows' | 'linux'
 
 export interface KeybindingOverride {
@@ -38,6 +46,7 @@ export interface AppSettings {
   formatter: FormatterSettings
   spellcheck: SpellcheckSettings
   keybindings: KeybindingSettings
+  fileTree: FileTreeSettings
   lastFolder?: string
 }
 
@@ -73,5 +82,6 @@ export const defaultAppSettings: AppSettings = {
   formatter: defaultFormatterSettings,
   spellcheck: defaultSpellcheckSettings,
   keybindings: defaultKeybindingSettings,
+  fileTree: defaultFileTreeSettings,
   lastFolder: undefined,
 }

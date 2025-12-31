@@ -16,6 +16,19 @@ test.describe('Vim Mode', () => {
     const page = await electronApp.firstWindow()
     await page.waitForLoadState('domcontentloaded')
 
+    // Wait for Welcome View to ensure app is interactive
+    // The welcome view shows "Lex" as header
+    await expect(page.locator('text=Simple. Fast. Markdown.')).toBeVisible()
+
+    // Open a file to ensure Editor is active (and status bar visible)
+    // using keyboard shortcut for New File since we are in a fresh instance
+    // Note: On Mac 'Meta+N', Windows/Linux 'Control+N'
+    const modifier = process.platform === 'darwin' ? 'Meta' : 'Control'
+    await page.keyboard.press(`${modifier}+N`)
+
+    // Wait for editor to be visible
+    await expect(page.locator('.monaco-editor').first()).toBeVisible({ timeout: 10000 })
+
     // Open settings
     await page.click('button[title="Settings"]')
     await expect(page.locator('h2:has-text("Settings")')).toBeVisible()

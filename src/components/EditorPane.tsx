@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { Editor, EditorHandle } from './Editor'
 import { PreviewPane } from './PreviewPane'
+import { WelcomeView } from './WelcomeView'
 import { TabBar, Tab, TabDropData } from './TabBar'
 import { StatusBar, ExportStatus } from './StatusBar'
 import type { FileContextMenuHandlers } from './FileContextMenu'
@@ -339,7 +340,9 @@ export const EditorPane = forwardRef<EditorPaneHandle, EditorPaneProps>(function
         contextMenuHandlers={contextMenuHandlers}
       />
       <div className="flex-1 min-h-0">
-        {isPreviewTab && activeTab?.previewContent ? (
+        {tabs.length === 0 ? (
+          <WelcomeView />
+        ) : isPreviewTab && activeTab?.previewContent ? (
           <PreviewPane content={activeTab.previewContent} />
         ) : (
           <Editor

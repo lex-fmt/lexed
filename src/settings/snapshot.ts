@@ -4,6 +4,7 @@ import type {
   FormatterSettings,
   KeybindingSettings,
   SpellcheckSettings,
+  FileTreeSettings,
 } from './types'
 import { defaultAppSettings } from './types'
 
@@ -11,6 +12,7 @@ let currentSettings: AppSettings = {
   editor: { ...defaultAppSettings.editor },
   formatter: { ...defaultAppSettings.formatter },
   spellcheck: { ...defaultAppSettings.spellcheck },
+  fileTree: { ...defaultAppSettings.fileTree },
   keybindings: {
     ...defaultAppSettings.keybindings,
     overrides: { ...defaultAppSettings.keybindings.overrides },
@@ -45,10 +47,15 @@ const cloneKeybindings = (keybindings: KeybindingSettings): KeybindingSettings =
   overrides: { ...keybindings.overrides },
 })
 
+const cloneFileTree = (fileTree: FileTreeSettings): FileTreeSettings => ({
+  showHiddenFiles: fileTree.showHiddenFiles,
+})
+
 const cloneSettings = (settings: AppSettings): AppSettings => ({
   editor: cloneEditor(settings.editor),
   formatter: cloneFormatter(settings.formatter),
   spellcheck: cloneSpellcheck(settings.spellcheck),
+  fileTree: cloneFileTree(settings.fileTree),
   keybindings: cloneKeybindings(settings.keybindings),
   lastFolder: settings.lastFolder,
 })
@@ -75,4 +82,8 @@ export function getSpellcheckSettingsSnapshot(): SpellcheckSettings {
 
 export function getKeybindingSettingsSnapshot(): KeybindingSettings {
   return cloneKeybindings(currentSettings.keybindings)
+}
+
+export function getFileTreeSettingsSnapshot(): FileTreeSettings {
+  return cloneFileTree(currentSettings.fileTree)
 }

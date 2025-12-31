@@ -1,0 +1,26 @@
+A few pointers on the implementation.
+
+1. All non editor exclusive logic should be in the rust code base (lex-lsp, lex-babel or core or any other crate that is currently available in the binary lex-lsp (then run build --with-source to pick it pup)), and that should have regular rust unit tests.
+2. The editor implementation should be as much as possible a thin UI / editor related layer that offloads the heavy lifting to the rust binary, so that all editors share as much code as possible. (nvim, vscode and lexed)
+3. Even things like available comands per open file can be shared. In nvim, there is no file tree widget or editor tab contextual menu, but there are commands. For example, what acations are available given an open buffer (i.e. export pdf, etc) should have a shared logic, even though each editor UI is editor specific.
+4. For examople , the completion logic can be centralized, but each editor implements it's own ui.
+- Macos: Quit app on last window closed (electron setting)
+- Restore open files on startup (per window). If a file is missing, just ignore it, no errors.
+- Implement completion for generating some more complicated elements:. Split the logic (given @table or @image to complete generate the text) from the ui, and unit test the logic. 
+  - @table 2 2 (or @table 2x3 or @table 2x 3 (spaces opetional can have x and no x))
+  - @table <column names> lines (optional, 1 is default), i.e. @table Name DOB Nationality 4 (will create a table, in a verbatim block formated as markdown with the the Name, Dob and Nationality colums and three rows), row number is optional
+  - auto complete table row, if editing a table line start with | should insert an empty row (the right number of pipes, and the cursor on the first column)
+  - image , should have a src parameter and the caret in that value, also @image path/ should work too.
+  - the file tree widget should not show hidden files (start with .)
+  - the export to pdf is working, and in the File> Export > menu as expected, but is missing from the the toolbar. This is an opportunity to make a code improvement. Toolbar buttons have menu counterpoatrs. For exports and some other features, enabled features are active editor dependent (you can export a lex file to lex, nor create a pdf with no editor files open). These logic, and most of the toolbar code should be centralized in tandem with menus (for example what decides what is enabled or not). Only the thin ui code that calls the actual logic is different, but everything else should be the same. Also the contextual meny for both editor tabs and files in the file tree have the same issue and logic. That is to say, centralize the code that decides waht operations can be executed in a given path, and alter the contextual menus in file tree and editor tab, the main menus and the toolbar to use the same logic. Write tests for the logic. 
+  - if there are no open files, on start up, if the file exists we should open the "welcome to lex" file and have it active in the editor
+  - when exporting to pdf, we show a toast notification with the sucess message. make that a link to open the file in the finder/explorer/linux equivalent (as the reveal menu itemn does)
+  - add completion for footnotes refernce [<integer] by having @note <num>, this should insert the link to the note [<num>] on the current carret line, then create the respective note item at the end
+  - alter the about Lexed menu version. It should show the current version for release builds, and @version+lexed commit hash for developement builds (ex v0.3.2 for relase and v0.3.2-dev-<hash> for dev)
+  - implement navigation for footnotes , when the cursor is in the note reference (i.e. [3] it should go to the footnote definition, if there is one (else no navigation)), conversely, if the carret is sinde a foot note def first line (numbered item in the last root sesson) it should go to the foot note ref if there is one. likewise it's critical to split the logic from ui so that the 
+  - add a rust lsp command for footnotes-reorder. What this should do is re-order the number for the footnote itself and update the ref. say we have footnotes 1,2,3 and we delete the content of the footnote 2 and the ref, we should renumber footnote 3 to be 2 
+  - add diagnotics for mismatched footnotes (both a ref that has no footnote content , footnotes without refs are ok, as it's often the case one will generate the footnotes and only link later)
+  - we shold have a README-dev.lex for each editor client (vscode, nvim, and lexed. It should have these informations types of information. )
+    - the guidelines above (logic in rust, thin ui layer, unittesting), this should be shared.
+    - editor specific items (i.e. how to run integration tests, build, etc)
+    - A pointer to https://github.com/lex-fmt/lex-workspace/EDITORS.lex , that being a lex formatted file that has a feature table listing which features are available for each editor. Keep in mind that lexed is not a plugin , but a full fledged app. Hence it has features that are already poarts of other editors (i.e. spell checking), those are not to be listed, (it's the lex content features we're intereested.) . Do check the code to verify implementation status.

@@ -1,6 +1,8 @@
 Lex LexEd Architecture
 
     This document outlines the architecture of the Lex LexEd application and the integration with the Rust-based Language Server Protocol (LSP).
+    
+    For a detailed matrix of supported features, see [EDITORS.lex](../EDITORS.lex).
 
 1. Architecture Overview
 

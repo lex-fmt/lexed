@@ -57,7 +57,7 @@ function AppContent() {
     resolvedActivePane,
     resolvedActivePaneId,
   } = usePersistedPaneLayout(createTabFromPath)
-  const { settings } = useSettings()
+  const { settings, updateFileTreeSettings } = useSettings()
   const { rootPath, setRootPath } = useRootFolder()
   const [exportStatus, setExportStatus] = useState<ExportStatus>({
     isExporting: false,
@@ -332,7 +332,12 @@ function AppContent() {
       await window.ipcRenderer.invoke('file-save', outputPath, lexContent)
 
       const fileName = outputPath.split('/').pop() || outputPath
-      toast.success(`Converted to ${fileName}`)
+      toast.success(`Converted to ${fileName}`, {
+        action: {
+          label: 'Show',
+          onClick: () => window.ipcRenderer.showItemInFolder(outputPath),
+        },
+      })
       openFileInPane(activePaneIdValue, outputPath)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Conversion failed'
@@ -380,7 +385,12 @@ function AppContent() {
         }
 
         const fileName = outputPath.split('/').pop() || outputPath
-        toast.success(`Exported to ${fileName}`)
+        toast.success(`Exported to ${fileName}`, {
+          action: {
+            label: 'Show',
+            onClick: () => window.ipcRenderer.showItemInFolder(outputPath),
+          },
+        })
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Export failed'
         toast.error(message)
@@ -540,6 +550,24 @@ function AppContent() {
     if (!activeEditor) return
     await toggleAnnotations(activeEditor)
   }, [activeEditor, ensureLspAvailable])
+
+  const handleToggleHiddenFiles = useCallback(async () => {
+    const current = settings.fileTree.showHiddenFiles
+    await updateFileTreeSettings({ showHiddenFiles: !current })
+  }, [settings.fileTree.showHiddenFiles, updateFileTreeSettings])
+
+  const handleTriggerAction = useCallback(() => {
+    if (!activeEditor) return
+    activeEditor.trigger('toolbar', 'editor.action.quickFix', null)
+  }, [activeEditor])
+
+  const handleReorderFootnotes = useCallback(() => {
+    if (!activeEditor) return
+    // "Reorder footnotes" is a "source" action. We can trigger the Source Action menu.
+    // There isn't a direct standard command for "run specific source action" in Monaco without custom wiring,
+    // so showing the menu is the best integration for now.
+    activeEditor.trigger('menu', 'editor.action.sourceAction', null)
+  }, [activeEditor])
 
   const handleOpenFilePath = useCallback(
     (filePath: string) => {
@@ -748,6 +776,8 @@ function AppContent() {
     onPrevAnnotation: handlePrevAnnotation,
     onResolveAnnotation: handleResolveAnnotation,
     onToggleAnnotations: handleToggleAnnotations,
+    onToggleHiddenFiles: handleToggleHiddenFiles,
+    onReorderFootnotes: handleReorderFootnotes,
     onOpenFilePath: handleOpenFilePath,
     onShowShortcuts: () => setShortcutsOpen(true),
   })
@@ -908,6 +938,9 @@ function AppContent() {
         onSplitVertical={handleSplitVertical}
         onSplitHorizontal={handleSplitHorizontal}
         onPreview={handlePreview}
+        onInsertAsset={handleInsertAsset}
+        onInsertVerbatim={handleInsertVerbatim}
+        onTriggerAction={handleTriggerAction}
         currentFile={activePaneFile}
         fileContextMenuHandlers={fileContextMenuHandlers}
         panel={
