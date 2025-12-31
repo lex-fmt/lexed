@@ -2,7 +2,7 @@
   "name": "lexed",
   "productName": "LexEd",
   "private": true,
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "LexEd editor for Lex",
   "author": {
     "name": "Arthur Debert",
