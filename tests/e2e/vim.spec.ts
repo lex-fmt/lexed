@@ -18,13 +18,11 @@ test.describe('Vim Mode', () => {
 
     // Wait for Welcome View to ensure app is interactive
     // The welcome view shows "Lex" as header
-    await expect(page.locator('text=Simple. Fast. Markdown.')).toBeVisible()
+    await expect(page.locator('text=Simple. Fast. Markdown.').first()).toBeVisible()
 
     // Open a file to ensure Editor is active (and status bar visible)
-    // using keyboard shortcut for New File since we are in a fresh instance
-    // Note: On Mac 'Meta+N', Windows/Linux 'Control+N'
-    const modifier = process.platform === 'darwin' ? 'Meta' : 'Control'
-    await page.keyboard.press(`${modifier}+N`)
+    // Use fixture to avoid native save dialogs
+    await openFixture(page, 'spellcheck-test.lex')
 
     // Wait for editor to be visible
     await expect(page.locator('.monaco-editor').first()).toBeVisible({ timeout: 10000 })
