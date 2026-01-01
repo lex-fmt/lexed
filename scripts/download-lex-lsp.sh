@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 RESOURCES_DIR="$APP_DIR/resources"
 
-# lex-lsp version and repository (keep in sync with shared/src/lex-version.json)
+# lex-lsp version and repository (reads from shared/lex-deps.json)
 LEX_CONFIG_SCRIPT="$APP_DIR/scripts/read-lex-config.mjs"
 
 if [[ -z "${LEX_LSP_VERSION:-}" ]]; then

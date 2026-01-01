@@ -3,47 +3,78 @@ import { WebContents, app, dialog } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
 
-function detectWorkspaceRoot(): string {
+/**
+ * Detect the lex workspace root by looking for the characteristic structure:
+ * a directory containing core/, editors/, tools/ subdirectories.
+ * Returns null if not in a lex workspace.
+ */
+function detectLexWorkspace(): string | null {
   const override = process.env.LEX_WORKSPACE_ROOT
-  if (override) {
+  if (override && fs.existsSync(override)) {
     return path.resolve(override)
   }
 
+  // Start from lexed repo and look for parent workspace
   let current = process.cwd()
   const { root } = path.parse(current)
+
   while (current !== root) {
-    if (fs.existsSync(path.join(current, 'Cargo.toml'))) {
-      return current
+    // Check for lex workspace structure: parent dir with core/, editors/, tools/
+    const parent = path.dirname(current)
+    if (
+      fs.existsSync(path.join(parent, 'core')) &&
+      fs.existsSync(path.join(parent, 'editors')) &&
+      fs.existsSync(path.join(parent, 'tools'))
+    ) {
+      return parent
     }
-    current = path.dirname(current)
+    current = parent
   }
-  if (fs.existsSync(path.join(root, 'Cargo.toml'))) {
-    return root
-  }
-  return process.cwd()
+
+  return null
 }
 
-const DEV_WORKSPACE_ROOT = detectWorkspaceRoot()
-
-function resolveDevBinary(binaryName: string): string {
-  const override = process.env.LEX_LSP_PATH
-  if (override) {
-    return path.resolve(override)
-  }
-  const resourcesRoot = path.join(process.env.APP_ROOT ?? DEV_WORKSPACE_ROOT, 'resources')
-  const resourcesBinary = process.platform === 'win32' ? `${binaryName}` : 'lex-lsp'
-  const candidates: string[] = [
-    path.join(DEV_WORKSPACE_ROOT, 'target', 'debug', binaryName),
-    path.join(resourcesRoot, resourcesBinary),
-  ]
-
-  for (const candidate of candidates) {
-    if (candidate && fs.existsSync(candidate)) {
-      return candidate
+/**
+ * Binary resolution priority:
+ * 1. LEX_LSP_PATH env var (explicit override)
+ * 2. Workspace binary at {workspace}/target/local/lex-lsp (dev convenience)
+ * 3. Bundled/resources binary
+ */
+function resolveLspBinary(binaryName: string): { path: string; source: string; warning?: string } {
+  // 1. Environment variable takes precedence
+  const envPath = process.env.LEX_LSP_PATH
+  if (envPath) {
+    const resolved = path.resolve(envPath)
+    if (fs.existsSync(resolved)) {
+      return { path: resolved, source: 'env' }
     }
+    return { path: resolved, source: 'env', warning: `LEX_LSP_PATH set but binary not found: ${resolved}` }
   }
 
-  return candidates[0]
+  // 2. Check for workspace binary (dev mode)
+  const workspace = detectLexWorkspace()
+  if (workspace) {
+    const workspaceBinary = path.join(workspace, 'target', 'local', binaryName)
+    if (fs.existsSync(workspaceBinary)) {
+      return { path: workspaceBinary, source: 'workspace' }
+    }
+    // Workspace detected but no binary - warn but continue to fallback
+    const warning = `Lex workspace detected at ${workspace} but no dev binary found. Run ./scripts/build-local.sh to build it.`
+
+    // 3. Fall back to resources binary
+    const resourcesRoot = path.join(process.env.APP_ROOT ?? process.cwd(), 'resources')
+    const resourcesBinary = path.join(resourcesRoot, binaryName)
+    if (fs.existsSync(resourcesBinary)) {
+      return { path: resourcesBinary, source: 'resources', warning }
+    }
+
+    return { path: resourcesBinary, source: 'resources', warning }
+  }
+
+  // 3. Resources binary (not in workspace)
+  const resourcesRoot = path.join(process.env.APP_ROOT ?? process.cwd(), 'resources')
+  const resourcesBinary = path.join(resourcesRoot, binaryName)
+  return { path: resourcesBinary, source: 'resources' }
 }
 
 function resolveLogFile(): string {
@@ -104,19 +135,28 @@ export class LspManager {
 
     this.rootPath = rootPath || null
 
-    let lspPath: string
-
     const binaryName = process.platform === 'win32' ? 'lex-lsp.exe' : 'lex-lsp'
+    let lspPath: string
+    let warning: string | undefined
 
     if (app.isPackaged) {
       // In production, the binary is in Resources
       lspPath = path.join(process.resourcesPath, binaryName)
     } else {
-      lspPath = resolveDevBinary(binaryName)
+      const resolved = resolveLspBinary(binaryName)
+      lspPath = resolved.path
+      warning = resolved.warning
+      log(`Binary resolution: source=${resolved.source}, path=${lspPath}`)
+    }
+
+    // Log warning about workspace without dev binary
+    if (warning) {
+      log(`Warning: ${warning}`)
+      console.warn(warning)
     }
 
     if (!fs.existsSync(lspPath)) {
-      const message = `Lex language server binary not found at ${lspPath}. Run "npm run build" once or execute scripts/download-lex-lsp.sh to fetch it.`
+      const message = `Lex language server binary not found at ${lspPath}. Run scripts/download-lex-lsp.sh to fetch it.`
       log(message)
       dialog.showErrorBox('Lex LSP Missing', message)
       this.sendStatus({ status: 'missing-binary', message, path: lspPath })

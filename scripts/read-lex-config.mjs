@@ -5,8 +5,16 @@ import { fileURLToPath } from 'node:url';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '..');
-const configPath = path.join(repoRoot, 'shared', 'src', 'lex-version.json');
-const key = process.argv[2] ?? 'lexLspVersion';
+const configPath = path.join(repoRoot, 'shared', 'lex-deps.json');
+
+// Map old key names to new ones for backwards compatibility during migration
+const keyMap = {
+  lexLspVersion: 'lex-lsp',
+  lexLspRepo: 'lex-lsp-repo',
+};
+
+const requestedKey = process.argv[2] ?? 'lex-lsp';
+const key = keyMap[requestedKey] ?? requestedKey;
 
 try {
   const raw = readFileSync(configPath, 'utf8');
@@ -22,6 +30,6 @@ try {
   }
   process.stdout.write(value);
 } catch (error) {
-  console.error(`Unable to read lex version config: ${(error && error.message) || error}`);
+  console.error(`Unable to read lex deps config: ${(error && error.message) || error}`);
   process.exit(1);
 }
