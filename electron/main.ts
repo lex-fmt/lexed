@@ -293,22 +293,53 @@ let currentMenuState: MenuState = {
   isLexFile: false,
 }
 
+interface CliPaths {
+  files: string[]
+  folder: string | null
+}
+
 /**
- * Extract .lex file paths from command line arguments.
- * Filters out Electron flags and non-.lex files.
+ * Extract paths from command line arguments for CLI usage.
+ * Returns files to open and an optional folder to set as workspace.
  */
-function extractLexFilesFromArgv(argv: string[]): string[] {
-  return argv
+function extractPathsFromArgv(argv: string[]): CliPaths {
+  const paths = argv
     .filter((arg) => !arg.startsWith('-') && !arg.startsWith('--'))
-    .filter((arg) => arg.endsWith('.lex'))
     .filter((arg) => {
-      try {
-        return fsSync.existsSync(arg) && fsSync.statSync(arg).isFile()
-      } catch {
-        return false
-      }
+      // Skip the electron binary and main script paths
+      if (arg.includes('electron') || arg.includes('Electron')) return false
+      if (arg.endsWith('.js') || arg.endsWith('.mjs')) return false
+      return true
     })
     .map((arg) => path.resolve(arg))
+
+  const files: string[] = []
+  let folder: string | null = null
+
+  for (const p of paths) {
+    try {
+      const stat = fsSync.statSync(p)
+      if (stat.isDirectory()) {
+        // Use the first directory as the workspace folder
+        if (!folder) {
+          folder = p
+        }
+      } else if (stat.isFile()) {
+        files.push(p)
+        // If opening a file, use its directory as folder if no folder specified
+        if (!folder) {
+          folder = path.dirname(p)
+        }
+      }
+    } catch {
+      // Path doesn't exist - could be a new file
+      if (p.endsWith('.lex')) {
+        files.push(p)
+      }
+    }
+  }
+
+  return { files, folder }
 }
 
 /**
@@ -329,6 +360,40 @@ function openFilesInWindow(filePaths: string[]) {
   } else {
     // No windows exist, create a new one with the files
     windowManager.createWindow(undefined, { showSplash: true, openFiles: filePaths })
+  }
+}
+
+/**
+ * Open paths from CLI arguments.
+ * Handles both files and folders.
+ */
+function openCliPaths(cliPaths: CliPaths) {
+  const { files, folder } = cliPaths
+  if (files.length === 0 && !folder) return
+
+  const windows = windowManager.getAllWindows()
+  const targetWin = windows[0]
+
+  if (targetWin && !targetWin.isDestroyed()) {
+    // Set folder first if specified
+    if (folder) {
+      targetWin.webContents.send('open-folder-path', folder)
+    }
+    // Then open files
+    for (const filePath of files) {
+      targetWin.webContents.send('open-file-path', filePath)
+      app.addRecentDocument(filePath)
+    }
+    // Bring window to front
+    if (targetWin.isMinimized()) targetWin.restore()
+    targetWin.focus()
+  } else {
+    // No windows exist, create a new one
+    // The folder will be set via settings if provided
+    if (folder) {
+      store.set('lastFolder', folder)
+    }
+    windowManager.createWindow(undefined, { showSplash: true, openFiles: files })
   }
 }
 
@@ -1085,6 +1150,52 @@ function createMenu() {
         { role: 'togglefullscreen' },
       ],
     },
+    // Shell menu (macOS only) - CLI installation
+    ...(isMac
+      ? [
+          {
+            label: 'Shell',
+            submenu: [
+              {
+                id: 'menu-install-cli',
+                label: "Install 'lexed' command in PATH",
+                visible: !isCliInstalled(),
+                click: async () => {
+                  const result = await installCliCommand()
+                  updateShellMenuVisibility()
+                  const windows = windowManager.getAllWindows()
+                  const targetWindow = windows.find((w) => w.isFocused()) || windows[0]
+                  if (targetWindow && !targetWindow.isDestroyed()) {
+                    targetWindow.webContents.send(
+                      'show-toast',
+                      result.success ? 'success' : 'error',
+                      result.message
+                    )
+                  }
+                },
+              },
+              {
+                id: 'menu-uninstall-cli',
+                label: "Uninstall 'lexed' command from PATH",
+                visible: isCliInstalled(),
+                click: async () => {
+                  const result = await uninstallCliCommand()
+                  updateShellMenuVisibility()
+                  const windows = windowManager.getAllWindows()
+                  const targetWindow = windows.find((w) => w.isFocused()) || windows[0]
+                  if (targetWindow && !targetWindow.isDestroyed()) {
+                    targetWindow.webContents.send(
+                      'show-toast',
+                      result.success ? 'success' : 'error',
+                      result.message
+                    )
+                  }
+                },
+              },
+            ],
+          },
+        ]
+      : []),
     {
       label: 'Window',
       submenu: [
@@ -1102,6 +1213,126 @@ function createMenu() {
   applyMenuState(currentMenuState)
 }
 
+/**
+ * Check if the CLI command is installed.
+ */
+function isCliInstalled(): boolean {
+  if (process.platform !== 'darwin') return false
+  const targetPath = '/usr/local/bin/lexed'
+  try {
+    const linkTarget = fsSync.readlinkSync(targetPath)
+    // Check if it points to our app's bin/lexed
+    return linkTarget.includes('LexEd.app') || linkTarget.includes('lexed/bin/lexed')
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Update the Shell menu visibility based on CLI install status.
+ */
+function updateShellMenuVisibility() {
+  if (!applicationMenu) return
+  const installItem = applicationMenu.getMenuItemById('menu-install-cli')
+  const uninstallItem = applicationMenu.getMenuItemById('menu-uninstall-cli')
+  if (installItem && uninstallItem) {
+    const installed = isCliInstalled()
+    installItem.visible = !installed
+    uninstallItem.visible = installed
+  }
+}
+
+/**
+ * Install the 'lexed' CLI command in PATH.
+ * Creates a symlink from /usr/local/bin/lexed to the bundled CLI script.
+ * Requires administrator privileges on macOS.
+ */
+async function installCliCommand(): Promise<{ success: boolean; message: string }> {
+  if (process.platform !== 'darwin') {
+    return { success: false, message: 'CLI installation is only supported on macOS' }
+  }
+
+  const targetPath = '/usr/local/bin/lexed'
+  const sourcePath = app.isPackaged
+    ? path.join(process.resourcesPath, 'bin', 'lexed')
+    : path.join(__dirname, '..', 'bin', 'lexed')
+
+  // Check if source exists
+  if (!fsSync.existsSync(sourcePath)) {
+    return { success: false, message: `CLI script not found at ${sourcePath}` }
+  }
+
+  // Check if already installed and pointing to correct location
+  try {
+    const existingLink = fsSync.readlinkSync(targetPath)
+    if (existingLink === sourcePath) {
+      return { success: true, message: 'CLI command is already installed' }
+    }
+  } catch {
+    // Target doesn't exist or isn't a symlink - continue with installation
+  }
+
+  // Create /usr/local/bin if it doesn't exist and create symlink
+  // Use osascript to get admin privileges
+  const { exec } = await import('child_process')
+  const { promisify } = await import('util')
+  const execAsync = promisify(exec)
+
+  const script = `
+    do shell script "mkdir -p /usr/local/bin && rm -f ${targetPath} && ln -s '${sourcePath}' ${targetPath}" with administrator privileges
+  `
+
+  try {
+    await execAsync(`osascript -e '${script}'`)
+    return {
+      success: true,
+      message: `Successfully installed 'lexed' command.\n\nYou can now open files with:\n  lexed /path/to/file.lex`,
+    }
+  } catch (error) {
+    const err = error as Error & { code?: number }
+    if (err.code === 1) {
+      // User cancelled the admin dialog
+      return { success: false, message: 'Installation cancelled' }
+    }
+    return { success: false, message: `Failed to install CLI: ${err.message}` }
+  }
+}
+
+/**
+ * Uninstall the 'lexed' CLI command from PATH.
+ */
+async function uninstallCliCommand(): Promise<{ success: boolean; message: string }> {
+  if (process.platform !== 'darwin') {
+    return { success: false, message: 'CLI uninstallation is only supported on macOS' }
+  }
+
+  const targetPath = '/usr/local/bin/lexed'
+
+  // Check if installed
+  if (!fsSync.existsSync(targetPath)) {
+    return { success: true, message: 'CLI command is not installed' }
+  }
+
+  const { exec } = await import('child_process')
+  const { promisify } = await import('util')
+  const execAsync = promisify(exec)
+
+  const script = `
+    do shell script "rm -f ${targetPath}" with administrator privileges
+  `
+
+  try {
+    await execAsync(`osascript -e '${script}'`)
+    return { success: true, message: "Successfully uninstalled 'lexed' command" }
+  } catch (error) {
+    const err = error as Error & { code?: number }
+    if (err.code === 1) {
+      return { success: false, message: 'Uninstallation cancelled' }
+    }
+    return { success: false, message: `Failed to uninstall CLI: ${err.message}` }
+  }
+}
+
 // Windows: Set App User Model ID for proper taskbar grouping
 if (process.platform === 'win32') {
   app.setAppUserModelId('com.lex.lexed')
@@ -1116,18 +1347,23 @@ if (!gotTheLock) {
   app.quit()
 } else {
   // Handle second instance launch (Windows/Linux: file opened when app is already running)
+  // Also handles CLI invocations via `lexed /path`
   app.on('second-instance', (_event, argv) => {
-    // Someone tried to run a second instance, focus our window
-    const windows = windowManager.getAllWindows()
-    if (windows.length > 0) {
-      const win = windows[0]
-      if (win.isMinimized()) win.restore()
-      win.focus()
-    }
+    // Extract paths from CLI arguments (handles both files and folders)
+    const cliPaths = extractPathsFromArgv(argv)
 
-    // On Windows/Linux, file paths come via command line arguments
-    const filesToOpen = extractLexFilesFromArgv(argv)
-    openFilesInWindow(filesToOpen)
+    if (cliPaths.files.length > 0 || cliPaths.folder) {
+      // CLI invocation with paths
+      openCliPaths(cliPaths)
+    } else {
+      // No paths, just focus the existing window
+      const windows = windowManager.getAllWindows()
+      if (windows.length > 0) {
+        const win = windows[0]
+        if (win.isMinimized()) win.restore()
+        win.focus()
+      }
+    }
   })
 
   // macOS: Handle file open via Finder (double-click, drag-drop, Open With)
@@ -1218,10 +1454,14 @@ if (!gotTheLock) {
     // Handle first launch setup (create Documents/LexEd and copy welcome doc)
     const welcomeFilePath = await setupFirstLaunch()
 
-    // Handle files passed via command line on initial launch
-    const initialFiles = extractLexFilesFromArgv(process.argv)
-    if (initialFiles.length > 0) {
-      windowManager.createWindow(undefined, { showSplash: true, openFiles: initialFiles })
+    // Handle paths passed via command line on initial launch (CLI support)
+    const cliPaths = extractPathsFromArgv(process.argv)
+    if (cliPaths.files.length > 0 || cliPaths.folder) {
+      // CLI invocation with paths
+      if (cliPaths.folder) {
+        store.set('lastFolder', cliPaths.folder)
+      }
+      windowManager.createWindow(undefined, { showSplash: true, openFiles: cliPaths.files })
     } else if (welcomeFilePath) {
       // First launch: set the LexEd folder as workspace and open welcome file
       const projectPath = getDefaultProjectPath()

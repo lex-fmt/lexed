@@ -84,6 +84,9 @@ interface Window {
     setSpellcheckSettings: (settings: { enabled: boolean; language: string }) => Promise<boolean>
     setFileTreeSettings: (settings: { showHiddenFiles: boolean }) => Promise<boolean>
     onSettingsChanged: (callback: (settings: any) => void) => () => void
+    onShowToast: (
+      callback: (type: 'success' | 'error' | 'info', message: string) => void
+    ) => () => void
   }
   lexTest?: {
     openFixture: (

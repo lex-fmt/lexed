@@ -184,6 +184,20 @@ function AppContent() {
     }
   }, [lspError])
 
+  // Listen for toast notifications from main process
+  useEffect(() => {
+    const unsubscribe = window.ipcRenderer.onShowToast?.((type, message) => {
+      if (type === 'success') {
+        toast.success(message)
+      } else if (type === 'error') {
+        toast.error(message)
+      } else {
+        toast.info(message)
+      }
+    })
+    return () => unsubscribe?.()
+  }, [])
+
   useMenuStateSync(Boolean(activePaneFile), isActiveFileLex)
 
   const registerPaneHandle = useCallback(

@@ -1,0 +1,131 @@
+#!/bin/bash
+#
+# LexEd CLI - Open files and folders in LexEd from the command line
+#
+# Usage:
+#   lexed [options] [path...]
+#
+# Options:
+#   --help, -h      Show this help message
+#   --version, -v   Show version information
+#   --wait, -w      Wait for the file to be closed before returning
+#
+# Examples:
+#   lexed                      # Open LexEd
+#   lexed file.lex             # Open a file
+#   lexed ~/Documents/project  # Open a folder
+#   lexed file1.lex file2.lex  # Open multiple files
+
+set -e
+
+# Resolve the real path of this script (follows symlinks)
+SCRIPT_SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SCRIPT_SOURCE" ]; do
+  SCRIPT_DIR="$(cd -P "$(dirname "$SCRIPT_SOURCE")" && pwd)"
+  SCRIPT_SOURCE="$(readlink "$SCRIPT_SOURCE")"
+  [[ $SCRIPT_SOURCE != /* ]] && SCRIPT_SOURCE="$SCRIPT_DIR/$SCRIPT_SOURCE"
+done
+SCRIPT_DIR="$(cd -P "$(dirname "$SCRIPT_SOURCE")" && pwd)"
+
+# Find the app bundle
+# Script is at: LexEd.app/Contents/Resources/bin/lexed
+# App is at: LexEd.app
+APP_PATH="$(dirname "$(dirname "$(dirname "$SCRIPT_DIR")")")"
+
+# Validate we found a proper app bundle
+if [[ ! -d "$APP_PATH" ]] || [[ ! -f "$APP_PATH/Contents/MacOS/LexEd" ]]; then
+  # Try common installation locations
+  if [[ -d "/Applications/LexEd.app" ]]; then
+    APP_PATH="/Applications/LexEd.app"
+  elif [[ -d "$HOME/Applications/LexEd.app" ]]; then
+    APP_PATH="$HOME/Applications/LexEd.app"
+  else
+    echo "Error: Could not find LexEd.app" >&2
+    echo "Please ensure LexEd is installed in /Applications or ~/Applications" >&2
+    exit 1
+  fi
+fi
+
+ELECTRON_PATH="$APP_PATH/Contents/MacOS/LexEd"
+WAIT_FLAG=""
+
+show_help() {
+  cat << 'EOF'
+LexEd CLI - Open files and folders in LexEd from the command line
+
+Usage:
+  lexed [options] [path...]
+
+Options:
+  --help, -h      Show this help message
+  --version, -v   Show version information
+  --wait, -w      Wait for the file to be closed before returning
+
+Examples:
+  lexed                      # Open LexEd
+  lexed file.lex             # Open a file
+  lexed ~/Documents/project  # Open a folder
+  lexed file1.lex file2.lex  # Open multiple files
+EOF
+}
+
+show_version() {
+  # Extract version from the app's Info.plist
+  if [[ -f "$APP_PATH/Contents/Info.plist" ]]; then
+    VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP_PATH/Contents/Info.plist" 2>/dev/null || echo "unknown")
+    echo "LexEd $VERSION"
+  else
+    echo "LexEd (version unknown)"
+  fi
+}
+
+# Parse arguments
+PATHS=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --help|-h)
+      show_help
+      exit 0
+      ;;
+    --version|-v)
+      show_version
+      exit 0
+      ;;
+    --wait|-w)
+      WAIT_FLAG="--wait"
+      shift
+      ;;
+    -*)
+      echo "Unknown option: $1" >&2
+      echo "Run 'lexed --help' for usage information" >&2
+      exit 1
+      ;;
+    *)
+      # Convert to absolute path
+      if [[ -e "$1" ]]; then
+        PATHS+=("$(cd "$(dirname "$1")" && pwd)/$(basename "$1")")
+      else
+        # File doesn't exist yet, still convert to absolute path
+        if [[ "$1" = /* ]]; then
+          PATHS+=("$1")
+        else
+          PATHS+=("$(pwd)/$1")
+        fi
+      fi
+      shift
+      ;;
+  esac
+done
+
+# Launch the app
+if [[ ${#PATHS[@]} -eq 0 ]]; then
+  # No paths specified, just open the app
+  open -a "$APP_PATH"
+else
+  # Open with paths as arguments
+  if [[ -n "$WAIT_FLAG" ]]; then
+    open -a "$APP_PATH" -W --args "${PATHS[@]}"
+  else
+    open -a "$APP_PATH" --args "${PATHS[@]}"
+  fi
+fi
