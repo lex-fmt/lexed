@@ -70,7 +70,6 @@ export interface DirEntry {
     name: string;
     path: string;
     isDirectory: boolean;
-    isFile: boolean;
 }
 /** Pane layout for persistence */
 export interface PaneLayout {
@@ -102,6 +101,7 @@ export interface FormatterSettings {
     maxBlankLines: number;
     indentString: string;
     preserveTrailingBlanks: boolean;
+    normalizeVerbatimMarkers: boolean;
     formatOnSave: boolean;
 }
 /** Spellcheck settings */
@@ -109,11 +109,27 @@ export interface SpellcheckSettings {
     enabled: boolean;
     language: string;
 }
+/** Keybinding override for a command */
+export interface KeybindingOverride {
+    mac?: string | null;
+    windows?: string | null;
+    linux?: string | null;
+}
+/** Keybinding settings */
+export interface KeybindingSettings {
+    overrides: Record<string, KeybindingOverride>;
+}
+/** File tree display settings */
+export interface FileTreeSettings {
+    showHiddenFiles: boolean;
+}
 /** All application settings */
 export interface AppSettings {
     editor: EditorSettings;
     formatter: FormatterSettings;
     spellcheck: SpellcheckSettings;
+    keybindings: KeybindingSettings;
+    fileTree: FileTreeSettings;
     lastFolder?: string;
 }
 /** Unsubscribe function returned by event listeners */
@@ -228,6 +244,13 @@ export interface LspTransport {
     reader: MessageReader;
     writer: MessageWriter;
 }
+/** LSP server status */
+export interface LspStatus {
+    status: string;
+    message?: string;
+    path?: string;
+    code?: number | null;
+}
 export interface LspAdapter {
     /**
      * Create an LSP transport for communication with the language server.
@@ -237,10 +260,7 @@ export interface LspAdapter {
      * Subscribe to LSP status updates (connecting, ready, error).
      * @returns Unsubscribe function
      */
-    onStatus?(callback: (status: {
-        state: string;
-        message?: string;
-    }) => void): Unsubscribe;
+    onStatus?(callback: (status: LspStatus) => void): Unsubscribe;
 }
 /**
  * Tab/pane layout persistence adapter.
