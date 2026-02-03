@@ -34,7 +34,52 @@ Lex LexEd Architecture
 
         Communicates via standard input/output (stdio) using the Language Server Protocol.
 
-2. LSP Communications
+2. Platform Abstraction
+
+    The editor UI is designed to run on multiple platforms: Electron desktop and browser-based web apps. This is achieved through a platform abstraction layer that decouples UI components from platform-specific APIs.
+
+    1. PlatformAdapter Interface
+
+        Defined in `shared/src/platform.ts`, the `PlatformAdapter` interface specifies all platform-dependent operations:
+
+        - File system access (read, write, list directories, open dialogs)
+        - Theme management (get current theme, subscribe to changes)
+        - Settings persistence (load, save application settings)
+        - LSP transport (create message reader/writer for language server communication)
+        - Toast notifications (show user-facing messages)
+        - Menu commands (respond to application menu actions)
+
+        Each platform provides its own implementation. The Electron adapter (`src/platform/electron.ts`) wraps `window.ipcRenderer` calls, while a future web adapter would use browser APIs and WASM-based LSP.
+
+    2. Dependency Injection via React Context
+
+        Components access platform capabilities through the `usePlatform()` hook:
+
+        ```
+        const platform = usePlatform()
+        const content = await platform.fileSystem.read(path)
+        ```
+
+        The `PlatformProvider` wraps the application root and injects the appropriate adapter:
+
+        ```
+        <PlatformProvider adapter={electronAdapter}>
+          <App />
+        </PlatformProvider>
+        ```
+
+        This pattern enables the same component code to work across platforms without conditional compilation or runtime checks.
+
+    3. LSP Transport Factory
+
+        The LSP client supports pluggable transport backends via `setLspTransportFactory()`. This allows:
+
+        - Electron: IPC-based transport to communicate with spawned `lex-lsp` process
+        - Web: WASM-based transport using `lex-wasm` compiled language server
+
+        The transport factory is set at application startup before LSP initialization, ensuring all language features use the correct communication mechanism.
+
+3. LSP Communications
 
     The communication between the Monaco editor and the Rust LSP server involves a multi-hop message passing system.
 
@@ -62,7 +107,7 @@ Lex LexEd Architecture
 
         The `LspClient` buffers the incoming data, parses the `Content-Length` header, extracts the JSON body, and resolves the pending request or triggers a notification handler.
 
-3. Semantic Highlighting
+4. Semantic Highlighting
 
     Syntax highlighting in Lex LexEd uses the LSP's semantic tokens capability for rich, accurate highlighting.
 
@@ -92,7 +137,7 @@ Lex LexEd Architecture
 
         A model value refresh is triggered to force Monaco to re-query tokens.
 
-4. Visual Style
+5. Visual Style
 
     The editor uses the Lex Monochrome Theme.
 
