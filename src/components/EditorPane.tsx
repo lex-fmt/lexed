@@ -12,6 +12,7 @@ import { PreviewPane } from './PreviewPane'
 import { WelcomeView } from './WelcomeView'
 import { TabBar, Tab, TabDropData } from './TabBar'
 import { StatusBar, ExportStatus } from './StatusBar'
+import { usePlatform } from '@/contexts/PlatformContext'
 import type { FileContextMenuHandlers } from './FileContextMenu'
 import type * as Monaco from 'monaco-editor'
 
@@ -84,6 +85,7 @@ export const EditorPane = forwardRef<EditorPaneHandle, EditorPaneProps>(function
   const previousTabsRef = useRef<Tab[]>(tabs)
   const latestOnFileLoaded = useRef(onFileLoaded)
   const latestOnCursorChange = useRef(onCursorChange)
+  const platform = usePlatform()
 
   useEffect(() => {
     latestOnFileLoaded.current = onFileLoaded
@@ -192,7 +194,7 @@ export const EditorPane = forwardRef<EditorPaneHandle, EditorPaneProps>(function
     if (!currentFile) return
 
     // Capture checksum of file on disk - this is our baseline for detecting external changes
-    const diskChecksum = await window.ipcRenderer.fileChecksum(currentFile)
+    const diskChecksum = await platform.fileSystem.checksum(currentFile)
     autoSaveChecksumRef.current = diskChecksum
 
     autoSaveIntervalRef.current = setInterval(async () => {
@@ -201,12 +203,12 @@ export const EditorPane = forwardRef<EditorPaneHandle, EditorPaneProps>(function
       if (!filePath || !editorInstance) return
 
       // Read current checksum from disk to check for external modifications
-      const currentDiskChecksum = await window.ipcRenderer.fileChecksum(filePath)
+      const currentDiskChecksum = await platform.fileSystem.checksum(filePath)
 
       if (currentDiskChecksum === autoSaveChecksumRef.current) {
         // Checksum matches - file hasn't been modified externally, safe to save
         const content = editorInstance.getValue()
-        await window.ipcRenderer.fileSave(filePath, content)
+        await platform.fileSystem.write(filePath, content)
         // Update our baseline checksum to the new content we just saved
         autoSaveChecksumRef.current = computeChecksum(content)
         console.log('[AutoSave] Saved file:', filePath)
@@ -219,7 +221,7 @@ export const EditorPane = forwardRef<EditorPaneHandle, EditorPaneProps>(function
         console.log('[AutoSave] File modified externally, skipping save:', filePath)
       }
     }, AUTO_SAVE_INTERVAL_MS)
-  }, [])
+  }, [platform.fileSystem])
 
   /**
    * Stops the auto-save interval timer.

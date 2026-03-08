@@ -185,11 +185,16 @@ test.describe('Spellcheck', () => {
       // 3. Type a misspelled word
       const misspelled = 'foobarbaz' // very unlikely to be in dictionary
       await editor.click()
-      // Use keyboard to ensure events fire
-      await page.keyboard.press('Control+End') // Go to end
+
+      // Use Cmd+End on macOS, Ctrl+End on other platforms to go to end of document
+      const goToEndKey = process.platform === 'darwin' ? 'Meta+ArrowDown' : 'Control+End'
+      await page.keyboard.press(goToEndKey)
       await page.keyboard.press('Enter')
       await page.keyboard.type(misspelled)
       await page.keyboard.type(' ') // Trigger check
+
+      // Wait for LSP to process document changes (debounced at 100ms)
+      await page.waitForTimeout(200)
 
       // Helper to wait for marker
       const waitForMarker = async (word: string, exists: boolean) => {
@@ -207,22 +212,12 @@ test.describe('Spellcheck', () => {
       // Check marker exists
       await waitForMarker(misspelled, true)
 
-      // Log cursor and markers
+      // Move cursor to the misspelled word to trigger quick fix
       await page.evaluate(async () => {
         const markers = (window as any).lexTest?.getMarkers() || []
-        console.log('[Test Debug] Markers:', markers)
-
         const marker = markers.find((m: any) => m.message.includes('foobarbaz'))
         if (marker) {
-          console.log('[Test Debug] Moving to marker:', marker)
-          // Use setCursor helper we just added
-          const success = (window as any).lexTest?.setCursor(
-            marker.startLineNumber,
-            marker.startColumn + 1
-          )
-          console.log('[Test Debug] setCursor result:', success)
-        } else {
-          console.error('[Test Debug] Marker not found!')
+          ;(window as any).lexTest?.setCursor(marker.startLineNumber, marker.startColumn + 1)
         }
       })
 

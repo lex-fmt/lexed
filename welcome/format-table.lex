@@ -18,4 +18,4 @@ Testing table and formatting
 | --------------- | ----- |
 | Markdown | No    |
 | Lex     | Yes    |
-  :: doc.table
+  :: doc.table ::
