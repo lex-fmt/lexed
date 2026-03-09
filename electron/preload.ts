@@ -181,6 +181,14 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   }) => ipcRenderer.invoke('set-formatter-settings', settings),
   setSpellcheckSettings: (settings: { enabled: boolean; language: string }) =>
     ipcRenderer.invoke('set-spellcheck-settings', settings),
+  spellcheckLoadDictionary: (language: string) =>
+    ipcRenderer.invoke('spellcheck-load-dictionary', language) as Promise<
+      { aff: string; dic: string } | { error: string }
+    >,
+  spellcheckLoadCustomWords: () =>
+    ipcRenderer.invoke('spellcheck-load-custom-words') as Promise<string[]>,
+  spellcheckAddToDictionary: (word: string) =>
+    ipcRenderer.invoke('spellcheck-add-to-dictionary', word) as Promise<boolean>,
   onSettingsChanged: (callback: (settings: any) => void) => {
     const handler = (_event: IpcRendererEvent, settings: any) => callback(settings)
     ipcRenderer.on('settings-changed', handler)

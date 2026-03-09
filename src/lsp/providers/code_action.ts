@@ -39,6 +39,11 @@ export function registerCodeActionProvider(languageId: string, connection: Proto
     ) => {
       if (!connection) return { actions: [], dispose: () => {} }
 
+      // Don't send client-side spellcheck markers to the LSP
+      const lspMarkers = context.markers.filter(
+        (marker: monaco.editor.IMarkerData) => marker.source !== 'lex-spell'
+      )
+
       const params: CodeActionParams = {
         textDocument: { uri: model.uri.toString() },
         range: {
@@ -46,7 +51,7 @@ export function registerCodeActionProvider(languageId: string, connection: Proto
           end: { line: range.endLineNumber - 1, character: range.endColumn - 1 },
         },
         context: {
-          diagnostics: context.markers.map((marker: monaco.editor.IMarkerData) => ({
+          diagnostics: lspMarkers.map((marker: monaco.editor.IMarkerData) => ({
             range: {
               start: { line: marker.startLineNumber - 1, character: marker.startColumn - 1 },
               end: { line: marker.endLineNumber - 1, character: marker.endColumn - 1 },

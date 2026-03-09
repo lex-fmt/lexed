@@ -846,6 +846,61 @@ ipcMain.handle(
   }
 )
 
+// --- Spellcheck dictionary IPC ---
+
+function getDictionariesPath(): string {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'dictionaries')
+  }
+  return path.join(process.env.APP_ROOT!, 'dictionaries')
+}
+
+function getCustomDictionaryPath(): string {
+  return path.join(getDictionariesPath(), 'custom.dic')
+}
+
+ipcMain.handle('spellcheck-load-dictionary', async (_event, language: string) => {
+  const dictPath = getDictionariesPath()
+  const affPath = path.join(dictPath, `${language}.aff`)
+  const dicPath = path.join(dictPath, `${language}.dic`)
+
+  try {
+    const [aff, dic] = await Promise.all([
+      fs.readFile(affPath, 'utf-8'),
+      fs.readFile(dicPath, 'utf-8'),
+    ])
+    return { aff, dic }
+  } catch {
+    return { error: `Dictionary not found for ${language}` }
+  }
+})
+
+ipcMain.handle('spellcheck-load-custom-words', async () => {
+  const customPath = getCustomDictionaryPath()
+  try {
+    const content = await fs.readFile(customPath, 'utf-8')
+    return content
+      .split('\n')
+      .map((w) => w.trim())
+      .filter((w) => w.length > 0)
+  } catch {
+    return []
+  }
+})
+
+ipcMain.handle('spellcheck-add-to-dictionary', async (_event, word: string) => {
+  const customPath = getCustomDictionaryPath()
+  try {
+    await fs.appendFile(customPath, word + '\n', 'utf-8')
+    return true
+  } catch (err) {
+    log.error('[Spellcheck] Failed to add word to dictionary:', err)
+    return false
+  }
+})
+
+// --- End spellcheck dictionary IPC ---
+
 ipcMain.handle('set-filetree-settings', (_event, settings: FileTreeSettings) => {
   store.set('fileTree', settings)
   BrowserWindow.getAllWindows().forEach((w) => {

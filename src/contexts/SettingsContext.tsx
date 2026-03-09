@@ -11,6 +11,7 @@ import { setSettingsSnapshot } from '@/settings/snapshot'
 
 import { lspClient } from '@/lsp/client'
 import { SpellcheckSettings, FileTreeSettings } from '@/settings/types'
+import { spellcheckService } from '@/spellcheck/service'
 
 interface SettingsContextType {
   settings: AppSettings
@@ -23,6 +24,23 @@ interface SettingsContextType {
 const defaultSettings: AppSettings = defaultAppSettings
 
 const SettingsContext = createContext<SettingsContextType | null>(null)
+
+let spellcheckInitialized = false
+
+async function applySpellcheckSettings(settings: SpellcheckSettings) {
+  spellcheckService.setEnabled(settings.enabled)
+  if (settings.enabled) {
+    await spellcheckService.setLanguage(settings.language)
+    if (!spellcheckInitialized) {
+      spellcheckService.registerCodeActions()
+      spellcheckInitialized = true
+    }
+    // Re-check all open models
+    for (const model of (await import('monaco-editor')).editor.getModels()) {
+      spellcheckService.scheduleCheck(model)
+    }
+  }
+}
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function useSettings() {
@@ -59,11 +77,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         } satisfies AppSettings
         setSettingsSnapshot(next)
 
-        // Notify LSP on initial load if needed, but LSP usually pulls config or gets it via didChangeConfiguration
-        // We should send it once we have it.
+        // Disable LSP-side spellcheck (now handled client-side)
         lspClient.sendNotification('workspace/didChangeConfiguration', {
-          settings: { spellcheck: next.spellcheck },
+          settings: { spellcheck: { enabled: false } },
         })
+
+        // Initialize client-side spellcheck
+        applySpellcheckSettings(next.spellcheck)
 
         return next
       })
@@ -91,10 +111,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         } satisfies AppSettings
         setSettingsSnapshot(next)
 
-        // Notify LSP
-        lspClient.sendNotification('workspace/didChangeConfiguration', {
-          settings: { spellcheck: next.spellcheck },
-        })
+        // Apply client-side spellcheck settings
+        applySpellcheckSettings(next.spellcheck)
 
         return next
       })
@@ -128,17 +146,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setSettings((prev) => {
       const next = { ...prev, spellcheck: spellcheckSettings } satisfies AppSettings
       setSettingsSnapshot(next)
-      // Notify LSP
-      if (lspClient) {
-        console.log('[SettingsContext] Sending workspace/didChangeConfiguration to LSP')
-        lspClient.sendNotification('workspace/didChangeConfiguration', {
-          settings: {
-            lex: {
-              spellcheck: next.spellcheck,
-            },
-          },
-        })
-      }
+      applySpellcheckSettings(next.spellcheck)
       return next
     })
   }

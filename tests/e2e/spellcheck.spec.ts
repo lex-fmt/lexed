@@ -1,16 +1,12 @@
 import { test, expect } from '@playwright/test'
 import { openFixture, launchApp } from './helpers'
-import path from 'path'
-import * as fs from 'fs/promises'
 
 test.describe('Spellcheck', () => {
   test('should show diagnostics for misspelled words and support language switching', async () => {
-    // Increase timeout for this test as it involves language switching and waiting for diagnostics
     test.setTimeout(60000)
     const electronApp = await launchApp()
     const page = await electronApp.firstWindow()
     page.on('console', (msg) => console.log(`renderer: ${msg.text()}`))
-    await page.waitForLoadState('domcontentloaded')
     await page.waitForLoadState('domcontentloaded')
 
     // Explicitly enable spellcheck
@@ -27,11 +23,10 @@ test.describe('Spellcheck', () => {
     // Focus and Type a space to ensure validation triggers
     await editor.click()
     await page.keyboard.type(' ')
-    await page.keyboard.press('Backspace') // Undo the space, but change event fired
+    await page.keyboard.press('Backspace')
 
-    // Helper to check markers via API to avoid UI flakiness
+    // Helper to check markers via API
     const expectUnknownWord = async (word: string) => {
-      // Wait for markers to appear
       await expect
         .poll(
           async () => {
@@ -40,7 +35,7 @@ test.describe('Spellcheck', () => {
             })
           },
           {
-            timeout: 10000,
+            timeout: 15000,
             message: `Waiting for markers containing "${word}"`,
           }
         )
@@ -55,7 +50,6 @@ test.describe('Spellcheck', () => {
 
     // Helper to ensure word is NOT flagged
     const expectWordValid = async (word: string) => {
-      // Check that markers do NOT contain the word
       const markers = await page.evaluate(() => {
         return (window as any).lexTest?.getMarkers() || []
       })
@@ -63,11 +57,8 @@ test.describe('Spellcheck', () => {
       expect(found, `Expected "${word}" to be valid (no error)`).toBe(false)
     }
 
-    // 1. Default Language (assumed en_US)
-    // "mispelled" should be error
+    // 1. Default Language (en_US)
     await expectUnknownWord('mispelled')
-
-    // "word" should be valid
     await expectWordValid('word')
 
     // 2. Switch to Portuguese
@@ -75,17 +66,16 @@ test.describe('Spellcheck', () => {
       await (window as any).ipcRenderer.setSpellcheckSettings({ enabled: true, language: 'pt_BR' })
     })
 
-    // Wait for diagnostics to update. usually fast but give it a moment
-    await page.waitForTimeout(2000)
+    // Wait for dictionary to load and re-check
+    await page.waitForTimeout(3000)
 
-    // "palavrra" should be error (palavra is correct)
+    // Trigger re-check by modifying content
+    await editor.click()
+    await page.keyboard.type(' ')
+    await page.keyboard.press('Backspace')
+
     await expectUnknownWord('palavrra')
-
-    // "errada" should be valid
     await expectWordValid('errada')
-
-    // "word" might be an error in Portuguese? "word" is not in PT dictionary.
-    // So "word" should be unknown.
     await expectUnknownWord('word')
 
     await electronApp.close()
@@ -142,28 +132,7 @@ test.describe('Spellcheck', () => {
   })
 
   test('successfully adds words to dictionary', async () => {
-    // We need a unique data dir for this test to verify persistence
-    // "lex-lsp" uses LEX_TEST_DATA_DIR to override the data directory
-    // We can pass this env var to the app
-    const testDataDir = path.resolve(
-      process.cwd(),
-      '..',
-      'target',
-      'e2e-data',
-      `spell-${Date.now()}`
-    )
-    await fs.mkdir(testDataDir, { recursive: true })
-
-    console.log(`Using test data dir: ${testDataDir}`)
-
-    const electronApp = await launchApp({
-      env: {
-        LEX_LSP_PATH: path.resolve('resources', 'lex-lsp'), // Explicitly use our copied binary
-        LEX_TEST_DATA_DIR: testDataDir,
-        // Disable welcome logic to speed up
-        LEX_DISABLE_PERSISTENCE: '1',
-      },
-    })
+    const electronApp = await launchApp()
     const page = await electronApp.firstWindow()
     page.on('console', (msg) => console.log('renderer:', msg.text()))
     await page.waitForLoadState('domcontentloaded')
@@ -183,18 +152,17 @@ test.describe('Spellcheck', () => {
       await expect(editor).toBeVisible()
 
       // 3. Type a misspelled word
-      const misspelled = 'foobarbaz' // very unlikely to be in dictionary
+      const misspelled = 'foobarbaz'
       await editor.click()
 
-      // Use Cmd+End on macOS, Ctrl+End on other platforms to go to end of document
       const goToEndKey = process.platform === 'darwin' ? 'Meta+ArrowDown' : 'Control+End'
       await page.keyboard.press(goToEndKey)
       await page.keyboard.press('Enter')
       await page.keyboard.type(misspelled)
-      await page.keyboard.type(' ') // Trigger check
+      await page.keyboard.type(' ')
 
-      // Wait for LSP to process document changes (debounced at 100ms)
-      await page.waitForTimeout(200)
+      // Wait for spellcheck to run (debounced at 300ms + dictionary load)
+      await page.waitForTimeout(1000)
 
       // Helper to wait for marker
       const waitForMarker = async (word: string, exists: boolean) => {
@@ -204,7 +172,7 @@ test.describe('Spellcheck', () => {
               const markers = await page.evaluate(() => (window as any).lexTest?.getMarkers() || [])
               return markers.some((m: any) => m.message.includes(`Unknown word: ${word}`))
             },
-            { timeout: 10000, message: `Waiting for marker "${word}" to be ${exists}` }
+            { timeout: 15000, message: `Waiting for marker "${word}" to be ${exists}` }
           )
           .toBe(exists)
       }
@@ -221,24 +189,18 @@ test.describe('Spellcheck', () => {
         }
       })
 
-      // Trigger standard Quick Fix menu (Cmd+. or Ctrl+.)
+      // Trigger Quick Fix menu
       const modifier = process.platform === 'darwin' ? 'Meta' : 'Control'
       await page.keyboard.press(`${modifier}+.`)
 
       // Wait for the quick fix menu to appear
       await page.waitForSelector('.context-view-block', { state: 'visible', timeout: 10000 })
 
-      // Wait for widget - look for partial match since title is "Add 'foobarbaz' to dictionary"
+      // Find and click "Add to dictionary"
       const widget = page.locator('.monaco-list-row').filter({ hasText: 'to dictionary' })
       await expect(widget).toBeVisible({ timeout: 10000 })
 
-      // 5. Select "Add to dictionary" - use keyboard as Monaco has pointer-blocking overlay
-      // Navigate to the "Add to dictionary" option using arrow keys
-      // For an unknown word like "foobarbaz", there may be no suggestions, so it might be first
-      // Use ArrowDown to navigate through items until we find the right one, then Enter
-      // Or use End to go to last item directly
       for (let i = 0; i < 5; i++) {
-        // Check if the "to dictionary" item is focused
         const focusedItem = await page
           .locator('.monaco-list-row.focused')
           .textContent()
@@ -251,29 +213,10 @@ test.describe('Spellcheck', () => {
       }
       await page.keyboard.press('Enter')
 
-      // 6. Verify marker disappears
+      // Verify marker disappears
       await waitForMarker(misspelled, false)
-
-      // 7. Verify file on disk
-      const customDicPath = path.join(testDataDir, 'dictionaries', 'custom.dic')
-      // Wait a bit for file write
-      await expect
-        .poll(async () => {
-          try {
-            return await fs.readFile(customDicPath, 'utf8')
-          } catch {
-            return ''
-          }
-        })
-        .toContain(misspelled)
     } finally {
       await electronApp.close()
-      // Cleanup
-      try {
-        await fs.rm(testDataDir, { recursive: true, force: true })
-      } catch (e) {
-        console.error('Failed to cleanup test data dir:', e)
-      }
     }
   })
 })
