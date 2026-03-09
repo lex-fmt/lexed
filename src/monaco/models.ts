@@ -1,6 +1,7 @@
 import * as monaco from 'monaco-editor'
 import { lspClient } from '@/lsp/client'
 import { getLanguageForFile, isLexFile } from '@/lib/files'
+import { spellcheckService } from '@/spellcheck/service'
 
 const modelCache = new Map<string, monaco.editor.ITextModel>()
 const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>()
@@ -54,11 +55,15 @@ export function getOrCreateModel(path: string, content: string): monaco.editor.I
             },
             contentChanges: [{ text: model.getValue() }],
           })
+          spellcheckService.scheduleCheck(model)
         }
       }, DEBOUNCE_DELAY_MS)
 
       debounceTimers.set(uriString, timer)
     })
+
+    // Initial spellcheck
+    spellcheckService.scheduleCheck(model)
   }
 
   return model

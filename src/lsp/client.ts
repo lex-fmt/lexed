@@ -287,7 +287,9 @@ export class LspClient {
           const uri = monaco.Uri.parse(params.uri)
           const model = monaco.editor.getModel(uri)
           if (model) {
-            const markers: monaco.editor.IMarkerData[] = params.diagnostics.map((d) => ({
+            // Filter out spellcheck diagnostics — spellcheck is now client-side
+            const filtered = params.diagnostics.filter((d) => d.source !== 'lex-spell')
+            const markers: monaco.editor.IMarkerData[] = filtered.map((d) => ({
               severity:
                 d.severity === 1
                   ? monaco.MarkerSeverity.Error

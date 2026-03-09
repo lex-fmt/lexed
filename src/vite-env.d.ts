@@ -82,6 +82,11 @@ interface Window {
       formatOnSave: boolean
     }) => Promise<boolean>
     setSpellcheckSettings: (settings: { enabled: boolean; language: string }) => Promise<boolean>
+    spellcheckLoadDictionary: (
+      language: string
+    ) => Promise<{ aff: string; dic: string } | { error: string }>
+    spellcheckLoadCustomWords: () => Promise<string[]>
+    spellcheckAddToDictionary: (word: string) => Promise<boolean>
     setFileTreeSettings: (settings: { showHiddenFiles: boolean }) => Promise<boolean>
     onSettingsChanged: (callback: (settings: any) => void) => () => void
     onShowToast: (
