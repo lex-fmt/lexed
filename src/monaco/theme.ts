@@ -1,9 +1,9 @@
-import * as monaco from 'monaco-editor';
+import * as monaco from 'monaco-editor'
 
-export type ThemeMode = 'dark' | 'light';
+export type ThemeMode = 'dark' | 'light'
 
-type ColorKey = 'normal' | 'muted' | 'faint' | 'faintest' | 'background' | 'lineHighlight';
-type MonacoColorPalette = Record<ColorKey, string>;
+type ColorKey = 'normal' | 'muted' | 'faint' | 'faintest' | 'background' | 'lineHighlight'
+type MonacoColorPalette = Record<ColorKey, string>
 
 const CSS_COLOR_VARIABLES: Record<ColorKey, string> = {
   normal: '--monaco-color-normal',
@@ -12,7 +12,7 @@ const CSS_COLOR_VARIABLES: Record<ColorKey, string> = {
   faintest: '--monaco-color-faintest',
   background: '--monaco-editor-background',
   lineHighlight: '--monaco-line-highlight',
-};
+}
 
 const FALLBACK_COLORS: Record<ThemeMode, MonacoColorPalette> = {
   light: {
@@ -31,72 +31,72 @@ const FALLBACK_COLORS: Record<ThemeMode, MonacoColorPalette> = {
     background: '#0c0c0cec',
     lineHighlight: '#181818ff',
   },
-};
+}
 
-const THEME_NAME = 'lex-monochrome';
+const THEME_NAME = 'lex-monochrome'
 
-type StylesResult = { styles: CSSStyleDeclaration; cleanup?: () => void } | null;
+type StylesResult = { styles: CSSStyleDeclaration; cleanup?: () => void } | null
 
 function resolveStylesForMode(mode: ThemeMode): StylesResult {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
-    return null;
+    return null
   }
 
-  const root = document.documentElement;
+  const root = document.documentElement
   if (!root) {
-    return null;
+    return null
   }
 
   if (root.getAttribute('data-theme') === mode || !document.body) {
-    return { styles: getComputedStyle(root) };
+    return { styles: getComputedStyle(root) }
   }
 
-  const probe = document.createElement('div');
-  probe.setAttribute('data-theme', mode);
-  probe.style.position = 'absolute';
-  probe.style.width = '0';
-  probe.style.height = '0';
-  probe.style.pointerEvents = 'none';
-  probe.style.visibility = 'hidden';
-  probe.style.opacity = '0';
-  document.body.appendChild(probe);
+  const probe = document.createElement('div')
+  probe.setAttribute('data-theme', mode)
+  probe.style.position = 'absolute'
+  probe.style.width = '0'
+  probe.style.height = '0'
+  probe.style.pointerEvents = 'none'
+  probe.style.visibility = 'hidden'
+  probe.style.opacity = '0'
+  document.body.appendChild(probe)
 
   return {
     styles: getComputedStyle(probe),
     cleanup: () => {
-      probe.remove();
+      probe.remove()
     },
-  };
+  }
 }
 
 function readColorsFromCss(mode: ThemeMode): MonacoColorPalette {
-  const fallback = FALLBACK_COLORS[mode];
-  const stylesResult = resolveStylesForMode(mode);
+  const fallback = FALLBACK_COLORS[mode]
+  const stylesResult = resolveStylesForMode(mode)
 
   if (!stylesResult) {
-    return { ...fallback };
+    return { ...fallback }
   }
 
-  const { styles, cleanup } = stylesResult;
-  const colors: MonacoColorPalette = { ...fallback };
+  const { styles, cleanup } = stylesResult
+  const colors: MonacoColorPalette = { ...fallback }
 
-  (Object.keys(CSS_COLOR_VARIABLES) as Array<keyof MonacoColorPalette>).forEach((key) => {
-    const cssVar = CSS_COLOR_VARIABLES[key];
-    const value = styles.getPropertyValue(cssVar).trim();
+  ;(Object.keys(CSS_COLOR_VARIABLES) as Array<keyof MonacoColorPalette>).forEach((key) => {
+    const cssVar = CSS_COLOR_VARIABLES[key]
+    const value = styles.getPropertyValue(cssVar).trim()
     if (value) {
-      colors[key] = value;
+      colors[key] = value
     }
-  });
+  })
 
-  cleanup?.();
+  cleanup?.()
 
-  return colors;
+  return colors
 }
 
 function defineTheme(mode: ThemeMode) {
-  const colors = readColorsFromCss(mode);
-  const baseTheme = mode === 'dark' ? 'vs-dark' : 'vs';
-  const themeName = `${THEME_NAME}-${mode}`;
+  const colors = readColorsFromCss(mode)
+  const baseTheme = mode === 'dark' ? 'vs-dark' : 'vs'
+  const themeName = `${THEME_NAME}-${mode}`
 
   monaco.editor.defineTheme(themeName, {
     base: baseTheme,
@@ -139,8 +139,8 @@ function defineTheme(mode: ThemeMode) {
       { token: 'ListItemText', foreground: colors.normal.replace('#', '') },
       {
         token: 'DocumentTitle',
-        foreground: colors.muted.replace('#', ''),
-        fontStyle: 'bold',
+        foreground: colors.normal.replace('#', ''),
+        fontStyle: 'underline',
       },
       {
         token: 'SessionMarker',
@@ -243,16 +243,16 @@ function defineTheme(mode: ThemeMode) {
       'editorLineNumber.foreground': colors.faint,
       'editorLineNumber.activeForeground': colors.normal,
     },
-  });
+  })
 
-  return themeName;
+  return themeName
 }
 
 export function applyLexTheme(mode: ThemeMode) {
-  const themeName = defineTheme(mode);
-  monaco.editor.setTheme(themeName);
+  const themeName = defineTheme(mode)
+  monaco.editor.setTheme(themeName)
 }
 
 export function getThemeNameForMode(mode: ThemeMode) {
-  return defineTheme(mode);
+  return defineTheme(mode)
 }
