@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import * as monaco from 'monaco-editor'
 import type { EditorPaneHandle } from '@/components/EditorPane'
 import type { PaneState } from '@/panes/types'
+import { spellcheckService } from '@/spellcheck/service'
 
 type FormattingRequestPayload = {
   type: 'document' | 'range'
@@ -122,6 +123,16 @@ export function useLexTestBridge({
         const model = editorInstance?.getModel?.()
         if (!model) return []
         return monaco.editor.getModelMarkers({ resource: model.uri })
+      },
+      isSpellcheckReady: () => spellcheckService.isReady(),
+      recheckSpelling: () => {
+        const target = activePaneId ?? panesRef.current[0]?.id ?? null
+        if (!target) return false
+        const editorInstance = paneHandles.current.get(target)?.getEditor()
+        const model = editorInstance?.getModel?.()
+        if (!model) return false
+        spellcheckService.checkModel(model)
+        return true
       },
       setCursor: (line: number, col: number) => {
         const editorInstance = getActiveEditorInstance()

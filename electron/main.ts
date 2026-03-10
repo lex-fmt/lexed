@@ -899,6 +899,17 @@ ipcMain.handle('spellcheck-add-to-dictionary', async (_event, word: string) => {
   }
 })
 
+ipcMain.handle('spellcheck-reset-custom-words', async () => {
+  const customPath = getCustomDictionaryPath()
+  try {
+    await fs.writeFile(customPath, '', 'utf-8')
+    return true
+  } catch (err) {
+    log.error('[Spellcheck] Failed to reset custom dictionary:', err)
+    return false
+  }
+})
+
 // --- End spellcheck dictionary IPC ---
 
 ipcMain.handle('set-filetree-settings', (_event, settings: FileTreeSettings) => {

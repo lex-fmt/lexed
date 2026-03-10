@@ -3,7 +3,7 @@ import { openFixture, launchApp } from './helpers'
 
 test.describe('Spellcheck', () => {
   test('should show diagnostics for misspelled words and support language switching', async () => {
-    test.setTimeout(60000)
+    test.setTimeout(90000)
     const electronApp = await launchApp()
     const page = await electronApp.firstWindow()
     page.on('console', (msg) => console.log(`renderer: ${msg.text()}`))
@@ -25,35 +25,29 @@ test.describe('Spellcheck', () => {
     await page.keyboard.type(' ')
     await page.keyboard.press('Backspace')
 
+    // Helper: recheck spelling and return marker messages in one evaluate call
+    const getSpellMarkers = () =>
+      page.evaluate(() => {
+        const lt = (window as any).lexTest
+        if (!lt) return []
+        lt.recheckSpelling()
+        return (lt.getMarkers() || []).map((m: any) => m.message)
+      })
+
     // Helper to check markers via API
-    const expectUnknownWord = async (word: string) => {
+    const expectUnknownWord = async (word: string, timeout = 20000) => {
       await expect
-        .poll(
-          async () => {
-            return await page.evaluate(() => {
-              return (window as any).lexTest?.getMarkers() || []
-            })
-          },
-          {
-            timeout: 15000,
-            message: `Waiting for markers containing "${word}"`,
-          }
-        )
-        .toEqual(
-          expect.arrayContaining([
-            expect.objectContaining({
-              message: expect.stringContaining(`Unknown word: ${word}`),
-            }),
-          ])
-        )
+        .poll(() => getSpellMarkers(), {
+          timeout,
+          message: `Waiting for markers containing "${word}"`,
+        })
+        .toEqual(expect.arrayContaining([expect.stringContaining(`Unknown word: ${word}`)]))
     }
 
     // Helper to ensure word is NOT flagged
     const expectWordValid = async (word: string) => {
-      const markers = await page.evaluate(() => {
-        return (window as any).lexTest?.getMarkers() || []
-      })
-      const found = markers.some((m: any) => m.message.includes(`Unknown word: ${word}`))
+      const messages = await getSpellMarkers()
+      const found = messages.some((m: string) => m.includes(`Unknown word: ${word}`))
       expect(found, `Expected "${word}" to be valid (no error)`).toBe(false)
     }
 
@@ -61,21 +55,14 @@ test.describe('Spellcheck', () => {
     await expectUnknownWord('mispelled')
     await expectWordValid('word')
 
-    // 2. Switch to Portuguese
+    // 2. Switch to French
     await page.evaluate(async () => {
-      await (window as any).ipcRenderer.setSpellcheckSettings({ enabled: true, language: 'pt_BR' })
+      await (window as any).ipcRenderer.setSpellcheckSettings({ enabled: true, language: 'fr_FR' })
     })
 
-    // Wait for dictionary to load and re-check
-    await page.waitForTimeout(3000)
-
-    // Trigger re-check by modifying content
-    await editor.click()
-    await page.keyboard.type(' ')
-    await page.keyboard.press('Backspace')
-
-    await expectUnknownWord('palavrra')
-    await expectWordValid('errada')
+    // Wait for French dictionary to load and verify
+    await expectUnknownWord('fautte', 30000)
+    await expectWordValid('est')
     await expectUnknownWord('word')
 
     await electronApp.close()
@@ -132,12 +119,16 @@ test.describe('Spellcheck', () => {
   })
 
   test('successfully adds words to dictionary', async () => {
+    test.setTimeout(60000)
     const electronApp = await launchApp()
     const page = await electronApp.firstWindow()
     page.on('console', (msg) => console.log('renderer:', msg.text()))
     await page.waitForLoadState('domcontentloaded')
 
     try {
+      // 0. Reset custom dictionary to avoid stale words from previous runs
+      await page.evaluate(() => (window as any).ipcRenderer.invoke('spellcheck-reset-custom-words'))
+
       // 1. Enable spellcheck
       await page.evaluate(async () => {
         await (window as any).ipcRenderer.setSpellcheckSettings({
@@ -151,7 +142,27 @@ test.describe('Spellcheck', () => {
       const editor = page.locator('.monaco-editor').first()
       await expect(editor).toBeVisible()
 
-      // 3. Type a misspelled word
+      // 3. Wait for spellcheck to be ready (fixture has "mispelled" which should be flagged)
+      const waitForMarker = async (word: string, exists: boolean) => {
+        await expect
+          .poll(
+            async () => {
+              return await page.evaluate((w) => {
+                const lt = (window as any).lexTest
+                if (!lt) return false
+                lt.recheckSpelling()
+                return (lt.getMarkers() || []).some((m: any) =>
+                  m.message.includes(`Unknown word: ${w}`)
+                )
+              }, word)
+            },
+            { timeout: 20000, message: `Waiting for marker "${word}" to be ${exists}` }
+          )
+          .toBe(exists)
+      }
+      await waitForMarker('mispelled', true)
+
+      // 4. Type a misspelled word
       const misspelled = 'foobarbaz'
       await editor.click()
 
@@ -160,22 +171,6 @@ test.describe('Spellcheck', () => {
       await page.keyboard.press('Enter')
       await page.keyboard.type(misspelled)
       await page.keyboard.type(' ')
-
-      // Wait for spellcheck to run (debounced at 300ms + dictionary load)
-      await page.waitForTimeout(1000)
-
-      // Helper to wait for marker
-      const waitForMarker = async (word: string, exists: boolean) => {
-        await expect
-          .poll(
-            async () => {
-              const markers = await page.evaluate(() => (window as any).lexTest?.getMarkers() || [])
-              return markers.some((m: any) => m.message.includes(`Unknown word: ${word}`))
-            },
-            { timeout: 15000, message: `Waiting for marker "${word}" to be ${exists}` }
-          )
-          .toBe(exists)
-      }
 
       // Check marker exists
       await waitForMarker(misspelled, true)

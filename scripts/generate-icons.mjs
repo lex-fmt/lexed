@@ -15,9 +15,7 @@ const winOutputDir = iconsDir;
 const pngSizes = [16, 32, 64, 128, 256, 512, 1024];
 const windowsIcoSizes = [16, 32, 64, 128, 256];
 const candidateAssetDirs = [
-  path.join(projectRoot, 'assets'),
-  path.join(projectRoot, '..', 'assets'),
-  path.join(workspaceRoot, 'assets'),
+  path.join(projectRoot, 'comms', 'assets'),
 ];
 
 const assetsDir = candidateAssetDirs.find((dir) => existsSync(dir));

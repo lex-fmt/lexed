@@ -112,12 +112,12 @@ export class WindowManager {
 
   private getLogoPath(): string {
     // In packaged app, assets are in resources/assets
-    // In dev, they're in APP_ROOT/assets
+    // In dev, they're in APP_ROOT/comms/assets
     if (app.isPackaged) {
       return path.join(process.resourcesPath, 'assets', 'logo-full.png')
     }
     const APP_ROOT = process.env.APP_ROOT || path.join(__dirname, '..')
-    return path.join(APP_ROOT, 'assets', 'logo-full.png')
+    return path.join(APP_ROOT, 'comms', 'assets', 'logo-full.png')
   }
 
   private createSplashWindow(): BrowserWindow {

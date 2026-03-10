@@ -190,7 +190,7 @@
         "to": "dictionaries"
       },
       {
-        "from": "assets/logo-full.png",
+        "from": "comms/assets/logo-full.png",
         "to": "assets/logo-full.png"
       }
     ]

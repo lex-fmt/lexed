@@ -76,6 +76,10 @@ export class SpellcheckService {
     return this.enabled
   }
 
+  isReady(): boolean {
+    return this.enabled && this.checker !== null
+  }
+
   /**
    * Schedule a spellcheck for the given model. Debounced to avoid
    * checking on every keystroke.
@@ -100,7 +104,12 @@ export class SpellcheckService {
    * Run spellcheck immediately on a model.
    */
   checkModel(model: monaco.editor.ITextModel): void {
-    if (!this.enabled || !this.checker || model.isDisposed()) return
+    if (!this.enabled || model.isDisposed()) return
+    if (!this.checker) {
+      // No dictionary loaded yet — clear stale markers from previous language
+      monaco.editor.setModelMarkers(model, MARKER_OWNER, [])
+      return
+    }
 
     const text = model.getValue()
     const words = extractCheckableWords(text)
