@@ -8,7 +8,6 @@ import {
   FileText,
   FileCode,
   File,
-  FileType,
   ChevronRight,
   ChevronDown,
 } from 'lucide-react'
@@ -55,7 +54,9 @@ function getFileIcon(filename: string, size: number = 14) {
   const ext = getExtension(filename)
   switch (ext) {
     case '.lex':
-      return <FileType size={size} className="shrink-0" />
+      return (
+        <img src="/lex.svg" alt="" style={{ width: size, height: size }} className="shrink-0" />
+      )
     case '.md':
       return <FileText size={size} className="shrink-0" />
     case '.html':
