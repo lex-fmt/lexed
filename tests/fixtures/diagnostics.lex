@@ -1,3 +1,3 @@
-# Diagnostics Fixture
+Diagnostics Fixture
 
-This document is used to verify diagnostic overlays.
+    This document is used to verify diagnostic overlays.

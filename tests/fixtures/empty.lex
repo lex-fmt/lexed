@@ -1,0 +1,1 @@
+../../comms/specs/benchmark/000-empty.lex
