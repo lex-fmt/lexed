@@ -115,6 +115,57 @@ jobs:
           CSC_KEY_PASSWORD: ${{ startsWith(matrix.platform, 'macos-') && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
         run: npm run build
 
+      - name: Re-sign QuickLook plugin and re-create DMG
+        if: ${{ steps.target-filter.outputs.skip == 'false' && startsWith(matrix.platform, 'macos-') }}
+        shell: bash
+        env:
+          CSC_LINK: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          # Import certificate into a temporary keychain
+          echo "$CSC_LINK" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain"
+          security create-keychain -p "" "$KEYCHAIN"
+          security unlock-keychain -p "" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$CSC_KEY_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/cert.p12"
+
+          # Find signing identity
+          IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN" | grep "Developer ID" | head -1 | awk -F'"' '{print $2}')
+          echo "Signing with: $IDENTITY"
+
+          # Find the .app
+          APP=$(ls -d release/mac-*/LexEd.app | head -1)
+          APPEX="$APP/Contents/PlugIns/LexQuickLook.appex"
+
+          if [[ -d "$APPEX" ]]; then
+            echo "Re-signing QuickLook appex..."
+            codesign --force --sign "$IDENTITY" --options runtime --timestamp \
+              --entitlements resources/entitlements.mac.plist \
+              "$APPEX"
+
+            echo "Re-signing app bundle..."
+            codesign --force --sign "$IDENTITY" --options runtime --timestamp \
+              --entitlements resources/entitlements.mac.plist \
+              "$APP"
+
+            echo "Verifying signatures..."
+            codesign --verify --deep --strict "$APP"
+
+            # Re-create DMG since the .app signature changed
+            rm -f release/*.dmg
+            APP_DIR=$(dirname "$APP")
+            ARCH=$(echo "$APP_DIR" | grep -o 'arm64\|x64')
+            VERSION=$(node -p "require('./package.json').version")
+            DMG_NAME="LexEd-${VERSION}-${ARCH}.dmg"
+            echo "Creating $DMG_NAME..."
+            hdiutil create -volname "LexEd" -srcfolder "$APP" -ov -format UDZO "release/$DMG_NAME"
+          fi
+
       - name: Write App Store Connect API key
         if: ${{ steps.target-filter.outputs.skip == 'false' && startsWith(matrix.platform, 'macos-') }}
         shell: bash
