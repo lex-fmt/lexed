@@ -111,10 +111,73 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LEX_HIDE_WINDOW: "1"
           NODE_OPTIONS: --max-old-space-size=4096
+          CSC_LINK: ${{ startsWith(matrix.platform, 'macos-') && secrets.APPLE_CERTIFICATE_P12_BASE64 || '' }}
+          CSC_KEY_PASSWORD: ${{ startsWith(matrix.platform, 'macos-') && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
         run: npm run build
 
+      - name: Write App Store Connect API key
+        if: ${{ steps.target-filter.outputs.skip == 'false' && startsWith(matrix.platform, 'macos-') }}
+        shell: bash
+        env:
+          ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_BASE64 }}
+        run: |
+          echo "$ASC_API_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+
+      - name: Submit DMG for notarization
+        id: notarize-submit
+        if: ${{ steps.target-filter.outputs.skip == 'false' && startsWith(matrix.platform, 'macos-') }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          DMG=$(ls release/*.dmg | head -1)
+          echo "Submitting $DMG for notarization..."
+          RESULT=$(xcrun notarytool submit "$DMG" \
+            --key "$RUNNER_TEMP/AuthKey.p8" \
+            --key-id "${{ secrets.ASC_API_KEY_ID }}" \
+            --issuer "${{ secrets.ASC_API_ISSUER_ID }}" \
+            --output-format json \
+            --no-wait)
+          echo "$RESULT"
+          ID=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+          echo "submission-id=$ID" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for notarization
+        if: ${{ steps.target-filter.outputs.skip == 'false' && startsWith(matrix.platform, 'macos-') }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ID="${{ steps.notarize-submit.outputs.submission-id }}"
+          for i in $(seq 1 60); do
+            RESULT=$(xcrun notarytool info "$ID" \
+              --key "$RUNNER_TEMP/AuthKey.p8" \
+              --key-id "${{ secrets.ASC_API_KEY_ID }}" \
+              --issuer "${{ secrets.ASC_API_ISSUER_ID }}" \
+              --output-format json 2>&1) || true
+            STATUS=$(echo "$RESULT" | python3 -c \
+              "import sys,json; print(json.load(sys.stdin).get('status','Unknown'))" \
+              2>/dev/null || echo "Unknown")
+            echo "  [$i/60] status=$STATUS ($(date -u +%H:%M:%S))"
+            if [ "$STATUS" = "Accepted" ]; then exit 0; fi
+            if [ "$STATUS" = "Invalid" ] || [ "$STATUS" = "Rejected" ]; then
+              xcrun notarytool log "$ID" \
+                --key "$RUNNER_TEMP/AuthKey.p8" \
+                --key-id "${{ secrets.ASC_API_KEY_ID }}" \
+                --issuer "${{ secrets.ASC_API_ISSUER_ID }}" 2>&1 || true
+              exit 1
+            fi
+            sleep 30
+          done
+          echo "::warning::Timed out after 30 min. DMG is signed but not notarized."
+
+      - name: Staple notarization ticket
+        if: ${{ steps.target-filter.outputs.skip == 'false' && startsWith(matrix.platform, 'macos-') }}
+        shell: bash
+        run: |
+          DMG=$(ls release/*.dmg | head -1)
+          xcrun stapler staple "$DMG" || echo "::warning::Staple failed — DMG is signed but not stapled"
+
       - name: Upload release assets (non-macOS or skip latest-mac.yml)
-        if: ${{ steps.target-filter.outputs.skip == 'false' }}
+        if: ${{ always() && !cancelled() && steps.target-filter.outputs.skip == 'false' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash

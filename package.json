@@ -2,7 +2,7 @@
   "name": "lexed",
   "productName": "LexEd",
   "private": true,
-  "version": "0.5.2",
+  "version": "0.6.1",
   "description": "LexEd editor for Lex",
   "author": {
     "name": "Arthur Debert",
@@ -99,6 +99,11 @@
     },
     "mac": {
       "icon": "build/icons/icons/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "resources/entitlements.mac.plist",
+      "entitlementsInherit": "resources/entitlements.mac.plist",
+      "notarize": false,
       "target": [
         "dmg"
       ],
@@ -142,6 +147,9 @@
           "to": "PlugIns/LexQuickLook.appex"
         }
       ]
+    },
+    "dmg": {
+      "sign": false
     },
     "win": {
       "icon": "build/icons/icons/icon.ico",
