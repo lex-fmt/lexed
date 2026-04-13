@@ -14,8 +14,7 @@ CONFIGURATION="Release"
 OUTPUT_DIR="$APP_DIR/build/quicklook"
 DERIVED_DATA="$HOME/Library/Developer/Xcode/DerivedData"
 
-xcodebuild -project "$PROJECT_PATH" -scheme "$SCHEME" -configuration "$CONFIGURATION" \
-  CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project "$PROJECT_PATH" -scheme "$SCHEME" -configuration "$CONFIGURATION" build
 
 LATEST_BUILD_DIR="$(ls -dt "$DERIVED_DATA"/LexQuickLook-*/Build/Products/Release 2>/dev/null | head -n 1 || true)"
 if [[ -z "$LATEST_BUILD_DIR" ]]; then
@@ -31,8 +30,5 @@ fi
 
 mkdir -p "$OUTPUT_DIR"
 cp -R "$SOURCE_APPEX" "$OUTPUT_DIR/"
-
-# Strip ad-hoc signature so electron-builder can re-sign with Developer ID + hardened runtime
-codesign --remove-signature "$OUTPUT_DIR/LexQuickLook.appex" 2>/dev/null || true
 
 echo "QuickLook appex copied to $OUTPUT_DIR"
