@@ -1,8 +1,15 @@
-import { test, expect } from '@playwright/test';
-import { openFixture, launchApp } from './helpers';
+import {
+  test,
+  expect,
+  loc,
+  waitForEditor,
+  waitForEditorContent,
+  resetFormattingRequest,
+  expectFormattingRequest,
+} from './lib'
+import { openFixture } from './helpers'
 
 const UNFORMATTED_CONTENT = `Hello This is a title
-
 
 
   There are many blank lines that shoule be squashed to 1 or 2.
@@ -13,7 +20,7 @@ const UNFORMATTED_CONTENT = `Hello This is a title
   8. Something
 
 
-  `;
+  `
 
 const EXPECTED_PROPERTIES = {
   'lex.session_blank_lines_before': 1,
@@ -24,114 +31,90 @@ const EXPECTED_PROPERTIES = {
   'lex.indent_string': '    ',
   'lex.preserve_trailing_blanks': false,
   'lex.normalize_verbatim_markers': true,
-};
+}
+
+const FORMATTER_SETTINGS = {
+  sessionBlankLinesBefore: 1,
+  sessionBlankLinesAfter: 1,
+  normalizeSeqMarkers: true,
+  unorderedSeqMarker: '-',
+  maxBlankLines: 2,
+  indentString: '    ',
+  preserveTrailingBlanks: false,
+  normalizeVerbatimMarkers: true,
+  formatOnSave: false,
+}
 
 test.describe('Format Document', () => {
-  test('formats document via toolbar button and records formatter options', async () => {
-    const electronApp = await launchApp();
+  test('formats document via toolbar button and records formatter options', async ({ page }) => {
+    await openFixture(page, 'format-basic.lex')
+    await page.evaluate(
+      (settings) => (window as any).ipcRenderer.setFormatterSettings?.(settings),
+      FORMATTER_SETTINGS
+    )
 
-    const page = await electronApp.firstWindow();
-    await page.waitForLoadState('domcontentloaded');
-    await openFixture(page, 'format-basic.lex');
-    await page.evaluate(() => (window as any).ipcRenderer.setFormatterSettings?.({
-      sessionBlankLinesBefore: 1,
-      sessionBlankLinesAfter: 1,
-      normalizeSeqMarkers: true,
-      unorderedSeqMarker: '-',
-      maxBlankLines: 2,
-      indentString: '    ',
-      preserveTrailingBlanks: false,
-      normalizeVerbatimMarkers: true,
-      formatOnSave: false,
-    }));
+    await waitForEditor(page)
 
-    const editor = page.locator('.monaco-editor').first();
-    await expect(editor).toBeVisible();
-    await page.waitForTimeout(2000);
+    await page.evaluate(({ content }) => (window as any).lexTest?.setActiveEditorValue?.(content), {
+      content: UNFORMATTED_CONTENT,
+    })
+    await waitForEditorContent(page, 'Hello This is a title')
 
-    await page.evaluate(({ content }) => (window as any).lexTest?.setActiveEditorValue?.(content), { content: UNFORMATTED_CONTENT });
-    await page.waitForTimeout(300);
-    const beforeFormat = await page.evaluate(() => (window as any).lexTest?.getActiveEditorValue() ?? '');
-    expect(beforeFormat).toBe(UNFORMATTED_CONTENT);
+    const beforeFormat = await page.evaluate(
+      () => (window as any).lexTest?.getActiveEditorValue() ?? ''
+    )
+    expect(beforeFormat).toBe(UNFORMATTED_CONTENT)
 
-    const formatButton = page.locator('button[title="Format Document"]');
-    await expect(formatButton).toBeVisible();
-    await page.evaluate(() => {
-      (window as any).lexTest?.resetFormattingRequest?.();
-      (window as any).__lexLastFormattingRequest = null;
-    });
-    await formatButton.click();
+    await resetFormattingRequest(page)
+    await loc.formatButton(page).click()
 
-    await page.waitForFunction(() => Boolean((window as any).__lexLastFormattingRequest));
-    const formattingRequest = await page.evaluate(() => (window as any).__lexLastFormattingRequest);
-    expect(formattingRequest?.type).toBe('document');
-    expect(formattingRequest?.params?.options).toMatchObject({
-      tabSize: 4,
-      insertSpaces: true,
-      ...EXPECTED_PROPERTIES,
-    });
+    const request = await expectFormattingRequest(page, {
+      type: 'document',
+      options: {
+        tabSize: 4,
+        insertSpaces: true,
+        ...EXPECTED_PROPERTIES,
+      },
+    })
+    expect(request?.type).toBe('document')
 
-    const contentAfter = await page.evaluate(() => (window as any).lexTest?.getActiveEditorValue() ?? '');
-    expect(contentAfter).not.toEqual(UNFORMATTED_CONTENT);
-    expect(contentAfter.trim().length).toBeGreaterThan(0);
+    const contentAfter = await page.evaluate(
+      () => (window as any).lexTest?.getActiveEditorValue() ?? ''
+    )
+    expect(contentAfter).not.toEqual(UNFORMATTED_CONTENT)
+    expect(contentAfter.trim().length).toBeGreaterThan(0)
+  })
 
-    await electronApp.close();
-  });
+  test('formats document via application menu command', async ({ electronApp, page }) => {
+    await openFixture(page, 'format-basic.lex')
+    await page.evaluate(
+      (settings) => (window as any).ipcRenderer.setFormatterSettings?.(settings),
+      FORMATTER_SETTINGS
+    )
 
-  test('formats document via application menu command', async () => {
-    const electronApp = await launchApp();
+    await waitForEditor(page)
 
-    const page = await electronApp.firstWindow();
-    await page.waitForLoadState('domcontentloaded');
-    await openFixture(page, 'format-basic.lex');
-    await page.evaluate(() => (window as any).ipcRenderer.setFormatterSettings?.({
-      sessionBlankLinesBefore: 1,
-      sessionBlankLinesAfter: 1,
-      normalizeSeqMarkers: true,
-      unorderedSeqMarker: '-',
-      maxBlankLines: 2,
-      indentString: '    ',
-      preserveTrailingBlanks: false,
-      normalizeVerbatimMarkers: true,
-      formatOnSave: false,
-    }));
+    await page.evaluate(({ content }) => (window as any).lexTest?.setActiveEditorValue?.(content), {
+      content: UNFORMATTED_CONTENT,
+    })
+    await waitForEditorContent(page, 'Hello This is a title')
 
-    const editor = page.locator('.monaco-editor').first();
-    await expect(editor).toBeVisible();
-    await page.waitForTimeout(2000);
-
-    await page.evaluate(({ content }) => (window as any).lexTest?.setActiveEditorValue?.(content), { content: UNFORMATTED_CONTENT });
-    await page.waitForTimeout(300);
-    await page.evaluate(() => {
-      (window as any).lexTest?.resetFormattingRequest?.();
-      (window as any).__lexLastFormattingRequest = null;
-    });
-
+    await resetFormattingRequest(page)
     await electronApp.evaluate(({ Menu }) => {
-      const menu = Menu.getApplicationMenu();
-      menu?.getMenuItemById('menu-format')?.click();
-    });
+      const menu = Menu.getApplicationMenu()
+      menu?.getMenuItemById('menu-format')?.click()
+    })
 
-    await page.waitForFunction(() => Boolean((window as any).__lexLastFormattingRequest));
-    const formattingRequest = await page.evaluate(() => (window as any).__lexLastFormattingRequest);
-    expect(formattingRequest?.type).toBe('document');
+    await expectFormattingRequest(page, { type: 'document' })
 
-    const contentAfter = await page.evaluate(() => (window as any).lexTest?.getActiveEditorValue() ?? '');
-    expect(contentAfter).not.toEqual(UNFORMATTED_CONTENT);
+    const contentAfter = await page.evaluate(
+      () => (window as any).lexTest?.getActiveEditorValue() ?? ''
+    )
+    expect(contentAfter).not.toEqual(UNFORMATTED_CONTENT)
+  })
 
-    await electronApp.close();
-  });
-
-  test('format button is disabled when no file is open', async () => {
-    const electronApp = await launchApp();
-
-    const page = await electronApp.firstWindow();
-    await page.waitForLoadState('domcontentloaded');
-
-    const formatButton = page.locator('button[title="Format Document"]');
-    await expect(formatButton).toBeVisible();
-    await expect(formatButton).toBeDisabled();
-
-    await electronApp.close();
-  });
-});
+  test('format button is disabled when no file is open', async ({ page }) => {
+    await expect(loc.formatButton(page)).toBeVisible()
+    await expect(loc.formatButton(page)).toBeDisabled()
+  })
+})

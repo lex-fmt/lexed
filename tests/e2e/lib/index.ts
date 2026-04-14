@@ -4,6 +4,7 @@ export { waitForLsp, waitForEditor, waitForEditorContent, waitForSpellcheck } fr
 export * as loc from './locators'
 export {
   expectMarkers,
+  resetFormattingRequest,
   expectFormattingRequest,
   expectEditorValue,
   expectToast,

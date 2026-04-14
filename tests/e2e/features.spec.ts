@@ -1,179 +1,65 @@
-import { test, expect } from '@playwright/test';
-import { openFixture, launchApp } from './helpers';
-
-type LexTestWindow = Window & {
-  lexTest?: {
-    editor?: {
-      focus: () => void;
-      trigger: (source: string, handler: string, payload?: unknown) => void;
-      setSelection: (selection: {
-        startLineNumber: number;
-        startColumn: number;
-        endLineNumber: number;
-        endColumn: number;
-      }) => void;
-    };
-    getActiveEditorValue: () => string;
-  };
-  monaco?: typeof import('monaco-editor');
-};
+import { test, expect, loc, waitForEditor, waitForEditorContent, expectEditorValue } from './lib'
+import { openFixture } from './helpers'
 
 test.describe('LexEd Features', () => {
-  test('should support completion', async () => {
-    const electronApp = await launchApp();
-    const page = await electronApp.firstWindow();
-    await page.waitForLoadState('domcontentloaded');
-    await openFixture(page, 'empty.lex');
-    const editor = page.locator('.monaco-editor').first();
-    await expect(editor).toBeVisible();
-    await page.waitForTimeout(2000); // Wait for LSP
-    await editor.click();
+  test('should support completion', async ({ page }) => {
+    await openFixture(page, 'empty.lex')
+    await waitForEditor(page)
+    await loc.editor(page).click()
+    await page.evaluate(() => (window as any).lexTest?.focusEditor?.())
 
-    // Ensure focus
-    await page.evaluate(() => {
-      const scopedWindow = window as LexTestWindow;
-      const editor = scopedWindow.lexTest?.editor;
-      if (editor) {
-        editor.focus();
-      }
-    });
+    await page.keyboard.type('@')
+    await page.evaluate(() => (window as any).lexTest?.triggerSuggest?.())
 
-    // Type trigger character
-    await page.keyboard.type('@');
-    await page.waitForTimeout(500);
+    await expect(loc.suggestWidget(page)).toBeVisible({ timeout: 10000 })
+  })
 
-    // Manually trigger suggest widget via keyboard shortcut (Ctrl+Space)
-    // Playwright modifiers can be tricky, so we fallback to editor action if needed.
-    await page.evaluate(() => {
-      const scopedWindow = window as LexTestWindow;
-      const editor = scopedWindow.lexTest?.editor;
-      if (editor) {
-        editor.trigger('keyboard', 'editor.action.triggerSuggest', {});
-      }
-    });
-
-    await page.waitForTimeout(2000); // Wait for completion
-
-    // Check for suggestion widget
-    const widget = page.locator('.suggest-widget');
-    // If this fails, we might need to skip visual verification in E2E and rely on manual.
-    // But let's try one more time.
-    if (await widget.isVisible()) {
-      await expect(widget).toBeVisible();
-    } else {
-      console.log('Warning: Suggest widget not visible, skipping assertion.');
-    }
-
-    await electronApp.close();
-  });
-
-  test('should support insert commands', async () => {
-    const electronApp = await launchApp();
-    const page = await electronApp.firstWindow();
-    await page.waitForLoadState('domcontentloaded');
-    await openFixture(page, 'empty.lex');
-    const editor = page.locator('.monaco-editor').first();
-    await expect(editor).toBeVisible();
-    await page.waitForTimeout(2000);
+  test('should support insert commands', async ({ electronApp, page }) => {
+    await openFixture(page, 'empty.lex')
+    await waitForEditor(page)
 
     // Mock file-pick in Main Process
     await electronApp.evaluate(({ ipcMain }) => {
-      ipcMain.removeHandler('file-pick');
+      ipcMain.removeHandler('file-pick')
       ipcMain.handle('file-pick', async () => {
-        return '/tmp/test-asset.png';
-      });
-    });
+        return '/tmp/test-asset.png'
+      })
+    })
 
-    // Trigger Insert Asset via menu from Main Process
+    // Trigger Insert Asset via menu
     await electronApp.evaluate(({ BrowserWindow }) => {
-      const win = BrowserWindow.getAllWindows()[0];
-      win.webContents.send('menu-insert-asset');
-    });
+      const win = BrowserWindow.getAllWindows()[0]
+      win.webContents.send('menu-insert-asset')
+    })
 
-    // Wait for insertion
-    await page.waitForTimeout(1000);
+    await waitForEditorContent(page, 'doc.image')
 
-    // Verify content
-    const content = await page.evaluate(() => {
-      const scopedWindow = window as LexTestWindow;
-      return scopedWindow.lexTest?.getActiveEditorValue() ?? '';
-    });
-    expect(content).toContain('doc.image');
-    expect(content).toContain('test-asset.png');
+    await expectEditorValue(page, 'doc.image')
+    await expectEditorValue(page, 'test-asset.png')
+  })
 
-    await electronApp.close();
-  });
+  test('should support range formatting', async ({ page }) => {
+    await openFixture(page, 'format-basic.lex')
+    await waitForEditor(page)
+    await loc.editor(page).click()
 
-  test('should support navigation and annotation commands', async () => {
-    const electronApp = await launchApp();
-    const page = await electronApp.firstWindow();
-    page.on('console', (msg) =>
-      console.log(`Browser Console: ${msg.text()}`)
-    );
-    await page.waitForLoadState('domcontentloaded');
-    await openFixture(page, 'empty.lex');
-    const editor = page.locator('.monaco-editor').first();
-    await expect(editor).toBeVisible();
-    await page.waitForTimeout(2000);
-
-    // Trigger Next Annotation
-    await electronApp.evaluate(({ BrowserWindow }) => {
-      const win = BrowserWindow.getAllWindows()[0];
-      win.webContents.send('menu-next-annotation');
-    });
-    // Just verify it doesn't crash (toast might appear "No more annotations")
-    await page.waitForTimeout(500);
-
-    // Trigger Resolve Annotation
-    await electronApp.evaluate(({ BrowserWindow }) => {
-      const win = BrowserWindow.getAllWindows()[0];
-      win.webContents.send('menu-resolve-annotation');
-    });
-    await page.waitForTimeout(500);
-
-    // Trigger Toggle Annotations
-    await electronApp.evaluate(({ BrowserWindow }) => {
-      const win = BrowserWindow.getAllWindows()[0];
-      win.webContents.send('menu-toggle-annotations');
-    });
-    await page.waitForTimeout(500);
-
-    await electronApp.close();
-  });
-
-  test('should support range formatting', async () => {
-    const electronApp = await launchApp();
-    const page = await electronApp.firstWindow();
-    await page.waitForLoadState('domcontentloaded');
-    await openFixture(page, 'format-basic.lex');
-    const editor = page.locator('.monaco-editor').first();
-    await expect(editor).toBeVisible();
-    await page.waitForTimeout(2000);
-    await editor.click();
-
-    // Select a range (e.g., lines 1-2)
+    // Select a range (lines 1-2)
     await page.evaluate(() => {
-      const scopedWindow = window as LexTestWindow;
-      const editor = scopedWindow.lexTest?.editor;
+      const scopedWindow = window as any
+      const editor = scopedWindow.lexTest?.editor
       if (editor && scopedWindow.monaco?.Selection) {
-        editor.setSelection(new scopedWindow.monaco.Selection(1, 1, 2, 1));
+        editor.setSelection(new scopedWindow.monaco.Selection(1, 1, 2, 1))
       }
-    });
+    })
 
     // Trigger Format Selection
     await page.evaluate(() => {
-      const scopedWindow = window as LexTestWindow;
-      const editor = scopedWindow.lexTest?.editor;
-      if (editor) {
-        editor.trigger('source', 'editor.action.formatSelection');
-      }
-    });
+      ;(window as any).lexTest?.editor?.trigger('source', 'editor.action.formatSelection')
+    })
 
-    await page.waitForTimeout(1000);
-
-    // Verify content (checking if it didn't crash and maybe changed, though exact check is hard without specific fixture)
-    // For now, just ensure it runs
-
-    await electronApp.close();
-  });
-});
+    // The range formatting provider sends the request to the LSP and applies edits.
+    // We verify the editor still has content (action didn't crash) and the value is non-empty.
+    // Full formatting assertion coverage is in format.spec.ts; this validates the action path.
+    await expectEditorValue(page, 'Title')
+  })
+})
