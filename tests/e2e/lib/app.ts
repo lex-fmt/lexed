@@ -19,8 +19,13 @@ export type AppFixtures = {
   launchOptions: AppLaunchOptions
 }
 
+const defaultLaunchOptions: AppLaunchOptions = {
+  env: { LEX_DISABLE_PERSISTENCE: '1' },
+}
+
 export const test = base.extend<AppFixtures>({
-  launchOptions: [({}, use) => use({}), { option: true }], // eslint-disable-line no-empty-pattern
+  // eslint-disable-next-line no-empty-pattern
+  launchOptions: [({}, use) => use(defaultLaunchOptions), { option: true }],
   electronApp: async ({ launchOptions }, use) => {
     const app = await launchApp(launchOptions)
     await use(app)

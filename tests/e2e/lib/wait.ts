@@ -20,20 +20,16 @@ export async function waitForEditor(page: Page, timeout = 15000) {
 }
 
 /**
- * Wait until the active editor's model value satisfies a predicate.
+ * Wait until the active editor's model value contains the given substring.
  * Uses page.waitForFunction for Playwright's built-in retry/timeout.
  */
-export async function waitForEditorContent(
-  page: Page,
-  predicate: string,
-  { timeout = 10000 } = {}
-) {
+export async function waitForEditorContent(page: Page, text: string, { timeout = 10000 } = {}) {
   await page.waitForFunction(
-    (text) => {
+    (substring) => {
       const value = (window as any).lexTest?.getActiveEditorValue() ?? ''
-      return value.includes(text)
+      return value.includes(substring)
     },
-    predicate,
+    text,
     { timeout }
   )
 }
