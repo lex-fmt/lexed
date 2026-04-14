@@ -141,7 +141,7 @@ function AppContent() {
               status.message ??
               `Lex LSP binary was not found${status.path ? ` at ${status.path}` : ''}.`,
             suggestion:
-              'Run "npm run build" once or execute scripts/download-lex-lsp.sh to download lex-lsp.',
+              'Run "bash scripts/fetch-deps.sh" to download lex-lsp, or use "npm run dev" which fetches it automatically.',
           })
         } else if (status.status === 'error') {
           setLspError({
