@@ -111,6 +111,10 @@
       ],
       "extraResources": [
         {
+          "from": "resources/lex-lsp",
+          "to": "lex-lsp"
+        },
+        {
           "from": "bin",
           "to": "bin"
         }
@@ -158,6 +162,12 @@
       "target": [
         "nsis",
         "zip"
+      ],
+      "extraResources": [
+        {
+          "from": "resources/lex-lsp.exe",
+          "to": "lex-lsp.exe"
+        }
       ]
     },
     "linux": {
@@ -165,7 +175,13 @@
       "target": [
         "AppImage"
       ],
-      "category": "Utility"
+      "category": "Utility",
+      "extraResources": [
+        {
+          "from": "resources/lex-lsp",
+          "to": "lex-lsp"
+        }
+      ]
     },
     "fileAssociations": [
       {
@@ -187,10 +203,6 @@
       "package.json"
     ],
     "extraResources": [
-      {
-        "from": "resources/lex-lsp",
-        "to": "lex-lsp"
-      },
       {
         "from": "welcome",
         "to": "welcome"
