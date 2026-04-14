@@ -2,6 +2,7 @@
 /// <reference types="vite/client" />
 
 interface Window {
+  __lexLspReady?: boolean
   ipcRenderer: {
     on(channel: string, func: (...args: unknown[]) => void): () => void
     off(channel: string, func: (...args: unknown[]) => void): void
@@ -108,5 +109,9 @@ interface Window {
     getLastFormattingRequest?: () => { type: 'document' | 'range'; params: unknown } | null
     notifyFormattingRequest?: (payload: { type: 'document' | 'range'; params: unknown }) => void
     getMarkers?: () => unknown[]
+    isLspReady?: () => boolean
+    isSpellcheckReady?: () => boolean
+    recheckSpelling?: () => boolean
+    setCursor?: (line: number, col: number) => boolean
   }
 }

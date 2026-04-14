@@ -124,6 +124,7 @@ export function useLexTestBridge({
         if (!model) return []
         return monaco.editor.getModelMarkers({ resource: model.uri })
       },
+      isLspReady: () => Boolean(window.__lexLspReady),
       isSpellcheckReady: () => spellcheckService.isReady(),
       recheckSpelling: () => {
         const target = activePaneId ?? panesRef.current[0]?.id ?? null

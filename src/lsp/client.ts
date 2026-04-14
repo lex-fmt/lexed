@@ -275,6 +275,7 @@ export class LspClient {
 
       await this.connection.sendNotification(InitializedNotification.type, {})
       log.info('[LspClient] Initialized')
+      window.__lexLspReady = true
       window.dispatchEvent(new CustomEvent('lexed:lsp-ready'))
 
       // Reset retry count on successful connection
@@ -362,6 +363,7 @@ export class LspClient {
 
     this.connection = null
     this.readyPromise = null
+    window.__lexLspReady = false
 
     if (this.retryCount < this.maxRetries) {
       const delay = this.baseRetryDelay * Math.pow(2, this.retryCount)
@@ -382,6 +384,7 @@ export class LspClient {
 
   public dispose() {
     this.isDisposed = true
+    window.__lexLspReady = false
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer)
       this.reconnectTimer = null

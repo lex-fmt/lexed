@@ -2,12 +2,12 @@ import { _electron as electron, type Page } from '@playwright/test'
 import path from 'node:path'
 import type { ProcessEnv } from 'node:process'
 
-type LaunchOptions = {
+export type AppLaunchOptions = {
   extraArgs?: string[]
   env?: Record<string, string | undefined>
 }
 
-export async function launchApp(options: LaunchOptions = {}) {
+export async function launchApp(options: AppLaunchOptions = {}) {
   const { extraArgs = [], env: envOverrides = {} } = options
   const useBuiltRenderer = process.env.LEX_E2E_USE_BUILD === '1'
   const devServerUrl =
