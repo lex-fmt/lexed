@@ -8,7 +8,11 @@ export type AppLaunchOptions = {
 }
 
 export async function launchApp(options: AppLaunchOptions = {}) {
-  const { extraArgs = [], env: envOverrides = {} } = options
+  const { extraArgs: userArgs = [], env: envOverrides = {} } = options
+
+  // Electron's SUID sandbox doesn't work in CI containers; disable it on Linux CI
+  const ciArgs = process.platform === 'linux' && process.env.CI ? ['--no-sandbox'] : []
+  const extraArgs = [...ciArgs, ...userArgs]
   const useBuiltRenderer = process.env.LEX_E2E_USE_BUILD === '1'
   const devServerUrl =
     process.env.VITE_DEV_SERVER_URL || (useBuiltRenderer ? undefined : 'http://localhost:5173')
