@@ -7,16 +7,11 @@ RESOURCES_DIR="$APP_DIR/resources"
 LEX_DEPS="$APP_DIR/shared/lex-deps.json"
 
 # ---------------------------------------------------------------------------
-# Read dep metadata from lex-deps.json
+# Read dep metadata from lex-deps.json via read-lex-config.mjs
 # ---------------------------------------------------------------------------
 dep_field() {
   local dep="$1" field="$2"
-  node -e "
-    const d = require('$LEX_DEPS');
-    const v = d.deps?.['$dep']?.['$field'];
-    if (!v) { process.stderr.write('Unknown dep field: $dep.$field\n'); process.exit(1); }
-    process.stdout.write(v);
-  "
+  node "$SCRIPT_DIR/read-lex-config.mjs" "$dep" "$field"
 }
 
 # ---------------------------------------------------------------------------
@@ -201,7 +196,7 @@ mkdir -p "$RESOURCES_DIR"
 if [[ -n "$REQUESTED_DEP" ]]; then
   DEPS=("$REQUESTED_DEP")
 else
-  DEPS=($(node -e "const d=require('$LEX_DEPS'); for(const k of Object.keys(d.deps||{})) process.stdout.write(k+'\n')"))
+  DEPS=($(node "$SCRIPT_DIR/read-lex-config.mjs" --list-deps))
 fi
 
 for dep in "${DEPS[@]}"; do
