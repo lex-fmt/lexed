@@ -54,7 +54,7 @@ npm run format       # Prettier
    - `npm run build:quicklook` - Build QuickLook extension (macOS only)
 
 2. `npm run build` executes:
-   - `scripts/download-lex-lsp.sh` - Download lex-lsp binary from GitHub releases
+   - `scripts/fetch-deps.sh` - Download lex-lsp binary from GitHub releases
    - `tsc` - TypeScript compilation
    - `vite build` - Bundle renderer, main, and preload
    - `electron-builder` - Package into DMG/installer
@@ -71,7 +71,7 @@ npm run format       # Prettier
 cd /path/to/lex && cargo build -p lex-lsp
 
 # Run lexed with local LSP
-LEX_LSP_PATH=/path/to/lex/target/debug/lex-lsp npm run dev
+LEX_LSP_PATH=/path/to/lex/target/debug/lex-lsp npm run dev:local
 ```
 
 ## Testing
