@@ -1,5 +1,5 @@
 import { spawn, ChildProcess } from 'child_process'
-import { WebContents, app, dialog } from 'electron'
+import { WebContents, app } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
 
@@ -108,9 +108,9 @@ export class LspManager {
     }
 
     if (!fs.existsSync(lspPath)) {
-      const message = `Lex language server binary not found at ${lspPath}. Run scripts/download-lex-lsp.sh to fetch it.`
+      const message = `Lex language server binary not found at ${lspPath}. Run: bash scripts/fetch-deps.sh`
       log(message)
-      dialog.showErrorBox('Lex LSP Missing', message)
+      console.error(message)
       this.sendStatus({ status: 'missing-binary', message, path: lspPath })
       return
     }

@@ -7,25 +7,32 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '..');
 const configPath = path.join(repoRoot, 'shared', 'lex-deps.json');
 
-// Map old key names to new ones for backwards compatibility during migration
-const keyMap = {
-  lexLspVersion: 'lex-lsp',
-  lexLspRepo: 'lex-lsp-repo',
-};
+// Usage: node read-lex-config.mjs <dep> <field>
+// Example: node read-lex-config.mjs lex-lsp version  → "v0.4.0"
+const dep = process.argv[2];
+const field = process.argv[3];
 
-const requestedKey = process.argv[2] ?? 'lex-lsp';
-const key = keyMap[requestedKey] ?? requestedKey;
+if (!dep || !field) {
+  console.error('Usage: read-lex-config.mjs <dep> <field>');
+  console.error('Example: read-lex-config.mjs lex-lsp version');
+  process.exit(1);
+}
 
 try {
   const raw = readFileSync(configPath, 'utf8');
   const config = JSON.parse(raw);
-  if (!(key in config)) {
-    console.error(`Key "${key}" not found in ${path.relative(repoRoot, configPath)}`);
+  const depConfig = config.deps?.[dep];
+  if (!depConfig) {
+    console.error(`Dep "${dep}" not found in ${path.relative(repoRoot, configPath)}`);
     process.exit(1);
   }
-  const value = config[key];
+  const value = depConfig[field];
+  if (value === undefined) {
+    console.error(`Field "${field}" not found for dep "${dep}"`);
+    process.exit(1);
+  }
   if (typeof value !== 'string') {
-    console.error(`Value for "${key}" must be a string`);
+    console.error(`Value for "${dep}.${field}" must be a string`);
     process.exit(1);
   }
   process.stdout.write(value);

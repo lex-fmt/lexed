@@ -64,8 +64,8 @@ jobs:
           npm ci
           npm run build
 
-      - name: Download lex-lsp binary
-        run: bash scripts/download-lex-lsp.sh
+      - name: Fetch lex-lsp binary
+        run: bash scripts/fetch-deps.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
