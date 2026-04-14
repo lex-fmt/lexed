@@ -6,7 +6,6 @@ import iconGen from 'icon-gen';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.join(__dirname, '..');
-const workspaceRoot = path.join(projectRoot, '..', '..');
 const outputDir = path.join(projectRoot, 'build', 'icons');
 const iconsDir = path.join(outputDir, 'icons');
 const pngOutputDir = iconsDir;
