@@ -1,122 +1,76 @@
-import { test, expect } from '@playwright/test';
-import { openFixture, launchApp } from './helpers';
-import * as fs from 'fs/promises';
+import { test, expect, loc, waitForEditor, expectToast } from './lib'
+import { openFixture } from './helpers'
+import * as fs from 'fs/promises'
 
 test.describe('Interop Features', () => {
-  test('should convert markdown to lex via convert button', async () => {
-    const electronApp = await launchApp();
-    const page = await electronApp.firstWindow();
-    await page.waitForLoadState('domcontentloaded');
+  test('should convert markdown to lex via convert button', async ({ page }) => {
+    const fixture = await openFixture(page, 'sample.md')
+    await waitForEditor(page)
 
-    // Open a markdown fixture
-    const fixture = await openFixture(page, 'sample.md');
-    const editor = page.locator('.monaco-editor').first();
-    await expect(editor).toBeVisible();
-    await page.waitForTimeout(2000); // Wait for LSP
+    await expect(loc.convertToLexButton(page)).toBeVisible()
+    await expect(loc.convertToLexButton(page)).toBeEnabled()
+    await loc.convertToLexButton(page).click()
 
-    // Find and click the convert to lex button
-    const convertButton = page.locator('button[title="Convert to Lex"]');
-    await expect(convertButton).toBeVisible();
-    await expect(convertButton).toBeEnabled();
-    await convertButton.click();
+    await expectToast(page, 'Converted')
 
-    // Wait for conversion to complete - look for success toast
-    const toast = page.locator('[data-sonner-toast]');
-    await expect(toast).toBeVisible({ timeout: 10000 });
+    const outputPath = fixture.path.replace(/\.md$/, '.lex')
+    const outputExists = await fs
+      .access(outputPath)
+      .then(() => true)
+      .catch(() => false)
+    expect(outputExists).toBe(true)
 
-    // Check the toast contains success message
-    const toastText = await toast.textContent();
-    expect(toastText).toContain('Converted');
+    const content = await fs.readFile(outputPath, 'utf-8')
+    expect(content).toContain('Sample Markdown')
 
-    // Verify the output file exists
-    const outputPath = fixture.path.replace(/\.md$/, '.lex');
-    const outputExists = await fs.access(outputPath).then(() => true).catch(() => false);
-    expect(outputExists).toBe(true);
+    await fs.unlink(outputPath).catch(() => {})
+  })
 
-    // Verify content is lex (should contain the title)
-    const content = await fs.readFile(outputPath, 'utf-8');
-    expect(content).toContain('Sample Markdown');
+  test('should export lex to markdown via menu', async ({ electronApp, page }) => {
+    const fixture = await openFixture(page, 'format-basic.lex')
+    await waitForEditor(page)
 
-    // Cleanup
-    await fs.unlink(outputPath).catch(() => {});
-    await electronApp.close();
-  });
-
-  test('should export lex to markdown via menu', async () => {
-    const electronApp = await launchApp();
-    const page = await electronApp.firstWindow();
-    await page.waitForLoadState('domcontentloaded');
-
-    // Open a lex fixture
-    const fixture = await openFixture(page, 'format-basic.lex');
-    const editor = page.locator('.monaco-editor').first();
-    await expect(editor).toBeVisible();
-    await page.waitForTimeout(2000); // Wait for LSP
-
-    // Trigger export via menu
     await electronApp.evaluate(({ BrowserWindow }) => {
-      const win = BrowserWindow.getAllWindows()[0];
-      win.webContents.send('menu-export', 'markdown');
-    });
+      const win = BrowserWindow.getAllWindows()[0]
+      win.webContents.send('menu-export', 'markdown')
+    })
 
-    // Wait for export to complete - look for success toast
-    const toast = page.locator('[data-sonner-toast]');
-    await expect(toast).toBeVisible({ timeout: 10000 });
+    await expectToast(page, 'Exported')
 
-    // Check the toast contains success message
-    const toastText = await toast.textContent();
-    expect(toastText).toContain('Exported');
+    const outputPath = fixture.path.replace(/\.lex$/, '.md')
+    const outputExists = await fs
+      .access(outputPath)
+      .then(() => true)
+      .catch(() => false)
+    expect(outputExists).toBe(true)
 
-    // Verify the output file exists
-    const outputPath = fixture.path.replace(/\.lex$/, '.md');
-    const outputExists = await fs.access(outputPath).then(() => true).catch(() => false);
-    expect(outputExists).toBe(true);
+    const content = await fs.readFile(outputPath, 'utf-8')
+    expect(content.length).toBeGreaterThan(0)
 
-    // Verify content is markdown
-    const content = await fs.readFile(outputPath, 'utf-8');
-    expect(content.length).toBeGreaterThan(0);
+    await fs.unlink(outputPath).catch(() => {})
+  })
 
-    // Cleanup
-    await fs.unlink(outputPath).catch(() => {});
-    await electronApp.close();
-  });
+  test('should export lex to html via menu', async ({ electronApp, page }) => {
+    const fixture = await openFixture(page, 'format-basic.lex')
+    await waitForEditor(page)
 
-  test('should export lex to html via menu', async () => {
-    const electronApp = await launchApp();
-    const page = await electronApp.firstWindow();
-    await page.waitForLoadState('domcontentloaded');
-
-    // Open a lex fixture
-    const fixture = await openFixture(page, 'format-basic.lex');
-    const editor = page.locator('.monaco-editor').first();
-    await expect(editor).toBeVisible();
-    await page.waitForTimeout(2000); // Wait for LSP
-
-    // Trigger export via menu
     await electronApp.evaluate(({ BrowserWindow }) => {
-      const win = BrowserWindow.getAllWindows()[0];
-      win.webContents.send('menu-export', 'html');
-    });
+      const win = BrowserWindow.getAllWindows()[0]
+      win.webContents.send('menu-export', 'html')
+    })
 
-    // Wait for export to complete
-    const toast = page.locator('[data-sonner-toast]');
-    await expect(toast).toBeVisible({ timeout: 10000 });
+    await expectToast(page, 'Exported')
 
-    // Check the toast contains success message
-    const toastText = await toast.textContent();
-    expect(toastText).toContain('Exported');
+    const outputPath = fixture.path.replace(/\.lex$/, '.html')
+    const outputExists = await fs
+      .access(outputPath)
+      .then(() => true)
+      .catch(() => false)
+    expect(outputExists).toBe(true)
 
-    // Verify the output file exists
-    const outputPath = fixture.path.replace(/\.lex$/, '.html');
-    const outputExists = await fs.access(outputPath).then(() => true).catch(() => false);
-    expect(outputExists).toBe(true);
+    const content = await fs.readFile(outputPath, 'utf-8')
+    expect(content).toContain('<')
 
-    // Verify content is HTML
-    const content = await fs.readFile(outputPath, 'utf-8');
-    expect(content).toContain('<');
-
-    // Cleanup
-    await fs.unlink(outputPath).catch(() => {});
-    await electronApp.close();
-  });
-});
+    await fs.unlink(outputPath).catch(() => {})
+  })
+})

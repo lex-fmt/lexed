@@ -69,18 +69,26 @@ export async function expectMarkers(page: Page, expected: MarkerMatch[], { timeo
 }
 
 /**
+ * Reset the captured formatting request. Call this before triggering a format
+ * action, then call expectFormattingRequest after the action to wait for the result.
+ */
+export async function resetFormattingRequest(page: Page) {
+  await page.evaluate(() => {
+    ;(window as any).lexTest?.resetFormattingRequest?.()
+    ;(window as any).__lexLastFormattingRequest = null
+  })
+}
+
+/**
  * Assert on the last formatting request captured by the test bridge.
- * Resets the captured request first, then waits for a new one to arrive.
+ * Waits for __lexLastFormattingRequest to be set, then deeply matches.
+ * Call resetFormattingRequest() before the triggering action to avoid stale data.
  */
 export async function expectFormattingRequest(
   page: Page,
   expected: { type?: 'document' | 'range'; options?: Record<string, unknown> },
   { timeout = 10000 } = {}
 ) {
-  await page.evaluate(() => {
-    ;(window as any).lexTest?.resetFormattingRequest?.()
-    ;(window as any).__lexLastFormattingRequest = null
-  })
   await page.waitForFunction(() => Boolean((window as any).__lexLastFormattingRequest), null, {
     timeout,
   })

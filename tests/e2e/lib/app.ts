@@ -11,23 +11,23 @@ import { launchApp, type AppLaunchOptions } from '../helpers'
  *   test('my test', async ({ electronApp, page }) => { ... })
  *
  * To customize launch options for a describe block:
- *   test.use({ launchOptions: { env: { LEX_DISABLE_PERSISTENCE: '0' } } })
+ *   test.use({ appLaunchOptions: { env: { LEX_DISABLE_PERSISTENCE: '0' } } })
  */
 export type AppFixtures = {
   electronApp: ElectronApplication
   page: Page
-  launchOptions: AppLaunchOptions
+  appLaunchOptions: AppLaunchOptions
 }
 
-const defaultLaunchOptions: AppLaunchOptions = {
+const defaultAppLaunchOptions: AppLaunchOptions = {
   env: { LEX_DISABLE_PERSISTENCE: '1' },
 }
 
 export const test = base.extend<AppFixtures>({
   // eslint-disable-next-line no-empty-pattern
-  launchOptions: [({}, use) => use(defaultLaunchOptions), { option: true }],
-  electronApp: async ({ launchOptions }, use) => {
-    const app = await launchApp(launchOptions)
+  appLaunchOptions: [({}, use) => use(defaultAppLaunchOptions), { option: true }],
+  electronApp: async ({ appLaunchOptions }, use) => {
+    const app = await launchApp(appLaunchOptions)
     await use(app)
     await app.close()
   },
