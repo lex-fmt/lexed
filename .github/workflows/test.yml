@@ -39,5 +39,51 @@ jobs:
       - name: Unit tests
         run: npm run test:unit -- --run
 
-      # Note: E2E tests require display and lex-lsp binary
-      # These are run locally via pre-commit hook
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: '0'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared module
+        run: |
+          cd shared
+          npm ci
+          npm run build
+
+      - name: Download lex-lsp binary
+        run: bash scripts/download-lex-lsp.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build renderer and main process
+        run: npm run icons && npx tsc && npx vite build
+
+      - name: Run E2E tests
+        run: xvfb-run --auto-servernum npx playwright test tests/e2e
+        env:
+          LEX_E2E_USE_BUILD: '1'
+          LEX_SKIP_E2E_BUILD: '1'
+          LEX_HIDE_WINDOW: '1'
+          LEX_DISABLE_PERSISTENCE: '1'
+
+      - name: Upload traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
