@@ -22,22 +22,23 @@ export default defineConfig({
       // Ployfill the Electron and Node.js API for Renderer process.
       // If you want use Node.js in Renderer process, the `nodeIntegration` needs to be enabled in the Main process.
       // See 👉 https://github.com/electron-vite/vite-plugin-electron-renderer
-      renderer: process.env.NODE_ENV === 'test'
-        // https://github.com/electron-vite/vite-plugin-electron-renderer/issues/78#issuecomment-2053600808
-        ? undefined
-        : {},
+      renderer:
+        process.env.NODE_ENV === 'test'
+          ? // https://github.com/electron-vite/vite-plugin-electron-renderer/issues/78#issuecomment-2053600808
+            undefined
+          : {},
     }),
   ],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
-      "@lex/shared": path.resolve(__dirname, "./shared/src/index.ts"),
+      '@': path.resolve(__dirname, './src'),
+      '@lex/shared': path.resolve(__dirname, './shared/src/index.ts'),
     },
   },
   server: {
     watch: {
-      // Ignore .lex files and welcome directory - these are user documents, not source code
-      ignored: ['**/*.lex', '**/welcome/**'],
+      // Ignore user documents and dictionaries - not source code
+      ignored: ['**/*.lex', '**/welcome/**', '**/dictionaries/**'],
     },
   },
   test: {
