@@ -22,9 +22,7 @@ test.describe('Split Panes', () => {
     }
   })
 
-  // Skipped: race condition between settings loading (lastFolder) and LSP initialization
-  // causing rootUri to be null in test environment, leading to LSP crashing.
-  // Visual verification confirms functionality works.
+  // TODO: re-enable once launchApp test infrastructure handles workspace init race condition
   test.skip('opens files per pane and syncs outline and explorer', async () => {
     test.setTimeout(60000)
     const electronApp = await launchApp()
