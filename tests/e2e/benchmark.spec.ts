@@ -7,12 +7,8 @@ test.describe('Benchmark File', () => {
 
     await openFixture(page, 'benchmark.lex')
 
-    const editor = loc.editor(page)
-    await expect(editor).toBeVisible()
-
-    await expect(editor).toContainText('Compromise')
-    await expect(editor).toContainText('1.')
-
+    await expect(loc.editor(page)).toContainText('Compromise')
+    await expect(loc.editor(page)).toContainText('1.')
     await expect(loc.outlineView(page)).toContainText('1. The Cage of Compromise')
   })
 })

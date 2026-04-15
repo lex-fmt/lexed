@@ -2,6 +2,7 @@ import { test, expect, _electron as electron } from '@playwright/test'
 import type { ElectronApplication, Page, ConsoleMessage } from '@playwright/test'
 import * as path from 'path'
 import { openFixture } from './helpers'
+import { waitForApp } from './lib/wait'
 import * as loc from './lib/locators'
 
 test.describe('Packaged Application', () => {
@@ -24,6 +25,9 @@ test.describe('Packaged Application', () => {
     )
     page.on('pageerror', (err: Error) => console.log(`[Browser Page Error] ${err.message}`))
     await page.waitForLoadState('domcontentloaded')
+
+    // Manual launch — wait for app readiness explicitly (the shared fixture does this automatically)
+    await waitForApp(page)
   })
 
   test.afterAll(async () => {
@@ -35,7 +39,6 @@ test.describe('Packaged Application', () => {
 
     await openFixture(page, 'benchmark.lex')
 
-    await expect(loc.editor(page)).toBeVisible({ timeout: 10000 })
     await expect(loc.editor(page).getByText('Compromise').first()).toBeVisible()
     await expect(loc.outlineView(page)).toContainText('1. The Cage of Compromise', {
       timeout: 10000,

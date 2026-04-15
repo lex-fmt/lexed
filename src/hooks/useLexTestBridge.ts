@@ -17,6 +17,7 @@ interface UseLexTestBridgeOptions {
   panesRef: React.MutableRefObject<PaneState[]>
   panes: PaneState[]
   openFileInPane: (paneId: string, path: string) => void
+  setRootPath: (path: string | undefined) => void
 }
 
 export function useLexTestBridge({
@@ -25,6 +26,7 @@ export function useLexTestBridge({
   panesRef,
   panes,
   openFileInPane,
+  setRootPath,
 }: UseLexTestBridgeOptions) {
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -143,6 +145,10 @@ export function useLexTestBridge({
         editorInstance.revealPosition({ lineNumber: line, column: col })
         return true
       },
+      openFolder: async (folderPath: string) => {
+        setRootPath(folderPath)
+        await window.ipcRenderer.setLastFolder(folderPath)
+      },
     }
     window.lexTest = api
     return () => {
@@ -150,5 +156,5 @@ export function useLexTestBridge({
         delete window.lexTest
       }
     }
-  }, [activePaneId, openFileInPane, panes, paneHandles, panesRef])
+  }, [activePaneId, openFileInPane, panes, paneHandles, panesRef, setRootPath])
 }

@@ -1,49 +1,10 @@
-import { test, expect, loc } from './lib'
-import type { Page } from '@playwright/test'
+import { test, expect, resetSettings, openSettings, closeSettings } from './lib'
 
 test.use({ appLaunchOptions: { env: { LEX_DISABLE_PERSISTENCE: '0' } } })
 
-const DEFAULT_EDITOR_SETTINGS = {
-  showRuler: false,
-  rulerWidth: 100,
-  vimMode: false,
-}
-
-const DEFAULT_FORMATTER_SETTINGS = {
-  sessionBlankLinesBefore: 1,
-  sessionBlankLinesAfter: 1,
-  normalizeSeqMarkers: true,
-  unorderedSeqMarker: '-',
-  maxBlankLines: 2,
-  indentString: '    ',
-  preserveTrailingBlanks: false,
-  normalizeVerbatimMarkers: true,
-  formatOnSave: false,
-}
-
-async function resetAppSettings(page: Page) {
-  await page.evaluate(
-    async ({ editor, formatter }) => {
-      await (window as any).ipcRenderer.setEditorSettings(editor)
-      await (window as any).ipcRenderer.setFormatterSettings(formatter)
-    },
-    { editor: DEFAULT_EDITOR_SETTINGS, formatter: DEFAULT_FORMATTER_SETTINGS }
-  )
-}
-
-async function openSettings(page: Page) {
-  await loc.settingsButton(page).click()
-  await expect(loc.settingsHeading(page)).toBeVisible()
-}
-
-async function saveAndCloseSettings(page: Page) {
-  await loc.saveChangesButton(page).click()
-  await expect(loc.settingsHeading(page)).toBeHidden()
-}
-
 test.describe('Settings', () => {
   test('loads latest formatter values when switching tabs', async ({ page }) => {
-    await resetAppSettings(page)
+    await resetSettings(page)
     await openSettings(page)
 
     const customFormatter = {
@@ -94,7 +55,7 @@ test.describe('Settings', () => {
   })
 
   test('persists UI and formatter settings after closing dialog', async ({ page }) => {
-    await resetAppSettings(page)
+    await resetSettings(page)
     await openSettings(page)
 
     const showRulerCheckbox = page.locator('input#show-ruler')
@@ -120,7 +81,7 @@ test.describe('Settings', () => {
       .locator('label:has-text("Format automatically on save") input[type="checkbox"]')
       .check()
 
-    await saveAndCloseSettings(page)
+    await closeSettings(page)
 
     await openSettings(page)
     await expect(page.locator('input#show-ruler')).toBeChecked()
