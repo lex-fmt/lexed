@@ -5,6 +5,7 @@ import {
   InitializeParams,
   InitializeRequest,
   InitializedNotification,
+  DidChangeWorkspaceFoldersNotification,
   MessageReader,
   MessageWriter,
 } from 'vscode-languageserver-protocol/browser'
@@ -260,6 +261,7 @@ export class LspClient {
             workspaceEdit: {
               documentChanges: true,
             },
+            workspaceFolders: true,
             didChangeConfiguration: { dynamicRegistration: true },
             didChangeWatchedFiles: { dynamicRegistration: true },
             symbol: { dynamicRegistration: true },
@@ -461,6 +463,27 @@ export class LspClient {
       return
     }
     this.connection.sendNotification(method, params)
+  }
+
+  public async notifyWorkspaceFoldersChanged(added: string[], removed: string[]): Promise<void> {
+    if (!this.readyPromise) return
+    await this.readyPromise
+    if (!this.connection) return
+
+    const toFolder = (p: string) => ({
+      uri: monaco.Uri.file(p).toString(),
+      name: p.split('/').pop() || p,
+    })
+
+    this.connection.sendNotification(DidChangeWorkspaceFoldersNotification.type, {
+      event: {
+        added: added.map(toFolder),
+        removed: removed.map(toFolder),
+      },
+    })
+    log.debug(
+      `[LspClient] Sent workspace/didChangeWorkspaceFolders (added=${added}, removed=${removed})`
+    )
   }
 }
 

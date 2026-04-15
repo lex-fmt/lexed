@@ -29,3 +29,10 @@ export function ensureLspInitialized(rootPath?: string) {
 export function hasCustomTransport(): boolean {
   return transportFactorySet
 }
+
+/**
+ * Notify the LSP server that workspace folders changed.
+ */
+export function notifyWorkspaceFoldersChanged(added: string[], removed: string[]) {
+  lspClient.notifyWorkspaceFoldersChanged(added, removed)
+}
