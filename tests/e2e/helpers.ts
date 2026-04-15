@@ -1,4 +1,4 @@
-import { _electron as electron, type Page } from '@playwright/test'
+import { _electron as electron, expect, type Page } from '@playwright/test'
 import path from 'node:path'
 import type { ProcessEnv } from 'node:process'
 
@@ -54,16 +54,23 @@ type LexTestWindow = Window & {
   }
 }
 
+/**
+ * Open a test fixture file and wait for the editor to be visible.
+ * Prerequisite: page fixture guarantees lexTest and LSP are ready.
+ * For pages not created by the fixture (e.g. packaged.spec.ts),
+ * call waitForApp(page) first.
+ */
 export async function openFixture(page: Page, fixtureName: string) {
-  const waitTimeout = process.env.LEX_E2E_USE_BUILD === '1' ? 15000 : 5000
-  await page.waitForFunction(() => Boolean((window as LexTestWindow).lexTest), null, {
-    timeout: waitTimeout,
-  })
-  return await page.evaluate(async (name) => {
+  const result = await page.evaluate(async (name) => {
     const scopedWindow = window as LexTestWindow
     if (!scopedWindow.lexTest) {
       throw new Error('lexTest helpers not available')
     }
     return scopedWindow.lexTest.openFixture(name)
   }, fixtureName)
+
+  // Guarantee editor is visible before returning to the test
+  await expect(page.locator('.monaco-editor').first()).toBeVisible({ timeout: 15000 })
+
+  return result
 }

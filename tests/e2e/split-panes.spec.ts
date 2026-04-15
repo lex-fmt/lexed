@@ -1,43 +1,15 @@
-import { test, expect } from '@playwright/test'
-import { launchApp } from './helpers'
-import * as loc from './lib/locators'
-import * as fs from 'fs'
-import * as path from 'path'
-import * as os from 'os'
+import { test, expect, loc, openWorkspace } from './lib'
 
 test.describe('Split Panes', () => {
-  let tempDir: string
-
-  test.beforeAll(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lex-split-panes-'))
-    fs.writeFileSync(path.join(tempDir, 'general.lex'), '# General\nContent')
-    fs.writeFileSync(path.join(tempDir, '20-ideas-naked.lex'), '# Ideas, Naked\nContent')
-  })
-
-  test.afterAll(() => {
-    try {
-      fs.rmSync(tempDir, { recursive: true, force: true })
-    } catch {
-      // Ignore
-    }
-  })
-
-  // TODO: re-enable once launchApp test infrastructure handles workspace init race condition
-  test.skip('opens files per pane and syncs outline and explorer', async () => {
+  test('opens files per pane and syncs outline and explorer', async ({ page }) => {
     test.setTimeout(60000)
-    const electronApp = await launchApp()
+
+    const workspace = await openWorkspace(page, [
+      { relativePath: 'general.lex', content: '# General\nContent' },
+      { relativePath: '20-ideas-naked.lex', content: '# Ideas, Naked\nContent' },
+    ])
 
     try {
-      const page = await electronApp.firstWindow()
-      await page.waitForLoadState('domcontentloaded')
-
-      await page.evaluate(async (dirPath) => {
-        await (window as any).ipcRenderer.invoke('test-set-workspace', dirPath)
-      }, tempDir)
-      await page.evaluate(() => location.reload())
-      await page.waitForLoadState('domcontentloaded')
-
-      await expect(loc.fileTree(page)).toBeVisible({ timeout: 15000 })
       await expect(loc.fileTreeItem(page, 'general.lex')).toBeVisible()
       await expect(loc.fileTreeItem(page, '20-ideas-naked.lex')).toBeVisible()
 
@@ -78,12 +50,12 @@ test.describe('Split Panes', () => {
 
       // Outline follows active pane
       await expect(loc.outlineView(page).locator('text="1. General"')).toBeVisible({
-        timeout: 5000,
+        timeout: 15000,
       })
 
       await panes.nth(1).click()
       await expect(loc.outlineView(page).locator('text="Ideas, Naked"')).toBeVisible({
-        timeout: 5000,
+        timeout: 15000,
       })
 
       // Split and close operations
@@ -100,7 +72,7 @@ test.describe('Split Panes', () => {
         await expect(loc.editorPanes(page)).not.toHaveCount(3)
       }
     } finally {
-      await electronApp.close()
+      workspace.cleanup()
     }
   })
 })

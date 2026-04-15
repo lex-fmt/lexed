@@ -1,11 +1,10 @@
-import { test, expect, loc, waitForEditor, expectToast } from './lib'
+import { test, expect, loc, expectToast } from './lib'
 import { openFixture } from './helpers'
 import * as fs from 'fs/promises'
 
 test.describe('Interop Features', () => {
   test('should convert markdown to lex via convert button', async ({ page }) => {
     const fixture = await openFixture(page, 'sample.md')
-    await waitForEditor(page)
 
     await expect(loc.convertToLexButton(page)).toBeVisible()
     await expect(loc.convertToLexButton(page)).toBeEnabled()
@@ -28,7 +27,6 @@ test.describe('Interop Features', () => {
 
   test('should export lex to markdown via menu', async ({ electronApp, page }) => {
     const fixture = await openFixture(page, 'format-basic.lex')
-    await waitForEditor(page)
 
     await electronApp.evaluate(({ BrowserWindow }) => {
       const win = BrowserWindow.getAllWindows()[0]
@@ -52,7 +50,6 @@ test.describe('Interop Features', () => {
 
   test('should export lex to html via menu', async ({ electronApp, page }) => {
     const fixture = await openFixture(page, 'format-basic.lex')
-    await waitForEditor(page)
 
     await electronApp.evaluate(({ BrowserWindow }) => {
       const win = BrowserWindow.getAllWindows()[0]

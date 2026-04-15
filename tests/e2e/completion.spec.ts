@@ -1,60 +1,36 @@
-import { test, expect, loc, waitForEditor } from './lib'
+import {
+  test,
+  loc,
+  focusEditor,
+  expectNoCompletionItem,
+  expectCompletionItem,
+  openWorkspace,
+} from './lib'
 import { openFixture } from './helpers'
-import fs from 'node:fs'
-import os from 'node:os'
 import path from 'node:path'
-
-const createWorkspace = () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lexed-path-workspace-'))
-  const notesDir = path.join(root, 'notes')
-  const assetsDir = path.join(root, 'assets')
-  fs.mkdirSync(notesDir, { recursive: true })
-  fs.mkdirSync(assetsDir, { recursive: true })
-  fs.writeFileSync(
-    path.join(notesDir, 'entry.lex'),
-    '# Entry File\n\nThis is a test document.\n\n@ima'
-  )
-  fs.writeFileSync(path.join(assetsDir, 'image.png'), 'fake-image')
-  fs.writeFileSync(path.join(root, '.gitignore'), '')
-  return root
-}
 
 test.describe('Path completion', () => {
   test('does not trigger suggestions without @ prefix', async ({ page }) => {
     await openFixture(page, 'empty.lex')
 
-    await waitForEditor(page)
-    await loc.editor(page).click()
-    await page.evaluate(() => (window as any).lexTest?.focusEditor?.())
-
+    await focusEditor(page)
     await page.keyboard.type('a')
-    await page.evaluate(() => (window as any).lexTest?.triggerSuggest?.())
+    await page.evaluate(() => (window as any).lexTest.triggerSuggest())
 
-    await expect
-      .poll(
-        async () => {
-          const sample = await page.evaluate(() => (window as any).__lexCompletionSample ?? [])
-          return Array.isArray(sample)
-            ? sample.find((item: any) => item?.detail === 'path reference')
-            : null
-        },
-        { timeout: 2000 }
-      )
-      .toBeUndefined()
+    await expectNoCompletionItem(page, { detail: 'path reference' })
   })
 
-  // TODO: re-enable once __lexCompletionSample is reliably populated in headless CI
-  test.skip('inserts relative paths for workspace files', async ({ page }) => {
-    const workspace = createWorkspace()
+  test('inserts relative paths for workspace files', async ({ page }) => {
+    test.setTimeout(90000)
+
+    const workspace = await openWorkspace(page, [
+      { relativePath: 'notes/entry.lex', content: '# Entry File\n\nThis is a test document.\n' },
+      { relativePath: 'assets/image.png', content: 'fake-image' },
+      { relativePath: '.gitignore', content: '' },
+    ])
 
     try {
-      await page.evaluate(async (rootPath) => {
-        await (window as any).ipcRenderer.invoke('test-set-workspace', rootPath)
-      }, workspace)
-      await page.evaluate(() => location.reload())
-      await page.waitForLoadState('domcontentloaded')
-
-      await expect(loc.fileTree(page)).toBeVisible({ timeout: 15000 })
+      // Open entry.lex via file tree
       await loc
         .fileTreeItem(page, /^notes$/)
         .first()
@@ -64,10 +40,10 @@ test.describe('Path completion', () => {
         .first()
         .click()
 
-      const assetPath = path.join(workspace, 'assets', 'image.png')
+      // Compute expected relative path
       const expectedRelative =
         (await page.evaluate(
-          ({ modelDir, assetPath: _assetPath }) => {
+          ({ modelDir }) => {
             return (window as any).__lexPathTestHelpers?.computeRelativeInsertText(
               'assets/image.png',
               'assets/image.png',
@@ -75,29 +51,19 @@ test.describe('Path completion', () => {
               (window as any).__lexWorkspaceRoot ?? undefined
             )
           },
-          {
-            modelDir: path.join(workspace, 'notes'),
-            assetPath,
-          }
+          { modelDir: path.join(workspace.path, 'notes') }
         )) ?? '../assets/image.png'
 
-      await waitForEditor(page)
-      await loc.editor(page).click()
-      await page.evaluate(() => (window as any).lexTest?.focusEditor?.())
+      // Wait for editor to be ready with the file
+      await focusEditor(page)
 
+      // Type @ trigger and verify path completion appears
       await page.keyboard.type('@ima')
-      await page.evaluate(() => (window as any).lexTest?.triggerSuggest?.())
-      await expect(loc.suggestWidget(page)).toBeVisible({ timeout: 10000 })
-      await expect
-        .poll(async () => {
-          const sample = await page.evaluate(() => (window as any).__lexCompletionSample ?? [])
-          return Array.isArray(sample)
-            ? sample.find((item: any) => item?.insertText === expectedRelative)
-            : undefined
-        })
-        .not.toBeUndefined()
+      await page.evaluate(() => (window as any).lexTest.triggerSuggest())
+
+      await expectCompletionItem(page, { insertText: expectedRelative }, { timeout: 20000 })
     } finally {
-      fs.rmSync(workspace, { recursive: true, force: true })
+      workspace.cleanup()
     }
   })
 })

@@ -34,6 +34,13 @@ export const test = base.extend<AppFixtures>({
   page: async ({ electronApp }, use) => {
     const page = await electronApp.firstWindow()
     await page.waitForLoadState('domcontentloaded')
+
+    // Guarantee the app is fully mounted and LSP is ready before any test runs.
+    // Individual tests should never need to call waitForApp/waitForLsp.
+    const timeout = process.env.LEX_E2E_USE_BUILD === '1' ? 15000 : 10000
+    await page.waitForFunction(() => Boolean((window as any).lexTest), null, { timeout })
+    await page.waitForFunction(() => Boolean((window as any).__lexLspReady), null, { timeout })
+
     await use(page)
   },
 })

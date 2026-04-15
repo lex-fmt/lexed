@@ -248,6 +248,7 @@ function AppContent() {
     panesRef,
     panes,
     openFileInPane,
+    setRootPath,
   })
 
   const handleNewFile = useCallback(async () => {

@@ -2,6 +2,14 @@ import type { Page } from '@playwright/test'
 import { expect } from '@playwright/test'
 
 /**
+ * Wait for the app to be fully mounted (lexTest bridge available).
+ * Use after page reload or any operation that re-creates the renderer.
+ */
+export async function waitForApp(page: Page, timeout = 15000) {
+  await page.waitForFunction(() => Boolean((window as any).lexTest), null, { timeout })
+}
+
+/**
  * Wait for the LSP client to complete initialization.
  * Replaces all `waitForTimeout(2000) // Wait for LSP` calls.
  */

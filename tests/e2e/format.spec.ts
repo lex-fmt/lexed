@@ -2,7 +2,6 @@ import {
   test,
   expect,
   loc,
-  waitForEditor,
   waitForEditorContent,
   resetFormattingRequest,
   expectFormattingRequest,
@@ -53,8 +52,6 @@ test.describe('Format Document', () => {
       FORMATTER_SETTINGS
     )
 
-    await waitForEditor(page)
-
     await page.evaluate(({ content }) => (window as any).lexTest?.setActiveEditorValue?.(content), {
       content: UNFORMATTED_CONTENT,
     })
@@ -91,8 +88,6 @@ test.describe('Format Document', () => {
       (settings) => (window as any).ipcRenderer.setFormatterSettings?.(settings),
       FORMATTER_SETTINGS
     )
-
-    await waitForEditor(page)
 
     await page.evaluate(({ content }) => (window as any).lexTest?.setActiveEditorValue?.(content), {
       content: UNFORMATTED_CONTENT,

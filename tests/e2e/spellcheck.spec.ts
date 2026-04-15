@@ -1,4 +1,4 @@
-import { test, expect, loc, waitForEditor, expectMarkers } from './lib'
+import { test, expect, loc, resetSettings, focusEditor, expectMarkers } from './lib'
 import { openFixture } from './helpers'
 
 test.describe('Spellcheck', () => {
@@ -7,21 +7,12 @@ test.describe('Spellcheck', () => {
   }) => {
     test.setTimeout(90000)
 
-    // Reset editor settings to defaults to avoid stale state from prior tests
-    await page.evaluate(async () => {
-      await (window as any).ipcRenderer.setEditorSettings({
-        showRuler: false,
-        rulerWidth: 100,
-        vimMode: false,
-      })
-      await (window as any).ipcRenderer.setSpellcheckSettings({ enabled: true, language: 'en_US' })
-    })
+    await resetSettings(page, { spellcheck: { enabled: true, language: 'en_US' } })
 
     await openFixture(page, 'spellcheck-test.lex')
-    await waitForEditor(page)
 
     // Trigger validation
-    await loc.editor(page).click()
+    await focusEditor(page)
     await page.keyboard.type(' ')
     await page.keyboard.press('Backspace')
 
@@ -56,12 +47,7 @@ test.describe('Spellcheck', () => {
   })
 
   test('allows switching languages from the status bar widget', async ({ page }) => {
-    await page.evaluate(async () => {
-      await (window as any).ipcRenderer.setSpellcheckSettings({
-        enabled: true,
-        language: 'en_US',
-      })
-    })
+    await resetSettings(page, { spellcheck: { enabled: true, language: 'en_US' } })
 
     await openFixture(page, 'spellcheck-test.lex')
 
@@ -98,25 +84,18 @@ test.describe('Spellcheck', () => {
   test('successfully adds words to dictionary', async ({ page }) => {
     test.setTimeout(60000)
 
-    // 0. Reset custom dictionary and enable spellcheck
+    // Reset custom dictionary and enable spellcheck
     await page.evaluate(() => (window as any).ipcRenderer.invoke('spellcheck-reset-custom-words'))
-    await page.evaluate(async () => {
-      await (window as any).ipcRenderer.setSpellcheckSettings({
-        enabled: true,
-        language: 'en_US',
-      })
-    })
+    await resetSettings(page, { spellcheck: { enabled: true, language: 'en_US' } })
 
-    // 1. Open fixture and wait for editor + LSP
     await openFixture(page, 'spellcheck-test.lex')
-    await waitForEditor(page, 30000)
 
-    // 3. Wait for initial markers
+    // Wait for initial markers
     await expectMarkers(page, [{ message: 'Unknown word: mispelled' }], { timeout: 20000 })
 
-    // 4. Type a misspelled word
+    // Type a misspelled word
     const misspelled = 'foobarbaz'
-    await loc.editor(page).click()
+    await focusEditor(page)
 
     const goToEndKey = process.platform === 'darwin' ? 'Meta+ArrowDown' : 'Control+End'
     await page.keyboard.press(goToEndKey)

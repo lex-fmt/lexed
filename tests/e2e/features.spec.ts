@@ -1,22 +1,21 @@
-import { test, expect, loc, waitForEditor, waitForEditorContent, expectEditorValue } from './lib'
+import {
+  test,
+  waitForEditorContent,
+  focusEditor,
+  expectEditorValue,
+  triggerCompletion,
+} from './lib'
 import { openFixture } from './helpers'
 
 test.describe('LexEd Features', () => {
   test('should support completion', async ({ page }) => {
     await openFixture(page, 'empty.lex')
-    await waitForEditor(page)
-    await loc.editor(page).click()
-    await page.evaluate(() => (window as any).lexTest?.focusEditor?.())
 
-    await page.keyboard.type('@')
-    await page.evaluate(() => (window as any).lexTest?.triggerSuggest?.())
-
-    await expect(loc.suggestWidget(page)).toBeVisible({ timeout: 10000 })
+    await triggerCompletion(page, '@')
   })
 
   test('should support insert commands', async ({ electronApp, page }) => {
     await openFixture(page, 'empty.lex')
-    await waitForEditor(page)
 
     // Mock file-pick in Main Process
     await electronApp.evaluate(({ ipcMain }) => {
@@ -40,8 +39,7 @@ test.describe('LexEd Features', () => {
 
   test('should support range formatting', async ({ page }) => {
     await openFixture(page, 'format-basic.lex')
-    await waitForEditor(page)
-    await loc.editor(page).click()
+    await focusEditor(page)
 
     // Select a range (lines 1-2)
     await page.evaluate(() => {
@@ -59,7 +57,6 @@ test.describe('LexEd Features', () => {
 
     // The range formatting provider sends the request to the LSP and applies edits.
     // We verify the editor still has content (action didn't crash) and the value is non-empty.
-    // Full formatting assertion coverage is in format.spec.ts; this validates the action path.
     await expectEditorValue(page, 'Title')
   })
 })
