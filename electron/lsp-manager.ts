@@ -76,6 +76,22 @@ export class LspManager {
 
   setWebContents(webContents: WebContents) {
     this.webContents = webContents
+    let initialLoadComplete = false
+
+    webContents.on('did-finish-load', () => {
+      initialLoadComplete = true
+    })
+
+    // Restart LSP on page reload (e.g. Vite HMR) so the new renderer
+    // can send a fresh initialize request to a clean LSP process.
+    webContents.on('did-start-navigation', () => {
+      if (initialLoadComplete && this.lspProcess) {
+        log('Renderer navigating — restarting LSP process')
+        this.stop()
+        this.start(this.rootPath ?? undefined)
+      }
+    })
+
     // Clear reference when webContents is destroyed to prevent errors
     webContents.on('destroyed', () => {
       this.webContents = null

@@ -856,6 +856,10 @@ function getDictionariesPath(): string {
 }
 
 function getCustomDictionaryPath(): string {
+  if (app.isPackaged) {
+    // In production the app bundle is read-only; store custom words in user data
+    return path.join(app.getPath('userData'), 'custom.dic')
+  }
   return path.join(getDictionariesPath(), 'custom.dic')
 }
 

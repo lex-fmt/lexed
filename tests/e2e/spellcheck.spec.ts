@@ -95,11 +95,7 @@ test.describe('Spellcheck', () => {
       .toMatchObject({ enabled: true, language: 'fr_FR' })
   })
 
-  // Fixme: LSP binary intermittently rejects initialize requests with -32600 (Invalid request)
-  // on the third Electron instance in a test run, causing this test to time out waiting for
-  // __lexLspReady. Reproduces identically on clean main. Root cause is in the lex-lsp binary,
-  // not the test.
-  test.fixme('successfully adds words to dictionary', async ({ page }) => {
+  test('successfully adds words to dictionary', async ({ page }) => {
     test.setTimeout(60000)
 
     // 0. Reset custom dictionary and enable spellcheck
