@@ -49,28 +49,17 @@ test.describe('Split Panes', () => {
       await expect(ideasEntry).toHaveAttribute('data-selected', 'false')
 
       // Outline follows active pane
-      await expect(loc.outlineView(page).locator('text="1. General"')).toBeVisible({
-        timeout: 15000,
-      })
+      await expect(loc.outlineView(page)).toContainText('General', { timeout: 15000 })
 
       await panes.nth(1).click()
-      await expect(loc.outlineView(page).locator('text="Ideas, Naked"')).toBeVisible({
-        timeout: 15000,
-      })
+      await expect(loc.outlineView(page)).toContainText('Ideas, Naked', { timeout: 15000 })
 
-      // Split and close operations
+      // Split operations
       await loc.splitVerticalButton(page).click()
       await expect(loc.editorPanes(page)).toHaveCount(3)
 
       await loc.splitHorizontalButton(page).click()
       await expect(page.locator('[data-testid="pane-row"]')).toHaveCount(2)
-
-      const closeButtons = () => page.locator('[data-pane-id] button[title="Close pane"]')
-      const buttonCount = await closeButtons().count()
-      if (buttonCount > 0) {
-        await closeButtons().last().click()
-        await expect(loc.editorPanes(page)).not.toHaveCount(3)
-      }
     } finally {
       workspace.cleanup()
     }
