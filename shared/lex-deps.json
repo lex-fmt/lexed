@@ -1,7 +1,7 @@
 {
   "deps": {
     "lexd-lsp": {
-      "version": "v0.7.4",
+      "version": "v0.8.0",
       "repo": "lex-fmt/lex"
     }
   }
