@@ -17,7 +17,7 @@
     "icons": "node ./scripts/generate-icons.mjs",
     "prebuild": "npm run icons && npm run build:quicklook",
     "build:quicklook": "bash ./scripts/build-quicklook.sh",
-    "build": "bash scripts/fetch-deps.sh && tsc && vite build && electron-builder",
+    "build": "bash scripts/fetch-deps.sh --if-missing && tsc && vite build && electron-builder",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix --max-warnings 0",
@@ -111,8 +111,8 @@
       ],
       "extraResources": [
         {
-          "from": "resources/lex-lsp",
-          "to": "lex-lsp"
+          "from": "resources/lexd-lsp",
+          "to": "lexd-lsp"
         },
         {
           "from": "bin",
@@ -165,8 +165,8 @@
       ],
       "extraResources": [
         {
-          "from": "resources/lex-lsp.exe",
-          "to": "lex-lsp.exe"
+          "from": "resources/lexd-lsp.exe",
+          "to": "lexd-lsp.exe"
         }
       ]
     },
@@ -178,8 +178,8 @@
       "category": "Utility",
       "extraResources": [
         {
-          "from": "resources/lex-lsp",
-          "to": "lex-lsp"
+          "from": "resources/lexd-lsp",
+          "to": "lexd-lsp"
         }
       ]
     },

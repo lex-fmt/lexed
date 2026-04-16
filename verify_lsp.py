@@ -35,8 +35,8 @@ def read_response(proc):
 
 def main():
     # Path to the built LSP binary
-    # It should be in target/debug/lex-lsp since we built it via npm run build -> cargo build
-    lsp_path = "../../target/debug/lex-lsp"
+    # It should be in target/debug/lexd-lsp since we built it via npm run build -> cargo build
+    lsp_path = "../../target/debug/lexd-lsp"
     
     print(f"Starting LSP from {lsp_path}")
     proc = subprocess.Popen(

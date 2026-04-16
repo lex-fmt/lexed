@@ -1,8 +1,8 @@
 import lexDeps from '../lex-deps.json' with { type: 'json' };
 
-// Pinned lex-lsp version - binaries downloaded from GitHub releases
-export const LEX_LSP_VERSION = lexDeps.deps['lex-lsp'].version;
-export const LEX_LSP_REPO = lexDeps.deps['lex-lsp'].repo;
+// Pinned lexd-lsp version - binaries downloaded from GitHub releases
+export const LEX_LSP_VERSION = lexDeps.deps['lexd-lsp'].version;
+export const LEX_LSP_REPO = lexDeps.deps['lexd-lsp'].repo;
 
 export const TOKEN_TYPES = [
     "DocumentTitle",

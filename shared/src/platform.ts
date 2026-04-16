@@ -272,7 +272,7 @@ export interface SettingsAdapter {
  * LSP transport factory.
  *
  * Creates the message reader/writer pair for LSP communication:
- * - Electron: IPC-based transport to spawned lex-lsp binary
+ * - Electron: IPC-based transport to spawned lexd-lsp binary
  * - Web: Direct calls to lex-wasm module
  */
 export interface LspTransport {

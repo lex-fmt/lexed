@@ -6,7 +6,7 @@ Standalone desktop editor for [Lex](https://github.com/lex-fmt/lex) — a plain 
 
 ## Overview
 
-LexEd is an Electron app built with React, TypeScript, and Monaco editor. All language features come from `lex-lsp` via LSP — no editor-side language logic.
+LexEd is an Electron app built with React, TypeScript, and Monaco editor. All language features come from `lexd-lsp` via LSP — no editor-side language logic.
 
 - Monochrome theme (typography and grayscale, adapts to light/dark)
 - Multi-pane editing with split views

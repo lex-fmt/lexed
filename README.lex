@@ -22,13 +22,13 @@ Lex LexEd Architecture
 
         Manages application lifecycle, native file system access, and window management.
 
-        Spawns and manages the `lex-lsp` binary as a child process.
+        Spawns and manages the `lexd-lsp` binary as a child process.
 
         Acts as a bridge between the Renderer and the LSP, forwarding JSON-RPC messages.
 
     3. Language Server (Rust)
 
-        The `lex-lsp` binary, written in Rust.
+        The `lexd-lsp` binary, written in Rust.
 
         Provides language intelligence: diagnostics, document symbols (outline), hover information, and semantic tokens.
 
@@ -74,7 +74,7 @@ Lex LexEd Architecture
 
         The LSP client supports pluggable transport backends via `setLspTransportFactory()`. This allows:
 
-        - Electron: IPC-based transport to communicate with spawned `lex-lsp` process
+        - Electron: IPC-based transport to communicate with spawned `lexd-lsp` process
         - Web: WASM-based transport using `lex-wasm` compiled language server
 
         The transport factory is set at application startup before LSP initialization, ensuring all language features use the correct communication mechanism.
@@ -89,15 +89,15 @@ Lex LexEd Architecture
 
     2. Main to LSP
 
-        The Main process listens on `lsp-input`, prepends the required `Content-Length` header, and writes the data to the `lex-lsp` process's standard input (stdin).
+        The Main process listens on `lsp-input`, prepends the required `Content-Length` header, and writes the data to the `lexd-lsp` process's standard input (stdin).
 
     3. LSP Processing
 
-        The `lex-lsp` binary reads from stdin, parses the message, processes the request (e.g., parsing the Lex document, generating tokens), and writes the response to standard output (stdout).
+        The `lexd-lsp` binary reads from stdin, parses the message, processes the request (e.g., parsing the Lex document, generating tokens), and writes the response to standard output (stdout).
 
     4. LSP to Main
 
-        The Main process captures the `lex-lsp` stdout stream.
+        The Main process captures the `lexd-lsp` stdout stream.
 
     5. Main to Renderer
 

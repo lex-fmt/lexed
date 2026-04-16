@@ -112,7 +112,7 @@ export class LspManager {
 
     this.rootPath = rootPath || null
 
-    const binaryName = process.platform === 'win32' ? 'lex-lsp.exe' : 'lex-lsp'
+    const binaryName = process.platform === 'win32' ? 'lexd-lsp.exe' : 'lexd-lsp'
     let lspPath: string
     let warning: string | undefined
 

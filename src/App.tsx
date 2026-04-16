@@ -141,7 +141,7 @@ function AppContent() {
               status.message ??
               `Lex LSP binary was not found${status.path ? ` at ${status.path}` : ''}.`,
             suggestion:
-              'Run "bash scripts/fetch-deps.sh" to download lex-lsp, or use "npm run dev" which fetches it automatically.',
+              'Run "bash scripts/fetch-deps.sh" to download lexd-lsp, or use "npm run dev" which fetches it automatically.',
           })
         } else if (status.status === 'error') {
           setLspError({
@@ -153,7 +153,7 @@ function AppContent() {
           setLspError({
             title: 'Lex Language Server Stopped',
             message: 'The language server exited unexpectedly.',
-            suggestion: 'Restart LexEd or rebuild lex-lsp to continue.',
+            suggestion: 'Restart LexEd or rebuild lexd-lsp to continue.',
           })
         }
       }) ?? (() => {})
@@ -164,7 +164,7 @@ function AppContent() {
       setLspError({
         title: 'Lex Language Server Unavailable',
         message: detail?.message ?? 'The language server is not responding.',
-        suggestion: 'Restart LexEd or rebuild lex-lsp to continue.',
+        suggestion: 'Restart LexEd or rebuild lexd-lsp to continue.',
       })
     }
 

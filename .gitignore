@@ -7,8 +7,8 @@ node_modules
 /tmp
 
 # Downloaded binaries
-/resources/lex-lsp
-/resources/lex-lsp.exe
+/resources/lexd-lsp
+/resources/lexd-lsp.exe
 
 # Logs
 logs
