@@ -7,10 +7,10 @@ class PreviewProvider: QLPreviewProvider {
     func providePreview(for request: QLFilePreviewRequest) async throws -> QLPreviewReply {
         let fileURL = request.fileURL
 
-        // Find lex-cli binary - check app bundle first, then PATH
+        // Find lexd-lsp binary - check app bundle first, then PATH
         let lexCLI = findLexCLI()
 
-        // Generate PNG preview using lex-cli
+        // Generate PNG preview using lexd-lsp
         let pngData = try await generatePreview(for: fileURL, using: lexCLI)
 
         // Return the PNG as the preview
@@ -22,11 +22,11 @@ class PreviewProvider: QLPreviewProvider {
 
     private func findLexCLI() -> URL {
         // Extension is at: LexEd.app/Contents/PlugIns/LexQuickLook.appex/Contents/MacOS/LexQuickLook
-        // We need:         LexEd.app/Contents/Resources/lex-lsp
+        // We need:         LexEd.app/Contents/Resources/lexd-lsp
         // So from extension bundle, go up to Contents, then into Resources
         if let extensionBundle = Bundle.main.bundleURL.deletingLastPathComponent() // PlugIns/
             .deletingLastPathComponent() // Contents/
-            .appendingPathComponent("Resources/lex-lsp") as URL? {
+            .appendingPathComponent("Resources/lexd-lsp") as URL? {
             if FileManager.default.fileExists(atPath: extensionBundle.path) {
                 return extensionBundle
             }
@@ -34,10 +34,10 @@ class PreviewProvider: QLPreviewProvider {
 
         // Fallback to common installation paths
         let candidates = [
-            "/Applications/LexEd.app/Contents/Resources/lex-lsp",
-            "/usr/local/bin/lex",
-            "/opt/homebrew/bin/lex",
-            NSHomeDirectory() + "/.cargo/bin/lex"
+            "/Applications/LexEd.app/Contents/Resources/lexd-lsp",
+            "/usr/local/bin/lexd",
+            "/opt/homebrew/bin/lexd",
+            NSHomeDirectory() + "/.cargo/bin/lexd"
         ]
 
         for candidate in candidates {
@@ -47,7 +47,7 @@ class PreviewProvider: QLPreviewProvider {
         }
 
         // Default
-        return URL(fileURLWithPath: "/Applications/LexEd.app/Contents/Resources/lex-lsp")
+        return URL(fileURLWithPath: "/Applications/LexEd.app/Contents/Resources/lexd-lsp")
     }
 
     private func generatePreview(for fileURL: URL, using lexCLI: URL) async throws -> Data {

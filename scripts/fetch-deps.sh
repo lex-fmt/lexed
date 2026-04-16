@@ -110,7 +110,7 @@ build_dep() {
   local dep="$1" target="$2"
 
   case "$dep" in
-    lex-lsp)
+    lexd-lsp)
       local repo_root
       repo_root="$(cd "$APP_DIR/.." && pwd)/lex"
       if [[ ! -d "$repo_root" ]]; then
@@ -119,28 +119,28 @@ build_dep() {
         exit 1
       fi
       if ! command -v cargo >/dev/null 2>&1; then
-        echo "cargo is required to build lex-lsp from source" >&2
+        echo "cargo is required to build lexd-lsp from source" >&2
         exit 1
       fi
       pushd "$repo_root" >/dev/null
       if [[ -n "$target" ]]; then
-        cargo build --bin lex-lsp --release --target "$target"
-        local bin_src="$repo_root/target/$target/release/lex-lsp"
+        cargo build --bin lexd-lsp --release --target "$target"
+        local bin_src="$repo_root/target/$target/release/lexd-lsp"
       else
-        cargo build --bin lex-lsp --release
-        local bin_src="$repo_root/target/release/lex-lsp"
+        cargo build --bin lexd-lsp --release
+        local bin_src="$repo_root/target/release/lexd-lsp"
       fi
       popd >/dev/null
       [[ ! -f "$bin_src" && -f "${bin_src}.exe" ]] && bin_src="${bin_src}.exe"
       if [[ ! -f "$bin_src" ]]; then
-        echo "lex-lsp binary not found at $bin_src" >&2
+        echo "lexd-lsp binary not found at $bin_src" >&2
         exit 1
       fi
-      local dest="$RESOURCES_DIR/lex-lsp"
+      local dest="$RESOURCES_DIR/lexd-lsp"
       [[ "$bin_src" == *.exe ]] && dest="${dest}.exe"
       cp "$bin_src" "$dest"
       chmod +x "$dest"
-      echo "lex-lsp (from source) → $dest"
+      echo "lexd-lsp (from source) → $dest"
       ;;
     *)
       echo "Don't know how to build $dep from source" >&2

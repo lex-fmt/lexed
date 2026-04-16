@@ -35,7 +35,7 @@ export async function launchApp(options: AppLaunchOptions = {}) {
   }
 
   if (useBuiltRenderer) {
-    const binaryName = process.platform === 'win32' ? 'lex-lsp.exe' : 'lex-lsp'
+    const binaryName = process.platform === 'win32' ? 'lexd-lsp.exe' : 'lexd-lsp'
     env.LEX_LSP_PATH = path.join(process.cwd(), 'resources', binaryName)
   }
 

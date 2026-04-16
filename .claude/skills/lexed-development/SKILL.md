@@ -54,7 +54,7 @@ npm run format       # Prettier
    - `npm run build:quicklook` - Build QuickLook extension (macOS only)
 
 2. `npm run build` executes:
-   - `scripts/fetch-deps.sh` - Download lex-lsp binary from GitHub releases
+   - `scripts/fetch-deps.sh` - Download lexd-lsp binary from GitHub releases
    - `tsc` - TypeScript compilation
    - `vite build` - Bundle renderer, main, and preload
    - `electron-builder` - Package into DMG/installer
@@ -63,15 +63,15 @@ npm run format       # Prettier
 
 ### Binary Resolution (in order)
 1. `LEX_LSP_PATH` environment variable (for local dev)
-2. Bundled binary in `resources/lex-lsp` (production)
+2. Bundled binary in `resources/lexd-lsp` (production)
 
 ### Development with Local LSP
 ```bash
-# Build lex-lsp from the lex repo
-cd /path/to/lex && cargo build -p lex-lsp
+# Build lexd-lsp from the lex repo
+cd /path/to/lex && cargo build -p lexd-lsp
 
 # Run lexed with local LSP
-LEX_LSP_PATH=/path/to/lex/target/debug/lex-lsp npm run dev:local
+LEX_LSP_PATH=/path/to/lex/target/debug/lexd-lsp npm run dev:local
 ```
 
 ## Testing
