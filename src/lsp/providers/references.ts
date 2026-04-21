@@ -2,25 +2,24 @@ import * as monaco from 'monaco-editor'
 import { ProtocolConnection } from 'vscode-languageserver-protocol/browser'
 import { LspLocation } from '../types'
 
-export function registerDefinitionProvider(
+export function registerReferencesProvider(
   languageId: string,
   connection: ProtocolConnection
 ): monaco.IDisposable {
-  return monaco.languages.registerDefinitionProvider(languageId, {
-    provideDefinition: async (model, position) => {
+  return monaco.languages.registerReferenceProvider(languageId, {
+    provideReferences: async (model, position, context) => {
       if (!connection) return null
       const params = {
         textDocument: { uri: model.uri.toString() },
         position: { line: position.lineNumber - 1, character: position.column - 1 },
+        context: { includeDeclaration: context.includeDeclaration ?? true },
       }
       try {
-        const result = (await connection.sendRequest('textDocument/definition', params)) as
-          | LspLocation
+        const result = (await connection.sendRequest('textDocument/references', params)) as
           | LspLocation[]
           | null
         if (!result) return null
-        const locations = Array.isArray(result) ? result : [result]
-        return locations.map((loc) => ({
+        return result.map((loc) => ({
           uri: monaco.Uri.parse(loc.uri),
           range: {
             startLineNumber: loc.range.start.line + 1,
@@ -30,7 +29,7 @@ export function registerDefinitionProvider(
           },
         }))
       } catch (e) {
-        console.error('[LSP] Definition failed:', e)
+        console.error('[LSP] References failed:', e)
         return null
       }
     },

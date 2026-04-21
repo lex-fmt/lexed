@@ -119,7 +119,11 @@ const computeRelativeInsertText = (
 }
 
 if (typeof window !== 'undefined') {
-  ;(window as { __lexPathTestHelpers?: { computeRelativeInsertText: typeof computeRelativeInsertText } }).__lexPathTestHelpers = {
+  ;(
+    window as {
+      __lexPathTestHelpers?: { computeRelativeInsertText: typeof computeRelativeInsertText }
+    }
+  ).__lexPathTestHelpers = {
     computeRelativeInsertText,
   }
 }
@@ -141,8 +145,11 @@ const getPathCompletionContext = (model: monaco.editor.ITextModel, position: mon
   return null
 }
 
-export function registerCompletionProvider(languageId: string, connection: ProtocolConnection) {
-  monaco.languages.registerCompletionItemProvider(languageId, {
+export function registerCompletionProvider(
+  languageId: string,
+  connection: ProtocolConnection
+): monaco.IDisposable {
+  return monaco.languages.registerCompletionItemProvider(languageId, {
     triggerCharacters: ['@', '[', ':', '='],
     provideCompletionItems: async (model, position, context) => {
       if (!connection) return { suggestions: [] }
@@ -150,7 +157,11 @@ export function registerCompletionProvider(languageId: string, connection: Proto
       const isPathContext = Boolean(getPathCompletionContext(model, position))
       const modelFsPath = model.uri?.fsPath ?? model.uri?.path ?? null
       const modelDir = getDirname(modelFsPath)
-      const workspaceRoot = getSettingsSnapshot().lastFolder ?? (typeof window !== 'undefined' ? (window as { __lexWorkspaceRoot?: string }).__lexWorkspaceRoot : undefined)
+      const workspaceRoot =
+        getSettingsSnapshot().lastFolder ??
+        (typeof window !== 'undefined'
+          ? (window as { __lexWorkspaceRoot?: string }).__lexWorkspaceRoot
+          : undefined)
 
       const params = {
         textDocument: { uri: model.uri.toString() },

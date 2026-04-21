@@ -395,28 +395,101 @@ export class LspClient {
       this.connection.dispose()
       this.connection = null
     }
+    void this.disposeProviders()
+  }
+
+  // Track Monaco provider registrations so reconnects don't leak
+  // duplicate providers pointing at stale (disposed) connections.
+  private providerDisposables: Array<Promise<{ dispose(): void }>> = []
+
+  private async disposeProviders() {
+    const pending = this.providerDisposables
+    this.providerDisposables = []
+    for (const p of pending) {
+      try {
+        const d = await p
+        d.dispose()
+      } catch (err) {
+        log.warn('[LspClient] failed to dispose provider', err)
+      }
+    }
   }
 
   private registerProviders() {
     const languageId = 'lex'
     if (!this.connection) return
 
-    import('./providers/completion').then((m) =>
-      m.registerCompletionProvider(languageId, this.connection!)
-    )
-    import('./providers/hover').then((m) => m.registerHoverProvider(languageId, this.connection!))
-    import('./providers/formatting').then((m) =>
-      m.registerFormattingProvider(languageId, this.connection!)
-    )
-    import('./providers/definition').then((m) =>
-      m.registerDefinitionProvider(languageId, this.connection!)
-    )
-    import('./providers/semantic_tokens').then((m) =>
-      m.registerSemanticTokensProvider(languageId, this.connection!)
-    )
-    import('./providers/code_action').then((m) =>
-      m.registerCodeActionProvider(languageId, this.connection!)
-    )
+    // Dispose any providers left from a previous connection. We do this
+    // fire-and-forget — the new registrations happen immediately so the
+    // race window where no provider is registered is minimal.
+    void this.disposeProviders()
+
+    const connection = this.connection
+    const noop: monaco.IDisposable = { dispose() {} }
+    // Wrap each dynamic import + registration so a module-load failure
+    // or a registration throw is surfaced as a logged error and turned
+    // into a no-op disposable. Without the catch these promises sit in
+    // `providerDisposables` unawaited until `disposeProviders()` runs,
+    // and a rejection would fire as an unhandled promise rejection.
+    const register = <T>(
+      label: string,
+      importer: () => Promise<T>,
+      bind: (m: T) => monaco.IDisposable
+    ): Promise<monaco.IDisposable> =>
+      importer()
+        .then(bind)
+        .catch((err: unknown) => {
+          log.error(`[LspClient] failed to register ${label} provider`, err)
+          return noop
+        })
+
+    this.providerDisposables = [
+      register(
+        'completion',
+        () => import('./providers/completion'),
+        (m) => m.registerCompletionProvider(languageId, connection)
+      ),
+      register(
+        'hover',
+        () => import('./providers/hover'),
+        (m) => m.registerHoverProvider(languageId, connection)
+      ),
+      register(
+        'formatting',
+        () => import('./providers/formatting'),
+        (m) => m.registerFormattingProvider(languageId, connection)
+      ),
+      register(
+        'definition',
+        () => import('./providers/definition'),
+        (m) => m.registerDefinitionProvider(languageId, connection)
+      ),
+      register(
+        'semantic_tokens',
+        () => import('./providers/semantic_tokens'),
+        (m) => m.registerSemanticTokensProvider(languageId, connection)
+      ),
+      register(
+        'code_action',
+        () => import('./providers/code_action'),
+        (m) => m.registerCodeActionProvider(languageId, connection)
+      ),
+      register(
+        'references',
+        () => import('./providers/references'),
+        (m) => m.registerReferencesProvider(languageId, connection)
+      ),
+      register(
+        'document_links',
+        () => import('./providers/document_links'),
+        (m) => m.registerDocumentLinksProvider(languageId, connection)
+      ),
+      register(
+        'folding_range',
+        () => import('./providers/folding_range'),
+        (m) => m.registerFoldingRangeProvider(languageId, connection)
+      ),
+    ]
   }
 
   public async sendRequest<R, P = unknown>(method: string, params: P): Promise<R> {

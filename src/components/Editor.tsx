@@ -10,6 +10,7 @@ import { useSettings } from '@/contexts/SettingsContext'
 import { usePlatform } from '@/contexts/PlatformContext'
 import { lspClient } from '@/lsp/client'
 import { buildFormattingOptions, notifyLexTest } from '@/lsp/providers/formatting'
+import { navigateTableCell, formatTableAtCursor } from '@/lsp/table_commands'
 import type { LspTextEdit } from '@/lsp/types'
 import { dispatchFileTreeRefresh } from '@/lib/events'
 
@@ -190,7 +191,56 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     } satisfies monaco.editor.IStandaloneEditorConstructionOptions)
     editorRef.current = editor
 
-    // ... existing code
+    // Table cell navigation — Tab / Shift+Tab when the cursor is on a
+    // pipe row jumps between cells (LSP-backed). Outside of pipe rows
+    // the `onKeyDown` handler does not preventDefault, so Monaco's
+    // default Tab (indent) / Shift+Tab (outdent) still runs. `navigateTableCell`
+    // itself guards against reentrancy (per-editor pending flag) so
+    // rapid Tab presses can't race and move the cursor out of order.
+    //
+    // If the LSP returns {inTable: false}, errors out, or the reentrancy
+    // guard drops the request and the helper returns `false`, we trigger
+    // Monaco's default Tab / Shift+Tab command explicitly so the
+    // keystroke isn't silently swallowed.
+    const tabDisposable = editor.onKeyDown((e) => {
+      if (e.keyCode !== monaco.KeyCode.Tab) return
+      const model = editor.getModel()
+      if (!model || model.getLanguageId() !== 'lex') return
+      const position = editor.getPosition()
+      if (!position) return
+      const lineText = model.getLineContent(position.lineNumber)
+      if (!lineText.trimStart().startsWith('|')) return
+
+      e.preventDefault()
+      e.stopPropagation()
+      const direction = e.shiftKey ? 'previous' : 'next'
+      const fallbackCommand = e.shiftKey ? 'outdent' : 'tab'
+      const runFallback = () => {
+        editor.trigger('keyboard', fallbackCommand, null)
+      }
+      void navigateTableCell(editor, direction)
+        .then((handled) => {
+          if (!handled) runFallback()
+        })
+        .catch(() => {
+          runFallback()
+        })
+    })
+
+    // Format Table at Cursor — Cmd+Shift+T (Ctrl+Shift+T on non-Mac),
+    // matching vscode's existing binding. Scoped to .lex buffers via
+    // the precondition so it doesn't shadow Monaco's default binding
+    // in other languages.
+    const formatTableDisposable = editor.addAction({
+      id: 'lex.formatTable',
+      label: 'Lex: Format Table at Cursor',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyT],
+      precondition: "editorLangId == 'lex'",
+      contextMenuGroupId: 'modification',
+      run: async () => {
+        await formatTableAtCursor(editor)
+      },
+    })
 
     const applyThemeFromNative = (mode: ThemeMode) => {
       applyTheme(mode)
@@ -222,6 +272,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     })
 
     return () => {
+      tabDisposable.dispose()
+      formatTableDisposable.dispose()
       editor.dispose()
       if (vimModeRef.current) {
         vimModeRef.current.dispose()
