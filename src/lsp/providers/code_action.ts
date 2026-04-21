@@ -7,24 +7,28 @@ import {
   Command,
   TextEdit,
   Diagnostic,
-  ExecuteCommandRequest,
 } from 'vscode-languageserver-protocol/browser'
+import { lspClient } from '../client'
 
-// Track registered commands to avoid duplicates
+// Monaco commands are registered once per app lifetime (they can't be
+// cleanly unregistered). That's fine as long as the handler resolves the
+// *current* connection at call time — otherwise an LSP reconnect would
+// leave the old commands pointing at a disposed connection. Route the
+// request through `lspClient.sendRequest`, which always uses the live
+// connection.
 const registeredCommands = new Set<string>()
 
-function registerLspCommand(commandId: string, connection: ProtocolConnection) {
+function registerLspCommand(commandId: string) {
   if (registeredCommands.has(commandId)) return
   registeredCommands.add(commandId)
 
   monaco.editor.registerCommand(commandId, (_accessor, ...args) => {
-    // Forward command execution to LSP server
-    connection
-      .sendRequest(ExecuteCommandRequest.type, {
+    lspClient
+      .sendRequest('workspace/executeCommand', {
         command: commandId,
         arguments: args,
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         console.error(`[LSP] Failed to execute command ${commandId}:`, err)
       })
   })
@@ -138,7 +142,7 @@ export function registerCodeActionProvider(
 
             if (action.command) {
               // Register the LSP command with Monaco so it can be executed
-              registerLspCommand(action.command.command, connection)
+              registerLspCommand(action.command.command)
               monacoAction.command = {
                 id: action.command.command,
                 title: action.command.title,

@@ -197,6 +197,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     // default Tab (indent) / Shift+Tab (outdent) still runs. `navigateTableCell`
     // itself guards against reentrancy (per-editor pending flag) so
     // rapid Tab presses can't race and move the cursor out of order.
+    //
+    // If the LSP returns {inTable: false}, errors out, or the reentrancy
+    // guard drops the request and the helper returns `false`, we trigger
+    // Monaco's default Tab / Shift+Tab command explicitly so the
+    // keystroke isn't silently swallowed.
     const tabDisposable = editor.onKeyDown((e) => {
       if (e.keyCode !== monaco.KeyCode.Tab) return
       const model = editor.getModel()
@@ -209,7 +214,17 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       e.preventDefault()
       e.stopPropagation()
       const direction = e.shiftKey ? 'previous' : 'next'
+      const fallbackCommand = e.shiftKey ? 'outdent' : 'tab'
+      const runFallback = () => {
+        editor.trigger('keyboard', fallbackCommand, null)
+      }
       void navigateTableCell(editor, direction)
+        .then((handled) => {
+          if (!handled) runFallback()
+        })
+        .catch(() => {
+          runFallback()
+        })
     })
 
     // Format Table at Cursor — Cmd+Shift+T (Ctrl+Shift+T on non-Mac),
