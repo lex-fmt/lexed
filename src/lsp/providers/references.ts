@@ -2,8 +2,11 @@ import * as monaco from 'monaco-editor'
 import { ProtocolConnection } from 'vscode-languageserver-protocol/browser'
 import { LspLocation } from '../types'
 
-export function registerReferencesProvider(languageId: string, connection: ProtocolConnection) {
-  monaco.languages.registerReferenceProvider(languageId, {
+export function registerReferencesProvider(
+  languageId: string,
+  connection: ProtocolConnection
+): monaco.IDisposable {
+  return monaco.languages.registerReferenceProvider(languageId, {
     provideReferences: async (model, position, context) => {
       if (!connection) return null
       const params = {

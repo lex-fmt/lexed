@@ -29,18 +29,19 @@ test.describe('Format Table at Cursor', () => {
     const invoked = await page.evaluate(() => (window as any).lexTest.triggerFormatTable())
     expect(invoked).toBe(true)
 
-    // Wait for the edit to land.
+    // Wait until the editor value changes (or the timeout elapses — if
+    // the table was already canonical, triggerFormatTable is a no-op and
+    // the assertion block below handles that case).
     await page
       .waitForFunction(
-        () => {
+        (previousValue) => {
           const current = (window as any).lexTest.getActiveEditorValue() as string
-          return current !== (window as any).__lex_e2e_before_table
+          return current !== previousValue
         },
-        null,
+        before,
         { timeout: 5000 }
       )
       .catch(() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         /* fall through — we'll assert below */
       })
 

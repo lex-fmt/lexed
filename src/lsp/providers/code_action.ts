@@ -30,8 +30,11 @@ function registerLspCommand(commandId: string, connection: ProtocolConnection) {
   })
 }
 
-export function registerCodeActionProvider(languageId: string, connection: ProtocolConnection) {
-  monaco.languages.registerCodeActionProvider(languageId, {
+export function registerCodeActionProvider(
+  languageId: string,
+  connection: ProtocolConnection
+): monaco.IDisposable {
+  return monaco.languages.registerCodeActionProvider(languageId, {
     provideCodeActions: async (
       model: monaco.editor.ITextModel,
       range: monaco.Range,

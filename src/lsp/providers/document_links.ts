@@ -8,8 +8,11 @@ interface LspDocumentLink {
   tooltip?: string
 }
 
-export function registerDocumentLinksProvider(languageId: string, connection: ProtocolConnection) {
-  monaco.languages.registerLinkProvider(languageId, {
+export function registerDocumentLinksProvider(
+  languageId: string,
+  connection: ProtocolConnection
+): monaco.IDisposable {
+  return monaco.languages.registerLinkProvider(languageId, {
     provideLinks: async (model) => {
       if (!connection) return { links: [] }
       const params = {

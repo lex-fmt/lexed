@@ -194,7 +194,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     // Table cell navigation — Tab / Shift+Tab when the cursor is on a
     // pipe row jumps between cells (LSP-backed). Outside of pipe rows
     // the `onKeyDown` handler does not preventDefault, so Monaco's
-    // default Tab (indent) / Shift+Tab (outdent) still runs.
+    // default Tab (indent) / Shift+Tab (outdent) still runs. `navigateTableCell`
+    // itself guards against reentrancy (per-editor pending flag) so
+    // rapid Tab presses can't race and move the cursor out of order.
     const tabDisposable = editor.onKeyDown((e) => {
       if (e.keyCode !== monaco.KeyCode.Tab) return
       const model = editor.getModel()

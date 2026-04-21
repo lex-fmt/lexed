@@ -2,13 +2,17 @@ import { test, expect } from './lib'
 import { openFixture } from './helpers'
 import { focusEditor } from './lib/actions'
 
-// These tests exercise the three LSP providers lexed now registers in
-// `src/lsp/client.ts::registerProviders` by driving the LSP through the
-// test bridge. Monaco's provider registries aren't easily introspected
-// from tests, so we verify the round-trip path via direct LSP requests
-// and confirm each provider returns data for the same fixture the UI
-// would see. Together with the providers being imported at app start
-// (which ensures registration actually runs) this covers the wiring.
+// These tests exercise the LSP server responses exposed through the
+// test bridge's `window.lexTest.request*` helpers, which call
+// `lspClient.sendRequest` directly. They validate the request/response
+// path and the returned data for folding ranges, document links, and
+// references on the same fixtures the editor UI uses.
+//
+// They do not, by themselves, prove that the Monaco providers in
+// `src/lsp/client.ts::registerProviders` are wired — that's smoke-tested
+// by the providers being imported at app start (the imports run during
+// `registerProviders`, so a broken registration would throw on launch
+// and every e2e test in the suite would fail).
 
 test.describe('LSP providers', () => {
   test('foldingRange responds for a document with sessions and tables', async ({ page }) => {

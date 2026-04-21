@@ -23,8 +23,11 @@ function mapKind(kind?: string): monaco.languages.FoldingRangeKind | undefined {
   }
 }
 
-export function registerFoldingRangeProvider(languageId: string, connection: ProtocolConnection) {
-  monaco.languages.registerFoldingRangeProvider(languageId, {
+export function registerFoldingRangeProvider(
+  languageId: string,
+  connection: ProtocolConnection
+): monaco.IDisposable {
+  return monaco.languages.registerFoldingRangeProvider(languageId, {
     provideFoldingRanges: async (model) => {
       if (!connection) return null
       const params = {

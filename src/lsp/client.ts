@@ -395,37 +395,63 @@ export class LspClient {
       this.connection.dispose()
       this.connection = null
     }
+    void this.disposeProviders()
+  }
+
+  // Track Monaco provider registrations so reconnects don't leak
+  // duplicate providers pointing at stale (disposed) connections.
+  private providerDisposables: Array<Promise<{ dispose(): void }>> = []
+
+  private async disposeProviders() {
+    const pending = this.providerDisposables
+    this.providerDisposables = []
+    for (const p of pending) {
+      try {
+        const d = await p
+        d.dispose()
+      } catch (err) {
+        log.warn('[LspClient] failed to dispose provider', err)
+      }
+    }
   }
 
   private registerProviders() {
     const languageId = 'lex'
     if (!this.connection) return
 
-    import('./providers/completion').then((m) =>
-      m.registerCompletionProvider(languageId, this.connection!)
-    )
-    import('./providers/hover').then((m) => m.registerHoverProvider(languageId, this.connection!))
-    import('./providers/formatting').then((m) =>
-      m.registerFormattingProvider(languageId, this.connection!)
-    )
-    import('./providers/definition').then((m) =>
-      m.registerDefinitionProvider(languageId, this.connection!)
-    )
-    import('./providers/semantic_tokens').then((m) =>
-      m.registerSemanticTokensProvider(languageId, this.connection!)
-    )
-    import('./providers/code_action').then((m) =>
-      m.registerCodeActionProvider(languageId, this.connection!)
-    )
-    import('./providers/references').then((m) =>
-      m.registerReferencesProvider(languageId, this.connection!)
-    )
-    import('./providers/document_links').then((m) =>
-      m.registerDocumentLinksProvider(languageId, this.connection!)
-    )
-    import('./providers/folding_range').then((m) =>
-      m.registerFoldingRangeProvider(languageId, this.connection!)
-    )
+    // Dispose any providers left from a previous connection. We do this
+    // fire-and-forget — the new registrations happen immediately so the
+    // race window where no provider is registered is minimal.
+    void this.disposeProviders()
+
+    const connection = this.connection
+    this.providerDisposables = [
+      import('./providers/completion').then((m) =>
+        m.registerCompletionProvider(languageId, connection)
+      ),
+      import('./providers/hover').then((m) => m.registerHoverProvider(languageId, connection)),
+      import('./providers/formatting').then((m) =>
+        m.registerFormattingProvider(languageId, connection)
+      ),
+      import('./providers/definition').then((m) =>
+        m.registerDefinitionProvider(languageId, connection)
+      ),
+      import('./providers/semantic_tokens').then((m) =>
+        m.registerSemanticTokensProvider(languageId, connection)
+      ),
+      import('./providers/code_action').then((m) =>
+        m.registerCodeActionProvider(languageId, connection)
+      ),
+      import('./providers/references').then((m) =>
+        m.registerReferencesProvider(languageId, connection)
+      ),
+      import('./providers/document_links').then((m) =>
+        m.registerDocumentLinksProvider(languageId, connection)
+      ),
+      import('./providers/folding_range').then((m) =>
+        m.registerFoldingRangeProvider(languageId, connection)
+      ),
+    ]
   }
 
   public async sendRequest<R, P = unknown>(method: string, params: P): Promise<R> {
