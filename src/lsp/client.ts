@@ -417,6 +417,15 @@ export class LspClient {
     import('./providers/code_action').then((m) =>
       m.registerCodeActionProvider(languageId, this.connection!)
     )
+    import('./providers/references').then((m) =>
+      m.registerReferencesProvider(languageId, this.connection!)
+    )
+    import('./providers/document_links').then((m) =>
+      m.registerDocumentLinksProvider(languageId, this.connection!)
+    )
+    import('./providers/folding_range').then((m) =>
+      m.registerFoldingRangeProvider(languageId, this.connection!)
+    )
   }
 
   public async sendRequest<R, P = unknown>(method: string, params: P): Promise<R> {

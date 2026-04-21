@@ -3,6 +3,7 @@ import * as monaco from 'monaco-editor'
 import type { EditorPaneHandle } from '@/components/EditorPane'
 import type { PaneState } from '@/panes/types'
 import { spellcheckService } from '@/spellcheck/service'
+import { lspClient } from '@/lsp/client'
 
 type FormattingRequestPayload = {
   type: 'document' | 'range'
@@ -145,9 +146,60 @@ export function useLexTestBridge({
         editorInstance.revealPosition({ lineNumber: line, column: col })
         return true
       },
+      getCursor: () => {
+        const editorInstance = getActiveEditorInstance()
+        const pos = editorInstance?.getPosition()
+        if (!pos) return null
+        return { line: pos.lineNumber, column: pos.column }
+      },
+      getLineContent: (line: number) => {
+        const editorInstance = getActiveEditorInstance()
+        const model = editorInstance?.getModel?.()
+        if (!model) return null
+        if (line < 1 || line > model.getLineCount()) return null
+        return model.getLineContent(line)
+      },
       openFolder: async (folderPath: string) => {
         setRootPath(folderPath)
         await window.ipcRenderer.setLastFolder(folderPath)
+      },
+
+      // Raw LSP request helpers — mainly for e2e tests that want to
+      // verify a provider is wired end-to-end without depending on
+      // Monaco's internal provider registries.
+      requestFoldingRanges: async () => {
+        const editorInstance = getActiveEditorInstance()
+        const model = editorInstance?.getModel?.()
+        if (!model) return null
+        return lspClient.sendRequest('textDocument/foldingRange', {
+          textDocument: { uri: model.uri.toString() },
+        })
+      },
+      requestDocumentLinks: async () => {
+        const editorInstance = getActiveEditorInstance()
+        const model = editorInstance?.getModel?.()
+        if (!model) return null
+        return lspClient.sendRequest('textDocument/documentLink', {
+          textDocument: { uri: model.uri.toString() },
+        })
+      },
+      requestReferences: async (line: number, column: number) => {
+        const editorInstance = getActiveEditorInstance()
+        const model = editorInstance?.getModel?.()
+        if (!model) return null
+        return lspClient.sendRequest('textDocument/references', {
+          textDocument: { uri: model.uri.toString() },
+          position: { line: line - 1, character: column - 1 },
+          context: { includeDeclaration: true },
+        })
+      },
+      triggerFormatTable: async () => {
+        const editorInstance = getActiveEditorInstance()
+        if (!editorInstance) return false
+        const action = editorInstance.getAction('lex.formatTable')
+        if (!action) return false
+        await action.run()
+        return true
       },
     }
     window.lexTest = api
