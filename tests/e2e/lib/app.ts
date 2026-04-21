@@ -26,7 +26,10 @@ export type AppFixtures = {
   electronApp: ElectronApplication
   page: Page
   appLaunchOptions: AppLaunchOptions
-  runtimeErrors: CapturedRuntimeError[]
+  // `readonly` so test code can't accidentally clear or mutate the
+  // collector and mask runtime errors before the teardown assertion
+  // runs.
+  runtimeErrors: ReadonlyArray<CapturedRuntimeError>
 }
 
 const defaultAppLaunchOptions: AppLaunchOptions = {
@@ -130,10 +133,14 @@ export const test = base.extend<AppFixtures>({
         throw useError
       }
 
-      // Only auto-fail on errors when the test itself passed. Read
-      // the latest status from the testInfo — by this point the test
-      // body has completed and Playwright has finalised it.
-      if (testInfo.status === testInfo.expectedStatus && errors.length > 0) {
+      // Only auto-fail on errors when the test actually passed.
+      // `status === expectedStatus` would also be true for a test
+      // marked as expected-to-fail (both fields land on `'failed'`),
+      // and asserting in that case would convert an expected failure
+      // into an unexpected teardown failure with a different message.
+      // Use the literal 'passed' check so we only attribute runtime
+      // errors to a clean test run.
+      if (testInfo.status === 'passed' && errors.length > 0) {
         const lines = errors.map((e, i) => `  [${i + 1}] (${e.source}) ${e.message}`)
         throw new Error(
           `Runtime errors captured during test (${errors.length}):\n${lines.join('\n')}`
