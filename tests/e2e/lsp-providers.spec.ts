@@ -9,10 +9,11 @@ import { focusEditor } from './lib/actions'
 // references on the same fixtures the editor UI uses.
 //
 // They do not, by themselves, prove that the Monaco providers in
-// `src/lsp/client.ts::registerProviders` are wired — that's smoke-tested
-// by the providers being imported at app start (the imports run during
-// `registerProviders`, so a broken registration would throw on launch
-// and every e2e test in the suite would fail).
+// `src/lsp/client.ts::registerProviders` are wired. That wiring is
+// only smoke-tested indirectly by the dynamic provider imports running
+// at app startup — if one of those imports or a registration throws,
+// it may surface as an unhandled rejection / console error and/or
+// missing provider functionality rather than a hard launch failure.
 
 test.describe('LSP providers', () => {
   test('foldingRange responds for a document with sessions and tables', async ({ page }) => {

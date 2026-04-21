@@ -425,31 +425,69 @@ export class LspClient {
     void this.disposeProviders()
 
     const connection = this.connection
+    const noop: monaco.IDisposable = { dispose() {} }
+    // Wrap each dynamic import + registration so a module-load failure
+    // or a registration throw is surfaced as a logged error and turned
+    // into a no-op disposable. Without the catch these promises sit in
+    // `providerDisposables` unawaited until `disposeProviders()` runs,
+    // and a rejection would fire as an unhandled promise rejection.
+    const register = <T>(
+      label: string,
+      importer: () => Promise<T>,
+      bind: (m: T) => monaco.IDisposable
+    ): Promise<monaco.IDisposable> =>
+      importer()
+        .then(bind)
+        .catch((err: unknown) => {
+          log.error(`[LspClient] failed to register ${label} provider`, err)
+          return noop
+        })
+
     this.providerDisposables = [
-      import('./providers/completion').then((m) =>
-        m.registerCompletionProvider(languageId, connection)
+      register(
+        'completion',
+        () => import('./providers/completion'),
+        (m) => m.registerCompletionProvider(languageId, connection)
       ),
-      import('./providers/hover').then((m) => m.registerHoverProvider(languageId, connection)),
-      import('./providers/formatting').then((m) =>
-        m.registerFormattingProvider(languageId, connection)
+      register(
+        'hover',
+        () => import('./providers/hover'),
+        (m) => m.registerHoverProvider(languageId, connection)
       ),
-      import('./providers/definition').then((m) =>
-        m.registerDefinitionProvider(languageId, connection)
+      register(
+        'formatting',
+        () => import('./providers/formatting'),
+        (m) => m.registerFormattingProvider(languageId, connection)
       ),
-      import('./providers/semantic_tokens').then((m) =>
-        m.registerSemanticTokensProvider(languageId, connection)
+      register(
+        'definition',
+        () => import('./providers/definition'),
+        (m) => m.registerDefinitionProvider(languageId, connection)
       ),
-      import('./providers/code_action').then((m) =>
-        m.registerCodeActionProvider(languageId, connection)
+      register(
+        'semantic_tokens',
+        () => import('./providers/semantic_tokens'),
+        (m) => m.registerSemanticTokensProvider(languageId, connection)
       ),
-      import('./providers/references').then((m) =>
-        m.registerReferencesProvider(languageId, connection)
+      register(
+        'code_action',
+        () => import('./providers/code_action'),
+        (m) => m.registerCodeActionProvider(languageId, connection)
       ),
-      import('./providers/document_links').then((m) =>
-        m.registerDocumentLinksProvider(languageId, connection)
+      register(
+        'references',
+        () => import('./providers/references'),
+        (m) => m.registerReferencesProvider(languageId, connection)
       ),
-      import('./providers/folding_range').then((m) =>
-        m.registerFoldingRangeProvider(languageId, connection)
+      register(
+        'document_links',
+        () => import('./providers/document_links'),
+        (m) => m.registerDocumentLinksProvider(languageId, connection)
+      ),
+      register(
+        'folding_range',
+        () => import('./providers/folding_range'),
+        (m) => m.registerFoldingRangeProvider(languageId, connection)
       ),
     ]
   }

@@ -15,15 +15,19 @@ test.describe('Table cell navigation', () => {
     // Sample", 2: "", 3: "    Results:", 4: "        | Name ...", 5: Alpha).
     await page.evaluate(() => (window as any).lexTest.setCursor(5, 11))
 
-    // Tab inside the first cell → second cell's content column.
+    // Tab inside the first cell → second cell's content column. The
+    // keydown handler kicks off an async LSP round-trip, so poll for
+    // the cursor to settle rather than reading it immediately.
     await page.keyboard.press('Tab')
-    const afterNext = await page.evaluate(() => (window as any).lexTest.getCursor())
-    expect(afterNext).toEqual({ line: 5, column: 19 })
+    await expect
+      .poll(() => page.evaluate(() => (window as any).lexTest.getCursor()))
+      .toEqual({ line: 5, column: 19 })
 
     // Shift+Tab back to the first cell.
     await page.keyboard.press('Shift+Tab')
-    const afterPrev = await page.evaluate(() => (window as any).lexTest.getCursor())
-    expect(afterPrev).toEqual({ line: 5, column: 11 })
+    await expect
+      .poll(() => page.evaluate(() => (window as any).lexTest.getCursor()))
+      .toEqual({ line: 5, column: 11 })
   })
 
   test('Tab on a non-pipe line falls through to default indent', async ({ page }) => {
