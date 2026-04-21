@@ -14,6 +14,7 @@ export {
   expectFormattingRequest,
   expectEditorValue,
   expectToast,
+  assertNoRuntimeErrors,
 } from './assertions'
 export {
   focusEditor,

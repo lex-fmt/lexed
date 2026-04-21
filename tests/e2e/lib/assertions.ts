@@ -147,3 +147,20 @@ export async function expectToast(page: Page, text: string | RegExp, timeout = 1
     await expect(toastLocator).toContainText(text)
   }
 }
+
+/**
+ * Assert that no renderer-side runtime errors have been captured so far
+ * in this test. Callable mid-test after an action that should be
+ * error-free; the fixture also auto-asserts on teardown so missing this
+ * call doesn't hide errors.
+ */
+export function assertNoRuntimeErrors(
+  errors: ReadonlyArray<{ source: string; message: string }>,
+  context?: string
+) {
+  if (errors.length === 0) return
+  const lines = errors.map((e, i) => `  [${i + 1}] (${e.source}) ${e.message}`)
+  throw new Error(
+    `${context ? context + ': ' : ''}runtime errors captured (${errors.length}):\n${lines.join('\n')}`
+  )
+}
