@@ -8,6 +8,7 @@ import nspell from 'nspell'
 import type NSpell from 'nspell'
 import * as monaco from 'monaco-editor'
 import { extractCheckableWords } from './word-extraction'
+import { caseVariants } from './case-variants'
 
 const MARKER_OWNER = 'lex-spell'
 const DEBOUNCE_MS = 300
@@ -154,12 +155,20 @@ export class SpellcheckService {
 
   /**
    * Add a word to the custom dictionary. Persists via IPC.
+   *
+   * For plain lowercase or Title-case input both forms are added, so
+   * the user doesn't have to approve "potato" and "Potato" separately.
+   * Oddly-cased words (ALL CAPS acronyms, camelCase, iPhone…) are
+   * stored verbatim.
    */
   async addToDictionary(word: string): Promise<void> {
+    const variants = caseVariants(word)
     if (this.checker) {
-      this.checker.add(word)
+      for (const v of variants) this.checker.add(v)
     }
-    await window.ipcRenderer.invoke('spellcheck-add-to-dictionary', word)
+    for (const v of variants) {
+      await window.ipcRenderer.invoke('spellcheck-add-to-dictionary', v)
+    }
   }
 
   /**

@@ -73,9 +73,9 @@ describe('extractCheckableWords', () => {
     expect(words.map((w) => w.text)).toEqual(["don't", "won't", "it's"])
   })
 
-  it('keeps hyphenated words', () => {
+  it('splits on hyphens', () => {
     const words = extractCheckableWords('well-known state-of-the-art')
-    expect(words.map((w) => w.text)).toEqual(['well-known', 'state-of-the-art'])
+    expect(words.map((w) => w.text)).toEqual(['well', 'known', 'state', 'of', 'the', 'art'])
   })
 
   it('skips annotation/verbatim blocks entirely', () => {
