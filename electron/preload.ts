@@ -69,6 +69,11 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
       path: string
       content: string
     }>,
+  testRouteOpenFiles: (filePaths: string[]) =>
+    ipcRenderer.invoke('test-route-open-files', filePaths) as Promise<{
+      existingWindowIds: number[]
+      newWindowIds: number[]
+    }>,
   getNativeTheme: () => ipcRenderer.invoke('get-native-theme'),
   onNativeThemeChanged: (callback: (theme: 'dark' | 'light') => void) => {
     const handler = (_event: IpcRendererEvent, theme: 'dark' | 'light') => callback(theme)

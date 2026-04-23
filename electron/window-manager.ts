@@ -7,6 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 import { randomUUID } from 'crypto'
 import { LspManager } from './lsp-manager'
 import Store from 'electron-store'
+import { mergeBounds } from './window-state'
 
 const SPLASH_SIZE = 256
 
@@ -76,8 +77,14 @@ export interface KeybindingSettings {
   overrides?: Record<string, KeybindingOverride>
 }
 
+export interface RecentRootEntry {
+  path: string
+  lastUsedAt: number
+}
+
 export interface AppSettings {
   openWindows?: WindowState[]
+  recentRoots?: RecentRootEntry[]
   // Global settings
   editor?: EditorSettings
   formatter?: FormatterSettings
@@ -331,32 +338,18 @@ export class WindowManager {
     const bounds = window.getBounds()
     const isMaximized = window.isMaximized()
 
-    // We need to fetch the current pane layout from the renderer or rely on what's been pushed to store
-    // For now, we assume the store is the source of truth for pane layout, updated via IPC
-    // But wait, the store is global. We need to update the specific window entry in the store.
-
     const currentSettings = this.store.store
     const openWindows = currentSettings.openWindows || []
-    const existingIndex = openWindows.findIndex((w) => w.id === stateId)
 
-    const newState: WindowState = {
-      id: stateId,
-      x: isMaximized ? undefined : bounds.x,
-      y: isMaximized ? undefined : bounds.y,
+    const updated = mergeBounds(openWindows, stateId, {
+      x: bounds.x,
+      y: bounds.y,
       width: isMaximized ? DEFAULT_WINDOW_STATE.width : bounds.width,
       height: isMaximized ? DEFAULT_WINDOW_STATE.height : bounds.height,
       isMaximized,
-      // Preserve existing state if present
-      ...(existingIndex >= 0 ? openWindows[existingIndex] : {}),
-    }
+    })
 
-    if (existingIndex >= 0) {
-      openWindows[existingIndex] = { ...openWindows[existingIndex], ...newState }
-    } else {
-      openWindows.push(newState)
-    }
-
-    this.store.set('openWindows', openWindows)
+    this.store.set('openWindows', updated)
   }
 
   public removeWindowState(stateId: string) {

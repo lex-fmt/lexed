@@ -16,7 +16,16 @@ import {
   FormatterSettings,
   FileTreeSettings,
 } from './window-manager'
+import {
+  routeOpenFile,
+  updateRecentRoots,
+  type OpenWindowState,
+  type RecentRoot,
+} from './file-routing'
+import { setWindowFolder, setWindowPaneLayout } from './window-state'
 import { randomUUID } from 'crypto'
+
+const DEFAULT_WINDOW_BOUNDS = { width: 1200, height: 800 }
 // LspManager import removed as it is managed by WindowManager
 
 // Configure logging
@@ -139,6 +148,16 @@ const store = new Store<AppSettings>({
         },
       },
     },
+    recentRoots: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          path: { type: 'string' },
+          lastUsedAt: { type: 'number' },
+        },
+      },
+    },
     editor: {
       type: 'object',
       properties: {
@@ -200,6 +219,39 @@ const store = new Store<AppSettings>({
 
 // Initialize WindowManager after store is created
 const windowManager = new WindowManager(store)
+
+const MAX_RECENT_ROOTS = 20
+
+function recordRecentRoot(folderPath: string | null | undefined): void {
+  if (!folderPath) return
+  const existing = store.store.recentRoots ?? []
+  const updated = updateRecentRoots(existing, folderPath, Date.now(), MAX_RECENT_ROOTS)
+  store.set('recentRoots', updated)
+}
+
+function getRecentRoots(): RecentRoot[] {
+  return store.store.recentRoots ?? []
+}
+
+/**
+ * Build the list of currently-open windows along with their workspace roots,
+ * for the file router. The focused window (if any) is flagged so ties resolve
+ * in its favor.
+ */
+function collectOpenWindowStates(): OpenWindowState[] {
+  const settings = store.store
+  const openWindowState = settings.openWindows ?? []
+  const focused = BrowserWindow.getFocusedWindow()
+  return windowManager.getAllWindows().map((win) => {
+    const stateId = windowManager.getWindowStateId(win.id)
+    const state = stateId ? openWindowState.find((w) => w.id === stateId) : undefined
+    return {
+      windowId: win.id,
+      root: state?.lastFolder ?? null,
+      isFocused: focused?.id === win.id,
+    }
+  })
+}
 
 // Settings persistence helpers removed in favor of direct store access or WindowManager
 // loadSettings, saveSettings, etc. are no longer used directly in main.ts logic
@@ -303,12 +355,16 @@ interface CliPaths {
  * Returns files to open and an optional folder to set as workspace.
  */
 function extractPathsFromArgv(argv: string[]): CliPaths {
+  // In dev mode the bootstrap arg is the app directory itself (e.g. `electron .`).
+  // Ignore it so we don't misread the repo root as a user-requested workspace.
+  const appPath = app.isReady() ? app.getAppPath() : null
   const paths = argv
     .filter((arg) => !arg.startsWith('-') && !arg.startsWith('--'))
     .filter((arg) => {
       // Skip the electron binary and main script paths
       if (arg.includes('electron') || arg.includes('Electron')) return false
       if (arg.endsWith('.js') || arg.endsWith('.mjs')) return false
+      if (appPath && path.resolve(arg) === appPath) return false
       return true
     })
     .map((arg) => path.resolve(arg))
@@ -343,23 +399,80 @@ function extractPathsFromArgv(argv: string[]): CliPaths {
 }
 
 /**
- * Open files in the renderer by sending IPC messages.
- * If no windows exist, creates a new one.
+ * Route each OS-provided file to the most appropriate window:
+ *   1. An open window whose workspace root contains the file (best = longest root).
+ *   2. Otherwise, a new window created with a matching recent root.
+ *   3. Otherwise, the focused/most-recent open window (no root change).
+ *   4. Otherwise, a new window with no workspace root.
+ *
+ * This is what fixes the "silently does nothing" behaviour when the OS hands
+ * us a file that lives outside whatever window happened to be windows[0].
  */
-function openFilesInWindow(filePaths: string[]) {
+function openFilesViaRouter(filePaths: string[]) {
   if (filePaths.length === 0) return
 
-  const windows = windowManager.getAllWindows()
-  const targetWin = windows[0]
+  // Group files per destination so we don't create one window per file when
+  // several files share the same routing decision.
+  const toExistingWindow = new Map<number, string[]>()
+  const toNewWindowWithRoot = new Map<string, string[]>()
+  const toNewWindow: string[] = []
 
-  if (targetWin && !targetWin.isDestroyed()) {
-    for (const filePath of filePaths) {
-      targetWin.webContents.send('open-file-path', filePath)
-      app.addRecentDocument(filePath)
+  for (const filePath of filePaths) {
+    const route = routeOpenFile({
+      filePath,
+      openWindows: collectOpenWindowStates(),
+      recentRoots: getRecentRoots(),
+    })
+    switch (route.kind) {
+      case 'existingWindow': {
+        const list = toExistingWindow.get(route.windowId) ?? []
+        list.push(route.filePath)
+        toExistingWindow.set(route.windowId, list)
+        break
+      }
+      case 'newWindowWithRoot': {
+        const list = toNewWindowWithRoot.get(route.root) ?? []
+        list.push(route.filePath)
+        toNewWindowWithRoot.set(route.root, list)
+        break
+      }
+      case 'newWindow':
+        toNewWindow.push(route.filePath)
+        break
     }
-  } else {
-    // No windows exist, create a new one with the files
-    windowManager.createWindow(undefined, { showSplash: true, openFiles: filePaths })
+  }
+
+  for (const [windowId, files] of toExistingWindow) {
+    const win = BrowserWindow.fromId(windowId)
+    if (!win || win.isDestroyed()) continue
+    for (const file of files) {
+      win.webContents.send('open-file-path', file)
+      app.addRecentDocument(file)
+    }
+    if (win.isMinimized()) win.restore()
+    win.focus()
+  }
+
+  for (const [root, files] of toNewWindowWithRoot) {
+    recordRecentRoot(root)
+    windowManager.createWindow(
+      {
+        id: randomUUID(),
+        width: DEFAULT_WINDOW_BOUNDS.width,
+        height: DEFAULT_WINDOW_BOUNDS.height,
+        lastFolder: root,
+      },
+      { showSplash: true, openFiles: files }
+    )
+    files.forEach((f) => app.addRecentDocument(f))
+  }
+
+  if (toNewWindow.length > 0) {
+    windowManager.createWindow(undefined, {
+      showSplash: true,
+      openFiles: toNewWindow,
+    })
+    toNewWindow.forEach((f) => app.addRecentDocument(f))
   }
 }
 
@@ -373,6 +486,8 @@ function openCliPaths(cliPaths: CliPaths) {
 
   const windows = windowManager.getAllWindows()
   const targetWin = windows[0]
+
+  if (folder) recordRecentRoot(folder)
 
   if (targetWin && !targetWin.isDestroyed()) {
     // Set folder first if specified
@@ -508,6 +623,24 @@ ipcMain.handle('test-set-workspace', async (_, folderPath: string) => {
   return true
 })
 
+/**
+ * Test-only: simulate an OS-level file-open event (macOS `open-file` or
+ * Windows/Linux second-instance) by running the router directly. Returns the
+ * IDs of the windows that received each file so e2e tests can assert where
+ * each file landed.
+ */
+ipcMain.handle('test-route-open-files', async (_, filePaths: string[]) => {
+  const before = new Set(windowManager.getAllWindows().map((w) => w.id))
+  openFilesViaRouter(filePaths)
+  // Give createWindow a tick to register new windows
+  await new Promise((resolve) => setTimeout(resolve, 50))
+  const after = windowManager.getAllWindows().map((w) => w.id)
+  return {
+    existingWindowIds: after.filter((id) => before.has(id)),
+    newWindowIds: after.filter((id) => !before.has(id)),
+  }
+})
+
 ipcMain.handle('file-read-dir', async (_, dirPath: string) => {
   try {
     const entries = await fs.readdir(dirPath, { withFileTypes: true })
@@ -591,29 +724,37 @@ ipcMain.handle('get-initial-folder', async (event) => {
   const win = BrowserWindow.fromWebContents(event.sender)
   if (!win) return getWelcomeFolderPath()
 
+  const stateId = windowManager.getWindowStateId(win.id)
   const settings = store.store
-  // Find window state
-  const winState = settings.openWindows?.find(
-    (w) => w.id === windowManager.getWindowStateId(win.id)
-  )
+  const winState = settings.openWindows?.find((w) => w.id === stateId)
 
-  if (winState?.lastFolder) {
+  const resolve = async (candidate?: string) => {
+    if (!candidate) return null
     try {
-      await fs.access(winState.lastFolder)
-      return winState.lastFolder
+      await fs.access(candidate)
+      return candidate
     } catch {
-      // Folder no longer exists
+      return null
     }
   }
 
-  // Fallback to global lastFolder (legacy/migration) or welcome
-  if (settings.lastFolder) {
-    try {
-      await fs.access(settings.lastFolder)
-      return settings.lastFolder
-    } catch {
-      // Folder no longer exists
+  const resolved = (await resolve(winState?.lastFolder)) ?? (await resolve(settings.lastFolder))
+
+  if (resolved) {
+    // Write the resolved folder back onto the per-window entry so the
+    // association persists across launches (this covers windows restored
+    // from a bare session with only bounds) and record it in the recent
+    // roots history.
+    if (stateId) {
+      const openWindows = store.store.openWindows || []
+      store.set(
+        'openWindows',
+        setWindowFolder(openWindows, stateId, resolved, DEFAULT_WINDOW_BOUNDS)
+      )
     }
+    windowManager.updateTitle(win.id, resolved)
+    recordRecentRoot(resolved)
+    return resolved
   }
 
   return getWelcomeFolderPath()
@@ -626,17 +767,11 @@ ipcMain.handle('set-last-folder', async (event, folderPath: string) => {
   const stateId = windowManager.getWindowStateId(win.id)
   if (!stateId) return false
 
-  const settings = store.store
-  const openWindows = settings.openWindows || []
-  const index = openWindows.findIndex((w) => w.id === stateId)
+  const openWindows = store.store.openWindows || []
+  store.set('openWindows', setWindowFolder(openWindows, stateId, folderPath, DEFAULT_WINDOW_BOUNDS))
+  windowManager.updateTitle(win.id, folderPath)
+  recordRecentRoot(folderPath)
 
-  if (index >= 0) {
-    openWindows[index].lastFolder = folderPath
-    store.set('openWindows', openWindows)
-    windowManager.updateTitle(win.id, folderPath)
-  }
-
-  // Also update global for legacy/fallback? Maybe not needed.
   return true
 })
 
@@ -761,26 +896,30 @@ ipcMain.handle(
     const stateId = windowManager.getWindowStateId(win.id)
     if (!stateId) return false
 
-    const settings = store.store
-    const openWindows = settings.openWindows || []
-    const index = openWindows.findIndex((w) => w.id === stateId)
+    const normalizedPanes: PaneLayoutSettings[] = panes.map((pane) => ({
+      id: pane.id || randomUUID(),
+      tabs: pane.tabs || [],
+      activeTab: pane.activeTab ?? null,
+    }))
+    const normalizedRows: PaneRowLayout[] = rows.map((row) => ({
+      id: row.id || randomUUID(),
+      paneIds: row.paneIds || [],
+      size: row.size,
+      paneSizes: row.paneSizes,
+    }))
 
-    if (index >= 0) {
-      openWindows[index].paneLayout = panes.map((pane) => ({
-        id: pane.id || randomUUID(),
-        tabs: pane.tabs || [],
-        activeTab: pane.activeTab ?? null,
-      }))
-      openWindows[index].paneRows = rows.map((row) => ({
-        id: row.id || randomUUID(),
-        paneIds: row.paneIds || [],
-        size: row.size,
-        paneSizes: row.paneSizes,
-      }))
-      openWindows[index].activePaneId = activePaneId || undefined
-
-      store.set('openWindows', openWindows)
-    }
+    const openWindows = store.store.openWindows || []
+    store.set(
+      'openWindows',
+      setWindowPaneLayout(
+        openWindows,
+        stateId,
+        normalizedPanes,
+        normalizedRows,
+        activePaneId || undefined,
+        DEFAULT_WINDOW_BOUNDS
+      )
+    )
     return true
   }
 )
@@ -1422,9 +1561,13 @@ if (!gotTheLock) {
     // Extract paths from CLI arguments (handles both files and folders)
     const cliPaths = extractPathsFromArgv(argv)
 
-    if (cliPaths.files.length > 0 || cliPaths.folder) {
-      // CLI invocation with paths
+    if (cliPaths.folder) {
+      // When the CLI explicitly names a folder, honour it: set the workspace
+      // on the active window (legacy behaviour) and route the accompanying
+      // files through the normal logic.
       openCliPaths(cliPaths)
+    } else if (cliPaths.files.length > 0) {
+      openFilesViaRouter(cliPaths.files)
     } else {
       // No paths, just focus the existing window
       const windows = windowManager.getAllWindows()
@@ -1436,12 +1579,19 @@ if (!gotTheLock) {
     }
   })
 
-  // macOS: Handle file open via Finder (double-click, drag-drop, Open With)
+  // macOS: Handle file open via Finder (double-click, drag-drop, Open With).
+  // On a cold start this event fires before whenReady, so we queue the file
+  // and dispatch it once the app is ready (and any restored windows exist).
+  const pendingOpenFiles: string[] = []
+  let appIsReady = false
   app.on('open-file', (event, filePath) => {
     event.preventDefault()
-    if (filePath.endsWith('.lex')) {
-      openFilesInWindow([filePath])
+    if (!filePath.endsWith('.lex')) return
+    if (!appIsReady) {
+      pendingOpenFiles.push(filePath)
+      return
     }
+    openFilesViaRouter([filePath])
   })
 
   app.whenReady().then(async () => {
@@ -1530,15 +1680,24 @@ if (!gotTheLock) {
       // CLI invocation with paths
       if (cliPaths.folder) {
         store.set('lastFolder', cliPaths.folder)
+        recordRecentRoot(cliPaths.folder)
       }
       windowManager.createWindow(undefined, { showSplash: true, openFiles: cliPaths.files })
     } else if (welcomeFilePath) {
       // First launch: set the LexEd folder as workspace and open welcome file
       const projectPath = getDefaultProjectPath()
       store.set('lastFolder', projectPath)
+      recordRecentRoot(projectPath)
       windowManager.createWindow(undefined, { showSplash: true, openFiles: [welcomeFilePath] })
     } else {
       windowManager.restoreWindows()
+    }
+
+    // Dispatch any OS `open-file` events that arrived before we were ready.
+    appIsReady = true
+    if (pendingOpenFiles.length > 0) {
+      const queued = pendingOpenFiles.splice(0, pendingOpenFiles.length)
+      openFilesViaRouter(queued)
     }
   })
 }
