@@ -33,12 +33,17 @@ export async function launchApp(options: AppLaunchOptions = {}) {
     ? undefined
     : fs.mkdtempSync(path.join(os.tmpdir(), 'lexed-e2e-'))
 
+  // LEX_USER_DATA_DIR goes *after* the envOverrides spread. Some callers
+  // build their env objects conditionally and may end up with
+  // `LEX_USER_DATA_DIR: undefined` in the override; if that spread
+  // came last it would wipe out our isolation dir and reintroduce the
+  // machine-dependent state we're trying to avoid.
   const env: ProcessEnv = {
     ...process.env,
     NODE_ENV: useBuiltRenderer ? 'production' : 'development',
     LEX_DISABLE_SINGLE_INSTANCE_LOCK: '1',
-    LEX_USER_DATA_DIR: callerProvidedDir ?? autoCreatedDir,
     ...envOverrides,
+    LEX_USER_DATA_DIR: callerProvidedDir ?? autoCreatedDir,
   }
 
   if (!env.LEX_HIDE_WINDOW) {

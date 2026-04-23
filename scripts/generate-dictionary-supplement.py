@@ -66,6 +66,18 @@ CSPELL_SOURCES = [
     "dictionaries/k8s/dict/k8s.txt",
 ]
 
+# cspell-dicts ships a curated "typo → correction" list. Used as a
+# denylist below to catch misspellings that leak in from the cspell
+# source files (e.g. `becaus`, `explicity`, `repitition` — all flagged
+# on the first Copilot review of this feature).
+CSPELL_MISSPELLINGS = "dictionaries/en-common-misspellings/dict/dict-en.json"
+
+# Additional typos the upstream misspellings dict misses. Keep small —
+# prefer fixing upstream over growing this list.
+EXTRA_DENYLIST = {
+    "unmodifing",  # typo of `unmodifying`
+}
+
 # License files to vendor alongside the generated supplement.
 # (key = destination filename under dictionaries/licenses/)
 LICENSE_SOURCES = {
@@ -176,15 +188,30 @@ def parse_cspell_source(text: str) -> set[str]:
     return out
 
 
+def parse_misspellings(text: str) -> set[str]:
+    """Extract the left-hand side ("typo") from each `typo->correct` entry
+    in cspell's en-common-misspellings dictionary JSON."""
+    data = json.loads(text)
+    typos: set[str] = set()
+    for defn in data.get("dictionaryDefinitions", []):
+        for entry in defn.get("flagWords", []) + defn.get("suggestWords", []):
+            left = entry.split("->", 1)[0].strip()
+            if left:
+                typos.add(left)
+    return typos
+
+
 def compute_stamp() -> str:
     """Hash of all inputs — if unchanged, supplement.dic is up to date."""
     h = hashlib.sha256()
     h.update(CSPELL_COMMIT.encode())
     h.update(json.dumps(CSPELL_SOURCES, sort_keys=True).encode())
+    h.update(CSPELL_MISSPELLINGS.encode())
     h.update(json.dumps(sorted(LICENSE_SOURCES.items()), sort_keys=True).encode())
     h.update(json.dumps(SUPPORTED_LANGUAGES, sort_keys=True).encode())
     h.update(json.dumps(sorted(CANARIES_LOWER), sort_keys=True).encode())
     h.update(json.dumps(sorted(CANARIES_UPPER), sort_keys=True).encode())
+    h.update(json.dumps(sorted(EXTRA_DENYLIST), sort_keys=True).encode())
     return h.hexdigest()
 
 
@@ -202,8 +229,18 @@ def generate() -> list[str]:
         raw |= parse_cspell_source(fetch(url))
     print(f"  cspell raw entries: {len(raw)}", file=sys.stderr)
 
+    print(f"  fetch {CSPELL_MISSPELLINGS}", file=sys.stderr)
+    denylist = parse_misspellings(fetch(f"{CSPELL_BASE}/{CSPELL_MISSPELLINGS}"))
+    denylist |= EXTRA_DENYLIST
+    print(f"  denylist entries: {len(denylist)}", file=sys.stderr)
+
     clean = {w for w in raw if is_keepable(w)} | CANARIES_LOWER | CANARIES_UPPER
-    print(f"  after filter + canaries: {len(clean)}", file=sys.stderr)
+    # Drop known misspellings — but only for lowercase words. ALL-CAPS
+    # acronyms are unlikely to be English typos (e.g. `AKS` = Azure
+    # Kubernetes Service), and the misspellings dict over-flags them.
+    before = len(clean)
+    clean = {w for w in clean if w.isupper() or w.lower() not in denylist}
+    print(f"  after denylist: {len(clean)} (-{before - len(clean)})", file=sys.stderr)
     return sorted(clean)
 
 
