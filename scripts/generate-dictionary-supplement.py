@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
-"""Generate dictionaries/supplement.txt for lexed.
+"""Generate dictionaries/source/supplement.txt for lexed.
 
 The vendored Hunspell base dictionaries are SCOWL-derived at size=60 and
 miss a lot of modern tech / programming / OS / networking vocabulary
-(`lifecycle`, `amd64`, `stdin`, `csrf`…). This script builds a single
-shared supplement that the spellcheck service layers on top of whichever
-language the user selected — tech terms are loanwords, so the same list
-is useful for every language we support.
+(`lifecycle`, `amd64`, `stdin`, `csrf`…). This script builds a plain
+word-list file that's consumed at BUILD TIME by
+`scripts/generate-tries.mjs`, which merges it into every language's
+precompiled `.trie.gz` (one lookup, no separate runtime supplement).
+
+Tech terms are loanwords, so the same supplement helps every language.
+Words already in `en_US.dic` are stripped — otherwise common English
+entries from cspell-dicts (`word`, `hello`, `the`) would pollute
+non-English tries.
 
 Sources:
   - streetsidesoftware/cspell-dicts (MIT) — the bulk of the vocabulary
@@ -14,10 +19,11 @@ Sources:
     omits or only ships in CamelCase
 
 Cache:
-  A stamp file at dictionaries/.supplement.stamp stores a hash of all
-  inputs (pinned commit, source URL list, canary lists, languages). A
-  run whose stamp matches is a no-op. `--force` regenerates anyway;
-  `--check` exits non-zero if the stamp doesn't match (CI use).
+  A stamp file at dictionaries/source/.supplement.stamp stores a hash
+  of all inputs (pinned commit, source URL list, canary lists,
+  languages). A run whose stamp matches is a no-op. `--force`
+  regenerates anyway; `--check` exits non-zero if the stamp doesn't
+  match (CI use).
 
 Usage:
   python3 scripts/generate-dictionary-supplement.py
@@ -231,7 +237,7 @@ def load_en_us_base() -> set[str]:
     NOT be added to non-English tries when the supplement is merged."""
     path = SOURCE_DIR / "en_US.dic"
     base: set[str] = set()
-    with path.open() as f:
+    with path.open(encoding="utf-8") as f:
         next(f, None)  # count header
         for line in f:
             w = line.strip().split("/", 1)[0]
