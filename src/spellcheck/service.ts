@@ -54,15 +54,32 @@ export class SpellcheckService {
     )
     this.checker = nspell(data.aff, data.dic)
 
-    // Load custom words
+    // Load vendored supplement (shared tech/programming/OS terms missing
+    // from the SCOWL-derived base dictionaries — same list for every
+    // language since tech vocabulary is loanwords). Added in chunks with
+    // a macrotask yield between each so we don't pin the renderer
+    // thread; spellcheck just gets progressively smarter as adds land.
+    const supplement = await this.loadSupplement()
+    if (this.loadGeneration !== generation) return
+    const CHUNK = 500
+    for (let i = 0; i < supplement.length; i += CHUNK) {
+      const end = Math.min(i + CHUNK, supplement.length)
+      for (let j = i; j < end; j++) this.checker.add(supplement[j])
+      if (end < supplement.length) {
+        await new Promise<void>((resolve) => setTimeout(resolve, 0))
+        if (this.loadGeneration !== generation) return
+      }
+    }
+
+    // Load custom words (user additions via "Add to dictionary")
     const customWords = await this.loadCustomWords()
     if (this.loadGeneration !== generation) return
-
     for (const word of customWords) {
       this.checker.add(word)
     }
+
     console.log(
-      `[Spellcheck] Dictionary loaded for ${language} (${customWords.length} custom words)`
+      `[Spellcheck] Dictionary loaded for ${language} (${supplement.length} supplement + ${customWords.length} custom words)`
     )
   }
 
@@ -281,6 +298,14 @@ export class SpellcheckService {
   private async loadCustomWords(): Promise<string[]> {
     try {
       return (await window.ipcRenderer.invoke('spellcheck-load-custom-words')) as string[]
+    } catch {
+      return []
+    }
+  }
+
+  private async loadSupplement(): Promise<string[]> {
+    try {
+      return (await window.ipcRenderer.invoke('spellcheck-load-supplement')) as string[]
     } catch {
       return []
     }

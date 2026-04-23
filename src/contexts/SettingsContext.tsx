@@ -27,6 +27,34 @@ const SettingsContext = createContext<SettingsContextType | null>(null)
 
 let spellcheckInitialized = false
 
+const LSP_READY_FALLBACK_MS = 10_000
+
+/**
+ * Run `fn` after the LSP has finished its initialize handshake (i.e.
+ * `window.__lexLspReady` is true), or immediately if it already is.
+ * Spellcheck is deferred through this so that nspell's synchronous
+ * dictionary parse — several seconds for large locales — doesn't
+ * starve the LSP response handler that flips the flag. A fallback
+ * timer ensures spellcheck still initializes if the LSP never comes
+ * up (so the feature isn't silently disabled when the binary is
+ * missing or crashing).
+ */
+function deferUntilLspReady(fn: () => void): void {
+  if ((window as { __lexLspReady?: boolean }).__lexLspReady) {
+    fn()
+    return
+  }
+  let fired = false
+  const handler = () => {
+    if (fired) return
+    fired = true
+    window.removeEventListener('lexed:lsp-ready', handler)
+    fn()
+  }
+  window.addEventListener('lexed:lsp-ready', handler)
+  setTimeout(handler, LSP_READY_FALLBACK_MS)
+}
+
 async function applySpellcheckSettings(settings: SpellcheckSettings) {
   spellcheckService.setEnabled(settings.enabled)
   if (settings.enabled) {
@@ -82,8 +110,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           settings: { spellcheck: { enabled: false } },
         })
 
-        // Initialize client-side spellcheck
-        applySpellcheckSettings(next.spellcheck)
+        // Initialize client-side spellcheck AFTER the LSP has completed
+        // its initialize handshake. nspell() parses the whole .dic
+        // synchronously on construction; large locales (pt_BR is 4+ MB,
+        // ru_RU is similar) block the renderer long enough to starve
+        // the LSP InitializeResponse handler, so the `__lexLspReady`
+        // flag never gets set. Waiting lets the handshake finish first.
+        deferUntilLspReady(() => applySpellcheckSettings(next.spellcheck))
 
         return next
       })

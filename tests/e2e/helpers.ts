@@ -1,4 +1,6 @@
 import { _electron as electron, expect, type Page } from '@playwright/test'
+import * as fs from 'node:fs'
+import * as os from 'node:os'
 import path from 'node:path'
 import type { ProcessEnv } from 'node:process'
 
@@ -17,10 +19,25 @@ export async function launchApp(options: AppLaunchOptions = {}) {
   const devServerUrl =
     process.env.VITE_DEV_SERVER_URL || (useBuiltRenderer ? undefined : 'http://localhost:5173')
 
+  // Isolate user-data per launch so tests don't read (or write) the
+  // developer's real persisted settings — without isolation the
+  // spellcheck language bleeds in and can blow test timeouts for large
+  // Hunspell locales (e.g. pt_BR at 4+ MB). Callers that need
+  // cross-launch persistence (e.g. file-routing) can provide their own
+  // via envOverrides.LEX_USER_DATA_DIR or a --user-data-dir extra arg;
+  // we only auto-create a fresh dir when neither is set.
+  const callerProvidedDir =
+    envOverrides.LEX_USER_DATA_DIR ||
+    extraArgs.find((a) => a.startsWith('--user-data-dir='))?.slice('--user-data-dir='.length)
+  const autoCreatedDir = callerProvidedDir
+    ? undefined
+    : fs.mkdtempSync(path.join(os.tmpdir(), 'lexed-e2e-'))
+
   const env: ProcessEnv = {
     ...process.env,
     NODE_ENV: useBuiltRenderer ? 'production' : 'development',
     LEX_DISABLE_SINGLE_INSTANCE_LOCK: '1',
+    LEX_USER_DATA_DIR: callerProvidedDir ?? autoCreatedDir,
     ...envOverrides,
   }
 
@@ -45,6 +62,13 @@ export async function launchApp(options: AppLaunchOptions = {}) {
   })
   app.process().stdout?.on('data', (data) => console.log(`Electron stdout: ${data}`))
   app.process().stderr?.on('data', (data) => console.log(`Electron stderr: ${data}`))
+  // Clean up only the dir we auto-created (caller-owned dirs are the
+  // caller's responsibility).
+  if (autoCreatedDir) {
+    app.once('close', () => {
+      fs.rm(autoCreatedDir, { recursive: true, force: true }, () => {})
+    })
+  }
   return app
 }
 
