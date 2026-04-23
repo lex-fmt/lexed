@@ -138,12 +138,15 @@ test.describe('File routing & workspace persistence', () => {
         return window.ipcRenderer.testRouteOpenFiles([fp])
       }, filePath)
 
-      expect(result.newWindowIds).toEqual([])
-      expect(result.existingWindowIds.length).toBeGreaterThan(0)
+      expect(result).toHaveLength(1)
+      expect(result[0].kind).toBe('existingWindow')
+      expect(result[0].filePath).toBe(filePath)
 
-      await expect(page.locator(`[data-tab-path="${filePath}"]`)).toBeVisible({
-        timeout: 5000,
-      })
+      // Locator by testid + basename text — portable across platforms where
+      // the absolute path may contain backslashes or get normalized.
+      await expect(
+        page.locator('[data-testid="editor-tab"]').filter({ hasText: path.basename(filePath) })
+      ).toBeVisible({ timeout: 5000 })
 
       await app.close()
     } finally {
@@ -163,11 +166,29 @@ test.describe('File routing & workspace persistence', () => {
       await setWorkspace(page, workspaceB)
       // Current window's root is now B; A is in recentRoots but not open.
 
+      const newWindowPromise = app.waitForEvent('window')
       const result = await page.evaluate(async (fp) => {
         return window.ipcRenderer.testRouteOpenFiles([fp])
       }, fileInA)
 
-      expect(result.newWindowIds).toHaveLength(1)
+      expect(result).toHaveLength(1)
+      expect(result[0].kind).toBe('newWindowWithRoot')
+      expect(result[0].root).toBe(workspaceA)
+
+      const newPage = await newWindowPromise
+      await newPage.waitForLoadState('domcontentloaded')
+      await newPage.waitForFunction(() => Boolean((window as Window).lexTest), null, {
+        timeout: 15000,
+      })
+      await newPage.waitForFunction(
+        (expected) => (window as Window).__lexWorkspaceRoot === expected,
+        workspaceA,
+        { timeout: 5000 }
+      )
+
+      await expect(
+        newPage.locator('[data-testid="editor-tab"]').filter({ hasText: path.basename(fileInA) })
+      ).toBeVisible({ timeout: 10000 })
 
       await app.close()
     } finally {

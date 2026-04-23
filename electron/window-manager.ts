@@ -106,9 +106,21 @@ const DEFAULT_WINDOW_STATE = {
   height: 800,
 }
 
+// Cap the number of windows we restore on launch. Entries accumulate in the
+// store under quit/crash paths that don't remove them; without a cap, a
+// machine that's been used long enough can spawn dozens of windows on every
+// launch. Keep the most-recently-appended entries (tail = more recent).
+const MAX_RESTORED_WINDOWS = 10
+
+interface WindowEntry {
+  window: BrowserWindow
+  lsp: LspManager
+  stateId: string
+  lastFocusedAt: number
+}
+
 export class WindowManager {
-  private windows: Map<number, { window: BrowserWindow; lsp: LspManager; stateId: string }> =
-    new Map()
+  private windows: Map<number, WindowEntry> = new Map()
   private store: Store<AppSettings>
   private isQuitting = false
   private splashWindow: BrowserWindow | null = null
@@ -212,6 +224,10 @@ export class WindowManager {
     return this.windows.get(id)?.stateId
   }
 
+  public getLastFocusedAt(id: number) {
+    return this.windows.get(id)?.lastFocusedAt ?? 0
+  }
+
   public getAllWindows() {
     return Array.from(this.windows.values()).map((w) => w.window)
   }
@@ -272,7 +288,15 @@ export class WindowManager {
       lsp.setWebContents(win.webContents)
       lsp.start()
 
-      this.windows.set(win.id, { window: win, lsp, stateId })
+      const entry: WindowEntry = { window: win, lsp, stateId, lastFocusedAt: Date.now() }
+      this.windows.set(win.id, entry)
+
+      // Track most-recent focus so the router's tiebreaker (recency) has data
+      // even when the app is backgrounded and no window is currently focused.
+      win.on('focus', () => {
+        const current = this.windows.get(win.id)
+        if (current) current.lastFocusedAt = Date.now()
+      })
 
       win.once('ready-to-show', () => {
         // Close splash and show main window
@@ -377,7 +401,14 @@ export class WindowManager {
     }
 
     const settings = this.store.store
-    const openWindows = settings.openWindows || []
+    let openWindows = settings.openWindows || []
+
+    // Trim accumulated state so a bloated store doesn't spawn dozens of
+    // windows on launch. Keeps the tail (most recently appended).
+    if (openWindows.length > MAX_RESTORED_WINDOWS) {
+      openWindows = openWindows.slice(-MAX_RESTORED_WINDOWS)
+      this.store.set('openWindows', openWindows)
+    }
 
     if (openWindows.length === 0) {
       this.createWindow(undefined, { showSplash: true })

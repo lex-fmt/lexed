@@ -20,9 +20,14 @@ interface Window {
     getInitialFolder: () => Promise<string>
     setLastFolder: (folderPath: string) => Promise<boolean>
     loadTestFixture: (fixtureName: string) => Promise<{ path: string; content: string }>
-    testRouteOpenFiles: (
-      filePaths: string[]
-    ) => Promise<{ existingWindowIds: number[]; newWindowIds: number[] }>
+    testRouteOpenFiles: (filePaths: string[]) => Promise<
+      Array<{
+        filePath: string
+        kind: 'existingWindow' | 'newWindowWithRoot' | 'newWindow'
+        windowId: number
+        root?: string
+      }>
+    >
     getNativeTheme: () => Promise<'dark' | 'light'>
     onNativeThemeChanged: (callback: (theme: 'dark' | 'light') => void) => () => void
     getOpenTabs: () => Promise<{

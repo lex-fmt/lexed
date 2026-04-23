@@ -22,7 +22,7 @@ import {
   type OpenWindowState,
   type RecentRoot,
 } from './file-routing'
-import { setWindowFolder, setWindowPaneLayout } from './window-state'
+import { setWindowFolder, setWindowPaneLayout, upsertWindowState } from './window-state'
 import { randomUUID } from 'crypto'
 
 const DEFAULT_WINDOW_BOUNDS = { width: 1200, height: 800 }
@@ -249,6 +249,7 @@ function collectOpenWindowStates(): OpenWindowState[] {
       windowId: win.id,
       root: state?.lastFolder ?? null,
       isFocused: focused?.id === win.id,
+      lastFocusedAt: windowManager.getLastFocusedAt(win.id),
     }
   })
 }
@@ -398,6 +399,13 @@ function extractPathsFromArgv(argv: string[]): CliPaths {
   return { files, folder }
 }
 
+export interface FileRouteDestination {
+  filePath: string
+  kind: 'existingWindow' | 'newWindowWithRoot' | 'newWindow'
+  windowId: number
+  root?: string
+}
+
 /**
  * Route each OS-provided file to the most appropriate window:
  *   1. An open window whose workspace root contains the file (best = longest root).
@@ -407,22 +415,26 @@ function extractPathsFromArgv(argv: string[]): CliPaths {
  *
  * This is what fixes the "silently does nothing" behaviour when the OS hands
  * us a file that lives outside whatever window happened to be windows[0].
+ *
+ * Returns a per-file record of the destination window so callers (tests in
+ * particular) can assert where each file landed.
  */
-function openFilesViaRouter(filePaths: string[]) {
-  if (filePaths.length === 0) return
+async function openFilesViaRouter(filePaths: string[]): Promise<FileRouteDestination[]> {
+  if (filePaths.length === 0) return []
 
-  // Group files per destination so we don't create one window per file when
+  // Snapshot routing inputs once — they don't change within a single batch,
+  // and recomputing per-file would make decisions harder to reason about.
+  const openWindows = collectOpenWindowStates()
+  const recentRoots = getRecentRoots()
+
+  // Group files per destination so we don't spawn one window per file when
   // several files share the same routing decision.
   const toExistingWindow = new Map<number, string[]>()
   const toNewWindowWithRoot = new Map<string, string[]>()
   const toNewWindow: string[] = []
 
   for (const filePath of filePaths) {
-    const route = routeOpenFile({
-      filePath,
-      openWindows: collectOpenWindowStates(),
-      recentRoots: getRecentRoots(),
-    })
+    const route = routeOpenFile({ filePath, openWindows, recentRoots })
     switch (route.kind) {
       case 'existingWindow': {
         const list = toExistingWindow.get(route.windowId) ?? []
@@ -442,12 +454,15 @@ function openFilesViaRouter(filePaths: string[]) {
     }
   }
 
+  const destinations: FileRouteDestination[] = []
+
   for (const [windowId, files] of toExistingWindow) {
     const win = BrowserWindow.fromId(windowId)
     if (!win || win.isDestroyed()) continue
     for (const file of files) {
       win.webContents.send('open-file-path', file)
       app.addRecentDocument(file)
+      destinations.push({ filePath: file, kind: 'existingWindow', windowId })
     }
     if (win.isMinimized()) win.restore()
     win.focus()
@@ -455,25 +470,76 @@ function openFilesViaRouter(filePaths: string[]) {
 
   for (const [root, files] of toNewWindowWithRoot) {
     recordRecentRoot(root)
-    windowManager.createWindow(
+    const newStateId = randomUUID()
+    seedNewWindowState(newStateId, files, root)
+    const win = await windowManager.createWindow(
       {
-        id: randomUUID(),
+        id: newStateId,
         width: DEFAULT_WINDOW_BOUNDS.width,
         height: DEFAULT_WINDOW_BOUNDS.height,
         lastFolder: root,
       },
-      { showSplash: true, openFiles: files }
+      { showSplash: true }
     )
-    files.forEach((f) => app.addRecentDocument(f))
+    files.forEach((f) => {
+      app.addRecentDocument(f)
+      destinations.push({ filePath: f, kind: 'newWindowWithRoot', windowId: win.id, root })
+    })
   }
 
   if (toNewWindow.length > 0) {
-    windowManager.createWindow(undefined, {
-      showSplash: true,
-      openFiles: toNewWindow,
+    const newStateId = randomUUID()
+    seedNewWindowState(newStateId, toNewWindow, null)
+    const win = await windowManager.createWindow(
+      {
+        id: newStateId,
+        width: DEFAULT_WINDOW_BOUNDS.width,
+        height: DEFAULT_WINDOW_BOUNDS.height,
+      },
+      { showSplash: true }
+    )
+    toNewWindow.forEach((f) => {
+      app.addRecentDocument(f)
+      destinations.push({ filePath: f, kind: 'newWindow', windowId: win.id })
     })
-    toNewWindow.forEach((f) => app.addRecentDocument(f))
   }
+
+  return destinations
+}
+
+/**
+ * Seed a newly-created window's persisted state with its workspace root and
+ * an initial pane layout that already contains the files to be opened.
+ *
+ * Going through the store avoids the race where `did-finish-load` → `send('open-file-path')`
+ * can fire before the renderer registers its listener (files silently dropped).
+ * The renderer loads this state via `get-open-tabs` on mount — deterministic.
+ */
+function seedNewWindowState(stateId: string, files: string[], root: string | null): void {
+  const paneId = randomUUID()
+  const rowId = randomUUID()
+  const paneLayout = [
+    {
+      id: paneId,
+      tabs: files,
+      activeTab: files[files.length - 1] ?? null,
+    },
+  ]
+  const paneRows = [{ id: rowId, paneIds: [paneId] }]
+  const patch: Partial<import('./window-manager').WindowState> = {
+    paneLayout,
+    paneRows,
+    activePaneId: paneId,
+  }
+  if (root) patch.lastFolder = root
+  const openWindows = store.store.openWindows || []
+  store.set(
+    'openWindows',
+    upsertWindowState(openWindows, stateId, patch, {
+      width: DEFAULT_WINDOW_BOUNDS.width,
+      height: DEFAULT_WINDOW_BOUNDS.height,
+    })
+  )
 }
 
 /**
@@ -625,20 +691,11 @@ ipcMain.handle('test-set-workspace', async (_, folderPath: string) => {
 
 /**
  * Test-only: simulate an OS-level file-open event (macOS `open-file` or
- * Windows/Linux second-instance) by running the router directly. Returns the
- * IDs of the windows that received each file so e2e tests can assert where
- * each file landed.
+ * Windows/Linux second-instance) by running the router directly. Returns a
+ * per-file destination record so e2e tests can assert where each file landed.
  */
 ipcMain.handle('test-route-open-files', async (_, filePaths: string[]) => {
-  const before = new Set(windowManager.getAllWindows().map((w) => w.id))
-  openFilesViaRouter(filePaths)
-  // Give createWindow a tick to register new windows
-  await new Promise((resolve) => setTimeout(resolve, 50))
-  const after = windowManager.getAllWindows().map((w) => w.id)
-  return {
-    existingWindowIds: after.filter((id) => before.has(id)),
-    newWindowIds: after.filter((id) => !before.has(id)),
-  }
+  return openFilesViaRouter(filePaths)
 })
 
 ipcMain.handle('file-read-dir', async (_, dirPath: string) => {
@@ -1567,7 +1624,7 @@ if (!gotTheLock) {
       // files through the normal logic.
       openCliPaths(cliPaths)
     } else if (cliPaths.files.length > 0) {
-      openFilesViaRouter(cliPaths.files)
+      void openFilesViaRouter(cliPaths.files)
     } else {
       // No paths, just focus the existing window
       const windows = windowManager.getAllWindows()
@@ -1591,7 +1648,7 @@ if (!gotTheLock) {
       pendingOpenFiles.push(filePath)
       return
     }
-    openFilesViaRouter([filePath])
+    void openFilesViaRouter([filePath])
   })
 
   app.whenReady().then(async () => {
@@ -1697,7 +1754,7 @@ if (!gotTheLock) {
     appIsReady = true
     if (pendingOpenFiles.length > 0) {
       const queued = pendingOpenFiles.splice(0, pendingOpenFiles.length)
-      openFilesViaRouter(queued)
+      void openFilesViaRouter(queued)
     }
   })
 }

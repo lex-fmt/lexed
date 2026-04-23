@@ -24,3 +24,5 @@ Updates all references to the renamed binary: electron-builder config, fetch-dep
 
 - `saveWindowState` no longer clobbers fresh window bounds with stale ones (spread order was reversed, so geometry never updated across launches).
 - Dev-mode argv parsing no longer misreads the Electron bootstrap argument (`electron .`) as a user-requested workspace folder.
+- Cap window restoration at 10 entries on launch. Quit/crash paths could leave orphaned `openWindows` entries in the store; without a cap, a machine used long enough would spawn a growing number of windows on every launch.
+- New windows created by OS-file routing seed their initial pane layout into the store before load, so the file reliably appears as a tab instead of racing with renderer-side IPC listener registration.
