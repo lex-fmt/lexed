@@ -105,14 +105,28 @@ jobs:
         if: ${{ steps.target-filter.outputs.skip == 'false' }}
         run: npm ci
 
-      - name: Build Electron package
-        if: ${{ steps.target-filter.outputs.skip == 'false' }}
+      # Split the build step in two so CSC_LINK / CSC_KEY_PASSWORD are only
+      # *defined* on macOS. Setting them to "" on Windows/Linux still creates
+      # the env var and trips electron-builder's Windows signing path, which
+      # reads CSC_LINK (alias WIN_CSC_LINK), tries to resolve the empty
+      # string as a file path under the runner workspace, and fails with
+      # "Env WIN_CSC_LINK is not correct, cannot resolve: D:\a\... not a file".
+      - name: Build Electron package (macOS, signed)
+        if: ${{ steps.target-filter.outputs.skip == 'false' && startsWith(matrix.platform, 'macos-') }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LEX_HIDE_WINDOW: "1"
           NODE_OPTIONS: --max-old-space-size=4096
-          CSC_LINK: ${{ startsWith(matrix.platform, 'macos-') && secrets.APPLE_CERTIFICATE_P12_BASE64 || '' }}
-          CSC_KEY_PASSWORD: ${{ startsWith(matrix.platform, 'macos-') && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
+          CSC_LINK: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: npm run build
+
+      - name: Build Electron package (unsigned)
+        if: ${{ steps.target-filter.outputs.skip == 'false' && !startsWith(matrix.platform, 'macos-') }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LEX_HIDE_WINDOW: "1"
+          NODE_OPTIONS: --max-old-space-size=4096
         run: npm run build
 
       - name: Re-sign QuickLook plugin and re-create DMG
