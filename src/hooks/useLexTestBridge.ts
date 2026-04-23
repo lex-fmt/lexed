@@ -129,6 +129,7 @@ export function useLexTestBridge({
       },
       isLspReady: () => Boolean(window.__lexLspReady),
       isSpellcheckReady: () => spellcheckService.isReady(),
+      spellcheckLanguage: () => spellcheckService.currentLanguage(),
       recheckSpelling: () => {
         const target = activePaneId ?? panesRef.current[0]?.id ?? null
         if (!target) return false

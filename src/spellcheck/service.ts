@@ -86,6 +86,16 @@ export class SpellcheckService {
   }
 
   /**
+   * The language the trie is currently loaded for (only meaningful
+   * while `isReady()` is true). Exposed so tests can wait for a
+   * language switch to land without relying on marker contents, which
+   * are ambiguous across languages for the same document.
+   */
+  currentLanguage(): string | null {
+    return this.trie !== null ? this.language : null
+  }
+
+  /**
    * Schedule a spellcheck for the given model. Debounced to avoid
    * checking on every keystroke.
    */

@@ -10,6 +10,9 @@
   },
   "homepage": "https://lex.ing",
   "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
   "scripts": {
     "predev": "bash scripts/fetch-deps.sh --if-missing",
     "dev": "vite",

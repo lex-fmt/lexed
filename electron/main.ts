@@ -3,8 +3,11 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import * as fs from 'fs/promises'
 import * as fsSync from 'fs'
+import { promisify } from 'node:util'
 import * as zlib from 'node:zlib'
 import log from 'electron-log'
+
+const gunzipAsync = promisify(zlib.gunzip)
 import { autoUpdater } from 'electron-updater'
 const DEFAULT_LOG_FILE = 'lexed.log'
 
@@ -1075,9 +1078,11 @@ function getCustomDictionaryPath(): string {
 ipcMain.handle('spellcheck-load-trie', async (_event, language: string) => {
   // Per-language precompiled trie (see scripts/generate-tries.mjs). The
   // trie is a cspell-trie-lib text format, gzipped for storage. We
-  // decompress here on the main side so the renderer doesn't need a
-  // gzip dependency (pako, etc.) in its bundle. The decompressed text
-  // is passed to `importTrie` in the renderer.
+  // decompress here on the main side (async, off the main thread via
+  // libuv's threadpool) so the renderer doesn't need a gzip dependency
+  // (pako, etc.) in its bundle and we don't stall the main process
+  // while a multi-MB trie inflates. The decompressed text is passed to
+  // `importTrie` in the renderer.
   //
   // Per-language tries include the language's Hunspell expansion
   // *merged with* the shared tech-vocab supplement, so a single load
@@ -1085,8 +1090,8 @@ ipcMain.handle('spellcheck-load-trie', async (_event, language: string) => {
   const triePath = path.join(getDictionariesPath(), `${language}.trie.gz`)
   try {
     const compressed = await fs.readFile(triePath)
-    const decompressed = zlib.gunzipSync(compressed).toString('utf-8')
-    return { text: decompressed }
+    const decompressed = await gunzipAsync(compressed)
+    return { text: decompressed.toString('utf-8') }
   } catch (err) {
     log.warn(`[Spellcheck] Trie not found for ${language}:`, err)
     return { error: `Trie not found for ${language}` }

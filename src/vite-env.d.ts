@@ -119,6 +119,7 @@ interface Window {
     getMarkers?: () => unknown[]
     isLspReady?: () => boolean
     isSpellcheckReady?: () => boolean
+    spellcheckLanguage?: () => string | null
     recheckSpelling?: () => boolean
     setCursor?: (line: number, col: number) => boolean
   }
