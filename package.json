@@ -29,15 +29,22 @@
     "test:e2e:dev": "LEX_SKIP_E2E_BUILD=1 LEX_DISABLE_PERSISTENCE=1 npx playwright test tests/e2e",
     "test:e2e:built": "LEX_E2E_USE_BUILD=1 LEX_SKIP_E2E_BUILD=1 LEX_HIDE_WINDOW=1 PLAYWRIGHT_BROWSERS_PATH=0 LEX_DISABLE_PERSISTENCE=1 npx playwright test tests/e2e",
     "test:unit": "vitest",
-    "dictionaries:update": "python3 scripts/generate-dictionary-supplement.py",
-    "dictionaries:update:force": "python3 scripts/generate-dictionary-supplement.py --force",
-    "dictionaries:check": "python3 scripts/generate-dictionary-supplement.py --check",
+    "dictionaries:update": "python3 scripts/generate-dictionary-supplement.py && node scripts/generate-tries.mjs",
+    "dictionaries:update:force": "python3 scripts/generate-dictionary-supplement.py --force && node scripts/generate-tries.mjs --force",
+    "dictionaries:check": "python3 scripts/generate-dictionary-supplement.py --check && node scripts/generate-tries.mjs --check",
+    "supplement:update": "python3 scripts/generate-dictionary-supplement.py",
+    "supplement:update:force": "python3 scripts/generate-dictionary-supplement.py --force",
+    "supplement:check": "python3 scripts/generate-dictionary-supplement.py --check",
+    "tries:update": "node scripts/generate-tries.mjs",
+    "tries:update:force": "node scripts/generate-tries.mjs --force",
+    "tries:check": "node scripts/generate-tries.mjs --check",
     "prepare": "husky"
   },
   "dependencies": {
     "@lex/shared": "file:./shared",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cspell-trie-lib": "^10.0.0",
     "electron-log": "^5.4.3",
     "electron-store": "^11.0.2",
     "electron-updater": "^6.6.2",
@@ -45,7 +52,6 @@
     "lucide-react": "^0.344.0",
     "monaco-editor": "^0.55.1",
     "monaco-vim": "^0.4.4",
-    "nspell": "^2.1.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "sonner": "^2.0.7",
@@ -54,13 +60,13 @@
     "vscode-ws-jsonrpc": "^3.5.0"
   },
   "devDependencies": {
+    "@cspell/cspell-tools": "^10.0.0",
     "@eslint/js": "^9.39.1",
     "@playwright/test": "^1.57.0",
     "@tailwindcss/vite": "^4.1.17",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
-    "@types/nspell": "^2.1.6",
     "@types/react": "^18.2.64",
     "@types/react-dom": "^18.2.21",
     "@typescript-eslint/eslint-plugin": "^7.1.1",
@@ -212,7 +218,11 @@
       },
       {
         "from": "dictionaries",
-        "to": "dictionaries"
+        "to": "dictionaries",
+        "filter": [
+          "*.trie.gz",
+          "licenses/**"
+        ]
       },
       {
         "from": "comms/assets/logo-full.png",
