@@ -17,10 +17,12 @@ export interface CheckableWord {
   endColumn: number
 }
 
-// Word boundary pattern: splits on whitespace and common punctuation,
-// but keeps apostrophes and hyphens within words.
+// Word boundary pattern: splits on whitespace, hyphens, and common
+// punctuation, but keeps apostrophes within words. Hyphens act as
+// separators so hyphenated tokens (e.g. `table-row`) are checked as
+// their individual parts — dictionaries rarely carry compound forms.
 const WORD_RE =
-  /[a-zA-Z\u00C0-\u024F\u0400-\u04FF](?:[a-zA-Z\u00C0-\u024F\u0400-\u04FF''-]*[a-zA-Z\u00C0-\u024F\u0400-\u04FF])?/g
+  /[a-zA-Z\u00C0-\u024F\u0400-\u04FF](?:[a-zA-Z\u00C0-\u024F\u0400-\u04FF'']*[a-zA-Z\u00C0-\u024F\u0400-\u04FF])?/g
 
 /**
  * Extracts checkable words from Lex source text.
