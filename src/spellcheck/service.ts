@@ -12,6 +12,7 @@ import { importTrie, Trie } from 'cspell-trie-lib'
 import * as monaco from 'monaco-editor'
 import { extractCheckableWords } from './word-extraction'
 import { caseVariants } from './case-variants'
+import { matchWithCase } from './case-match'
 
 const MARKER_OWNER = 'lex-spell'
 const DEBOUNCE_MS = 300
@@ -148,15 +149,19 @@ export class SpellcheckService {
   }
 
   /**
-   * Check a single word.
+   * Check a single word. Lookup is case-aware via `matchWithCase` so
+   * sentence-initial `And` and shouted `AND` match `and` in the dict.
    */
   isCorrect(word: string): boolean {
     if (!this.trie) return true
-    // Skip single characters, numbers, and words with special chars
     if (word.length <= 1) return true
     if (/^\d+$/.test(word)) return true
     if (/[_@#$%^&*]/.test(word)) return true
-    return this.trie.has(word) || this.customWords.has(word)
+    return matchWithCase((w) => this.lookup(w), word)
+  }
+
+  private lookup(word: string): boolean {
+    return this.trie!.has(word) || this.customWords.has(word)
   }
 
   /**
