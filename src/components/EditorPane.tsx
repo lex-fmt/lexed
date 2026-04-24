@@ -8,6 +8,7 @@ import {
   useMemo,
 } from 'react'
 import { Editor, EditorHandle } from './Editor'
+import type { MonacoInjectionHighlighterApi } from '@/editor/injection_highlighter'
 import { PreviewPane } from './PreviewPane'
 import { WelcomeView } from './WelcomeView'
 import { TabBar, Tab, TabDropData } from './TabBar'
@@ -27,6 +28,7 @@ export interface EditorPaneHandle {
   format: () => Promise<void>
   getCurrentFile: () => string | null
   getEditor: () => Monaco.editor.IStandaloneCodeEditor | null
+  getInjectionHighlighter: () => MonacoInjectionHighlighterApi | null
   find: () => void
   replace: () => void
 }
@@ -323,6 +325,7 @@ export const EditorPane = forwardRef<EditorPaneHandle, EditorPaneProps>(function
       format: handleFormat,
       getCurrentFile: () => editorRef.current?.getCurrentFile() ?? null,
       getEditor: () => editorRef.current?.getEditor() ?? null,
+      getInjectionHighlighter: () => editorRef.current?.getInjectionHighlighter() ?? null,
       find: handleFind,
       replace: handleReplace,
     }),

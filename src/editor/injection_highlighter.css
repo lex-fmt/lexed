@@ -1,0 +1,62 @@
+/*
+ * Injection highlighter colours for embedded code inside verbatim blocks.
+ * Defaults mirror the `lex.injection.*` colour IDs shipped in the vscode
+ * extension; we keep dark and light variants via `[data-theme]` on the
+ * document root (matches the rest of the lexed renderer).
+ *
+ * The `inlineClassName` from Monaco decorations lands on an inner span
+ * that already has a colour from the LSP semantic tokens pass. These
+ * selectors use `!important` so the injection colour wins over the
+ * generic `VerbatimContent` foreground.
+ */
+
+:root,
+[data-theme='dark'] {
+  --lex-injection-keyword: #569cd6;
+  --lex-injection-string: #ce9178;
+  --lex-injection-comment: #6a9955;
+  --lex-injection-number: #b5cea8;
+  --lex-injection-type: #4ec9b0;
+  --lex-injection-function: #dcdcaa;
+  --lex-injection-operator: #d4d4d4;
+}
+
+[data-theme='light'] {
+  --lex-injection-keyword: #0000ff;
+  --lex-injection-string: #a31515;
+  --lex-injection-comment: #008000;
+  --lex-injection-number: #098658;
+  --lex-injection-type: #267f99;
+  --lex-injection-function: #795e26;
+  --lex-injection-operator: #000000;
+}
+
+.lex-injection-keyword {
+  color: var(--lex-injection-keyword) !important;
+  font-weight: 600;
+}
+
+.lex-injection-string {
+  color: var(--lex-injection-string) !important;
+}
+
+.lex-injection-comment {
+  color: var(--lex-injection-comment) !important;
+  font-style: italic;
+}
+
+.lex-injection-number {
+  color: var(--lex-injection-number) !important;
+}
+
+.lex-injection-type {
+  color: var(--lex-injection-type) !important;
+}
+
+.lex-injection-function {
+  color: var(--lex-injection-function) !important;
+}
+
+.lex-injection-operator {
+  color: var(--lex-injection-operator) !important;
+}

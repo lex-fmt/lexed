@@ -3,6 +3,10 @@
     "lexd-lsp": {
       "version": "v0.8.5",
       "repo": "lex-fmt/lex"
+    },
+    "tree-sitter": {
+      "version": "v0.8.3",
+      "repo": "lex-fmt/tree-sitter-lex"
     }
   }
 }

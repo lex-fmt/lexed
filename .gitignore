@@ -10,6 +10,11 @@ node_modules
 /resources/lexd-lsp
 /resources/lexd-lsp.exe
 
+# Downloaded tree-sitter grammar + queries
+# (fetched by scripts/download-tree-sitter.sh)
+/resources/tree-sitter-lex.wasm
+/resources/queries/
+
 # Logs
 logs
 *.log

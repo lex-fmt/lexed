@@ -69,6 +69,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Download tree-sitter grammar
+        run: bash scripts/download-tree-sitter.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build renderer and main process
         run: npm run icons && npx tsc && npx vite build
 
