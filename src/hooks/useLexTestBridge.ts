@@ -202,6 +202,42 @@ export function useLexTestBridge({
         await action.run()
         return true
       },
+
+      // Injection highlighter introspection — exposed so e2e tests can
+      // verify that embedded code inside `:: <lang> ::` verbatim blocks
+      // gets categorised tokens back from the Monaco host adapter.
+      getInjectionZones: () => {
+        const target = activePaneId ?? panesRef.current[0]?.id ?? null
+        if (!target) return []
+        const highlighter = paneHandles.current.get(target)?.getInjectionHighlighter()
+        return highlighter?.getInjectionZones() ?? []
+      },
+      getInjectionRanges: () => {
+        const target = activePaneId ?? panesRef.current[0]?.id ?? null
+        if (!target) return []
+        const highlighter = paneHandles.current.get(target)?.getInjectionHighlighter()
+        return highlighter?.getInjectionRanges() ?? []
+      },
+      getInjectionRangesByCategory: () => {
+        const target = activePaneId ?? panesRef.current[0]?.id ?? null
+        if (!target) return {}
+        const highlighter = paneHandles.current.get(target)?.getInjectionHighlighter()
+        const byCategory = highlighter?.getRangesByCategory()
+        if (!byCategory) return {}
+        const out: Record<string, unknown[]> = {}
+        for (const [cat, ranges] of byCategory) {
+          out[cat] = ranges
+        }
+        return out
+      },
+      refreshInjectionHighlighter: async () => {
+        const target = activePaneId ?? panesRef.current[0]?.id ?? null
+        if (!target) return false
+        const highlighter = paneHandles.current.get(target)?.getInjectionHighlighter()
+        if (!highlighter) return false
+        await highlighter.refresh()
+        return true
+      },
     }
     window.lexTest = api
     return () => {

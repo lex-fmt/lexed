@@ -13,6 +13,11 @@ import { buildFormattingOptions, notifyLexTest } from '@/lsp/providers/formattin
 import { navigateTableCell, formatTableAtCursor } from '@/lsp/table_commands'
 import type { LspTextEdit } from '@/lsp/types'
 import { dispatchFileTreeRefresh } from '@/lib/events'
+import { initTreeSitter } from '@/treesitter'
+import {
+  createMonacoInjectionHighlighter,
+  type MonacoInjectionHighlighterApi,
+} from '@/editor/injection_highlighter'
 
 initializeMonaco()
 
@@ -32,6 +37,7 @@ export interface EditorHandle {
   closeFile: (path: string) => void
   find: () => void
   replace: () => void
+  getInjectionHighlighter: () => MonacoInjectionHighlighterApi | null
 }
 
 export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
@@ -42,6 +48,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
   const vimModeRef = useRef<any>(null)
   const attachedStatusNodeRef = useRef<HTMLDivElement | null>(null)
+  const injectionHighlighterRef = useRef<MonacoInjectionHighlighterApi | null>(null)
   const [currentFile, setCurrentFile] = useState<string | null>(null)
   const { settings } = useSettings()
   const platform = usePlatform()
@@ -126,6 +133,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     replace: () => {
       editorRef.current?.trigger('menu', 'editor.action.startFindReplaceAction', null)
     },
+    getInjectionHighlighter: () => injectionHighlighterRef.current,
   }))
 
   useEffect(() => {
@@ -274,9 +282,24 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       }
     })
 
+    // Embedded-code highlighter inside `:: python ::` / `:: js ::` blocks.
+    // Tree-sitter loads lazily; if the WASM artifacts are missing or the
+    // grammar fails to init, `initTreeSitter()` resolves to null and the
+    // highlighter install is skipped — LSP semantic tokens still colour
+    // the rest of the document either way.
+    void initTreeSitter().then((ts) => {
+      if (!ts || !editorRef.current) return
+      if (injectionHighlighterRef.current) {
+        injectionHighlighterRef.current.dispose()
+      }
+      injectionHighlighterRef.current = createMonacoInjectionHighlighter(editorRef.current, ts)
+    })
+
     return () => {
       tabDisposable.dispose()
       formatTableDisposable.dispose()
+      injectionHighlighterRef.current?.dispose()
+      injectionHighlighterRef.current = null
       editor.dispose()
       if (vimModeRef.current) {
         vimModeRef.current.dispose()
