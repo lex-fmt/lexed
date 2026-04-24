@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
-"""Generate dictionaries/supplement.dic for lexed.
+"""Generate dictionaries/source/supplement.txt for lexed.
 
 The vendored Hunspell base dictionaries are SCOWL-derived at size=60 and
 miss a lot of modern tech / programming / OS / networking vocabulary
-(`lifecycle`, `amd64`, `stdin`, `csrf`…). This script builds a single
-shared supplement that the spellcheck service layers on top of whichever
-language the user selected — tech terms are loanwords, so the same list
-is useful for every language we support.
+(`lifecycle`, `amd64`, `stdin`, `csrf`…). This script builds a plain
+word-list file that's consumed at BUILD TIME by
+`scripts/generate-tries.mjs`, which merges it into every language's
+precompiled `.trie.gz` (one lookup, no separate runtime supplement).
+
+Tech terms are loanwords, so the same supplement helps every language.
+Words already in `en_US.dic` are stripped — otherwise common English
+entries from cspell-dicts (`word`, `hello`, `the`) would pollute
+non-English tries.
 
 Sources:
   - streetsidesoftware/cspell-dicts (MIT) — the bulk of the vocabulary
@@ -14,10 +19,11 @@ Sources:
     omits or only ships in CamelCase
 
 Cache:
-  A stamp file at dictionaries/.supplement.stamp stores a hash of all
-  inputs (pinned commit, source URL list, canary lists, languages). A
-  run whose stamp matches is a no-op. `--force` regenerates anyway;
-  `--check` exits non-zero if the stamp doesn't match (CI use).
+  A stamp file at dictionaries/source/.supplement.stamp stores a hash
+  of all inputs (pinned commit, source URL list, canary lists,
+  languages). A run whose stamp matches is a no-op. `--force`
+  regenerates anyway; `--check` exits non-zero if the stamp doesn't
+  match (CI use).
 
 Usage:
   python3 scripts/generate-dictionary-supplement.py
@@ -38,9 +44,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DICT_DIR = ROOT / "dictionaries"
+SOURCE_DIR = DICT_DIR / "source"
 LICENSES_DIR = DICT_DIR / "licenses"
-OUTPUT = DICT_DIR / "supplement.dic"
-STAMP = DICT_DIR / ".supplement.stamp"
+# Build-input only. The tries generator (scripts/generate-tries.mjs)
+# merges this list into every language's .trie.gz. Not loaded at runtime.
+# Plain word list — no Hunspell count header.
+OUTPUT = SOURCE_DIR / "supplement.txt"
+STAMP = SOURCE_DIR / ".supplement.stamp"
 
 # Pinned upstream — bump to pull newer vocabulary.
 CSPELL_COMMIT = "4325f7ffd5c50dfdd0e68821ab2d19abdd925f38"
@@ -202,7 +212,7 @@ def parse_misspellings(text: str) -> set[str]:
 
 
 def compute_stamp() -> str:
-    """Hash of all inputs — if unchanged, supplement.dic is up to date."""
+    """Hash of all inputs — if unchanged, supplement.txt is up to date."""
     h = hashlib.sha256()
     h.update(CSPELL_COMMIT.encode())
     h.update(json.dumps(CSPELL_SOURCES, sort_keys=True).encode())
@@ -219,6 +229,21 @@ def read_stamp() -> str | None:
     if STAMP.exists():
         return STAMP.read_text().strip()
     return None
+
+
+def load_en_us_base() -> set[str]:
+    """Extract the stem entries from the en_US Hunspell .dic.
+    Used to dedup the supplement — anything already in English should
+    NOT be added to non-English tries when the supplement is merged."""
+    path = SOURCE_DIR / "en_US.dic"
+    base: set[str] = set()
+    with path.open(encoding="utf-8") as f:
+        next(f, None)  # count header
+        for line in f:
+            w = line.strip().split("/", 1)[0]
+            if w:
+                base.add(w.lower())
+    return base
 
 
 def generate() -> list[str]:
@@ -241,13 +266,25 @@ def generate() -> list[str]:
     before = len(clean)
     clean = {w for w in clean if w.isupper() or w.lower() not in denylist}
     print(f"  after denylist: {len(clean)} (-{before - len(clean)})", file=sys.stderr)
+
+    # Dedup against en_US base. The supplement is merged into *every*
+    # language trie, so anything already in English would pollute
+    # non-English dicts (e.g. shipping `word` or `hello` into fr_FR).
+    # Net effect: supplement becomes the set of tech/loanword vocabulary
+    # that's genuinely absent from standard English — `HTTP`, `amd64`,
+    # `stdin`, `lifecycle` stay; common English words drop.
+    base = load_en_us_base()
+    before = len(clean)
+    clean = {w for w in clean if w.lower() not in base}
+    print(f"  after en_US dedup: {len(clean)} (-{before - len(clean)})", file=sys.stderr)
     return sorted(clean)
 
 
 def write_supplement(words: list[str]) -> None:
-    # Hunspell .dic format: first line is the entry count.
-    lines = [str(len(words))] + words + [""]
-    OUTPUT.write_text("\n".join(lines), encoding="utf-8")
+    # Plain word list: one entry per line, no Hunspell count header.
+    # The tries generator feeds this to cspell-tools as a word-list source.
+    SOURCE_DIR.mkdir(parents=True, exist_ok=True)
+    OUTPUT.write_text("\n".join(words) + "\n", encoding="utf-8")
 
 
 def write_licenses() -> None:
@@ -273,19 +310,19 @@ def main() -> int:
 
     if args.check:
         if actual == expected and OUTPUT.exists():
-            print("supplement.dic is up to date")
+            print("supplement.txt is up to date")
             return 0
         print(
-            "supplement.dic is stale — run `python3 scripts/generate-dictionary-supplement.py`",
+            "supplement.txt is stale — run `python3 scripts/generate-dictionary-supplement.py`",
             file=sys.stderr,
         )
         return 1
 
     if not args.force and actual == expected and OUTPUT.exists():
-        print(f"supplement.dic is up to date ({OUTPUT.name}, stamp {expected[:12]})")
+        print(f"supplement.txt is up to date ({OUTPUT.name}, stamp {expected[:12]})")
         return 0
 
-    print("Generating supplement.dic…", file=sys.stderr)
+    print("Generating supplement.txt…", file=sys.stderr)
     try:
         words = generate()
         write_licenses()

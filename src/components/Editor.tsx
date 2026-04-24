@@ -188,6 +188,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       fontFamily: 'Geist, -apple-system, BlinkMacSystemFont, sans-serif',
       'semanticHighlighting.enabled': true,
       rulers: settings.editor.showRuler ? [settings.editor.rulerWidth] : [],
+      // The lightbulb gutter icon is visual noise in a prose editor;
+      // Cmd+. still opens the quick-fix menu with the icon off.
+      lightbulb: { enabled: monaco.editor.ShowLightbulbIconMode.Off },
     } satisfies monaco.editor.IStandaloneEditorConstructionOptions)
     editorRef.current = editor
 

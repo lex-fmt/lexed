@@ -33,6 +33,15 @@ test.describe('Spellcheck', () => {
       await (window as any).ipcRenderer.setSpellcheckSettings({ enabled: true, language: 'fr_FR' })
     })
 
+    // Wait for the fr_FR trie to actually be loaded. We can't use
+    // `expectMarkers('fautte')` as a signal because `fautte` is flagged
+    // in BOTH en_US and fr_FR (it's not in either dict), so the poll
+    // would return on the stale en_US marker before the switch lands.
+    await page.waitForFunction(
+      () => (window as any).lexTest?.spellcheckLanguage?.() === 'fr_FR',
+      null,
+      { timeout: 30000 }
+    )
     await expectMarkers(page, [{ message: 'Unknown word: fautte' }], { timeout: 30000 })
 
     // "est" should be valid in French, "word" should be flagged

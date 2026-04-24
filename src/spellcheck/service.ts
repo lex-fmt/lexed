@@ -1,26 +1,33 @@
 /**
- * Client-side spellcheck service using nspell (Hunspell-compatible).
+ * Client-side spellcheck service using cspell-trie-lib.
  *
- * Runs entirely in the renderer process. Dictionaries are loaded from
- * the main process via IPC (bundled as extraResources).
+ * Runs entirely in the renderer process. Per-language tries are
+ * precompiled offline (see scripts/generate-tries.mjs) and shipped as
+ * `dictionaries/<lang>.trie.gz`; the main process decompresses them and
+ * hands the text to `importTrie`. Startup cost is 50–320ms — well under
+ * a frame on English and under a third of a second for morphologically
+ * rich locales like pt_BR, where nspell used to take minutes.
  */
-import nspell from 'nspell'
-import type NSpell from 'nspell'
+import { importTrie, Trie } from 'cspell-trie-lib'
 import * as monaco from 'monaco-editor'
 import { extractCheckableWords } from './word-extraction'
 import { caseVariants } from './case-variants'
+import { matchWithCase } from './case-match'
 
 const MARKER_OWNER = 'lex-spell'
 const DEBOUNCE_MS = 300
 const MAX_SUGGESTIONS = 4
 
-interface DictionaryData {
-  aff: string
-  dic: string
+interface TrieData {
+  text: string
 }
 
 export class SpellcheckService {
-  private checker: NSpell | null = null
+  private trie: Trie | null = null
+  // Words the user added via "Add to dictionary" (or any case variants
+  // we fanned out). The trie is immutable once parsed, so runtime
+  // additions live here and we consult both during `isCorrect`.
+  private customWords: Set<string> = new Set()
   private language: string = ''
   private enabled: boolean = true
   private debounceTimers = new Map<string, ReturnType<typeof setTimeout>>()
@@ -28,15 +35,16 @@ export class SpellcheckService {
   private loadGeneration: number = 0
 
   async setLanguage(language: string): Promise<void> {
-    if (language === this.language && this.checker) return
+    if (language === this.language && this.trie) return
 
     // Increment generation to cancel any in-flight load
     const generation = ++this.loadGeneration
     this.language = language
-    this.checker = null
+    this.trie = null
+    this.customWords = new Set()
 
-    console.log(`[Spellcheck] Loading dictionary for ${language}...`)
-    const data = await this.loadDictionary(language)
+    console.log(`[Spellcheck] Loading trie for ${language}…`)
+    const data = await this.loadTrie(language)
 
     // If another setLanguage was called while we were loading, abort
     if (this.loadGeneration !== generation) {
@@ -45,41 +53,21 @@ export class SpellcheckService {
     }
 
     if (!data) {
-      console.warn(`[Spellcheck] No dictionary data for ${language}`)
+      console.warn(`[Spellcheck] No trie data for ${language}`)
       return
     }
 
-    console.log(
-      `[Spellcheck] Creating checker for ${language} (aff: ${data.aff.length} bytes, dic: ${data.dic.length} bytes)`
-    )
-    this.checker = nspell(data.aff, data.dic)
+    const t0 = performance.now()
+    this.trie = new Trie(importTrie(data.text))
+    const parseMs = performance.now() - t0
 
-    // Load vendored supplement (shared tech/programming/OS terms missing
-    // from the SCOWL-derived base dictionaries — same list for every
-    // language since tech vocabulary is loanwords). Added in chunks with
-    // a macrotask yield between each so we don't pin the renderer
-    // thread; spellcheck just gets progressively smarter as adds land.
-    const supplement = await this.loadSupplement()
-    if (this.loadGeneration !== generation) return
-    const CHUNK = 500
-    for (let i = 0; i < supplement.length; i += CHUNK) {
-      const end = Math.min(i + CHUNK, supplement.length)
-      for (let j = i; j < end; j++) this.checker.add(supplement[j])
-      if (end < supplement.length) {
-        await new Promise<void>((resolve) => setTimeout(resolve, 0))
-        if (this.loadGeneration !== generation) return
-      }
-    }
-
-    // Load custom words (user additions via "Add to dictionary")
+    // Custom words (user additions via "Add to dictionary")
     const customWords = await this.loadCustomWords()
     if (this.loadGeneration !== generation) return
-    for (const word of customWords) {
-      this.checker.add(word)
-    }
+    this.customWords = new Set(customWords)
 
     console.log(
-      `[Spellcheck] Dictionary loaded for ${language} (${supplement.length} supplement + ${customWords.length} custom words)`
+      `[Spellcheck] Trie ready for ${language} (parsed in ${parseMs.toFixed(0)}ms, ${this.customWords.size} custom words)`
     )
   }
 
@@ -95,7 +83,17 @@ export class SpellcheckService {
   }
 
   isReady(): boolean {
-    return this.enabled && this.checker !== null
+    return this.enabled && this.trie !== null
+  }
+
+  /**
+   * The language the trie is currently loaded for (only meaningful
+   * while `isReady()` is true). Exposed so tests can wait for a
+   * language switch to land without relying on marker contents, which
+   * are ambiguous across languages for the same document.
+   */
+  currentLanguage(): string | null {
+    return this.trie !== null ? this.language : null
   }
 
   /**
@@ -123,8 +121,8 @@ export class SpellcheckService {
    */
   checkModel(model: monaco.editor.ITextModel): void {
     if (!this.enabled || model.isDisposed()) return
-    if (!this.checker) {
-      // No dictionary loaded yet — clear stale markers from previous language
+    if (!this.trie) {
+      // No trie loaded yet — clear stale markers from previous language
       monaco.editor.setModelMarkers(model, MARKER_OWNER, [])
       return
     }
@@ -151,23 +149,30 @@ export class SpellcheckService {
   }
 
   /**
-   * Check a single word.
+   * Check a single word. Lookup is case-aware via `matchWithCase` so
+   * sentence-initial `And` and shouted `AND` match `and` in the dict.
    */
   isCorrect(word: string): boolean {
-    if (!this.checker) return true
-    // Skip single characters, numbers, and words with special chars
+    if (!this.trie) return true
     if (word.length <= 1) return true
     if (/^\d+$/.test(word)) return true
     if (/[_@#$%^&*]/.test(word)) return true
-    return this.checker.correct(word)
+    return matchWithCase((w) => this.lookup(w), word)
+  }
+
+  private lookup(word: string): boolean {
+    return this.trie!.has(word) || this.customWords.has(word)
   }
 
   /**
-   * Get spelling suggestions for a misspelled word.
+   * Get spelling suggestions for a misspelled word. Capped at
+   * `MAX_SUGGESTIONS` — cspell-trie sometimes returns `numSuggestions + 1`
+   * results, so we slice defensively so the Monaco lightbulb never
+   * shows a longer list than we promised.
    */
   suggest(word: string): string[] {
-    if (!this.checker) return []
-    return this.checker.suggest(word).slice(0, MAX_SUGGESTIONS)
+    if (!this.trie) return []
+    return this.trie.suggest(word, { numSuggestions: MAX_SUGGESTIONS }).slice(0, MAX_SUGGESTIONS)
   }
 
   /**
@@ -180,9 +185,7 @@ export class SpellcheckService {
    */
   async addToDictionary(word: string): Promise<void> {
     const variants = caseVariants(word)
-    if (this.checker) {
-      for (const v of variants) this.checker.add(v)
-    }
+    for (const v of variants) this.customWords.add(v)
     for (const v of variants) {
       await window.ipcRenderer.invoke('spellcheck-add-to-dictionary', v)
     }
@@ -195,12 +198,28 @@ export class SpellcheckService {
     if (this.codeActionDisposable) return
 
     this.codeActionDisposable = monaco.languages.registerCodeActionProvider('lex', {
-      provideCodeActions: (model, _range, context) => {
+      provideCodeActions: (model, range, context) => {
         const actions: monaco.languages.CodeAction[] = []
+        // Monaco may pass markers from anywhere in the buffer depending
+        // on how the user triggered the lightbulb (single-word Cmd+.,
+        // range selection, lint panel, …). We only want suggestions for
+        // markers that *actually* overlap the trigger range, and only
+        // one suggestion set per unique misspelling so the list doesn't
+        // explode when the same typo appears twice in view.
+        const seen = new Set<string>()
+        const relevant = context.markers.filter(
+          (m) =>
+            m.source === MARKER_OWNER &&
+            m.endLineNumber >= range.startLineNumber &&
+            m.startLineNumber <= range.endLineNumber &&
+            (m.startLineNumber !== range.endLineNumber || m.startColumn <= range.endColumn) &&
+            (m.endLineNumber !== range.startLineNumber || m.endColumn >= range.startColumn)
+        )
 
-        for (const marker of context.markers) {
-          if (marker.source !== MARKER_OWNER) continue
+        for (const marker of relevant) {
           const word = marker.message.replace('Unknown word: ', '')
+          if (seen.has(word)) continue
+          seen.add(word)
 
           // Spelling suggestions
           const suggestions = this.suggest(word)
@@ -279,18 +298,18 @@ export class SpellcheckService {
     this.clearAllMarkers()
   }
 
-  private async loadDictionary(language: string): Promise<DictionaryData | null> {
+  private async loadTrie(language: string): Promise<TrieData | null> {
     try {
-      const data = (await window.ipcRenderer.invoke('spellcheck-load-dictionary', language)) as
-        | DictionaryData
+      const data = (await window.ipcRenderer.invoke('spellcheck-load-trie', language)) as
+        | TrieData
         | { error: string }
       if ('error' in data) {
-        console.warn(`[Spellcheck] Failed to load dictionary for ${language}:`, data.error)
+        console.warn(`[Spellcheck] Failed to load trie for ${language}:`, data.error)
         return null
       }
       return data
     } catch (err) {
-      console.warn(`[Spellcheck] Failed to load dictionary for ${language}:`, err)
+      console.warn(`[Spellcheck] Failed to load trie for ${language}:`, err)
       return null
     }
   }
@@ -298,14 +317,6 @@ export class SpellcheckService {
   private async loadCustomWords(): Promise<string[]> {
     try {
       return (await window.ipcRenderer.invoke('spellcheck-load-custom-words')) as string[]
-    } catch {
-      return []
-    }
-  }
-
-  private async loadSupplement(): Promise<string[]> {
-    try {
-      return (await window.ipcRenderer.invoke('spellcheck-load-supplement')) as string[]
     } catch {
       return []
     }
