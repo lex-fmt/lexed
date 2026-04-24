@@ -287,15 +287,20 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     // grammar fails to init, `initTreeSitter()` resolves to null and the
     // highlighter install is skipped — LSP semantic tokens still colour
     // the rest of the document either way.
+    //
+    // The cancellation flag guards against a late-resolving init
+    // attaching a highlighter to a disposed editor after unmount.
+    let tsInitCancelled = false
     void initTreeSitter().then((ts) => {
-      if (!ts || !editorRef.current) return
+      if (tsInitCancelled || !ts || editorRef.current !== editor) return
       if (injectionHighlighterRef.current) {
         injectionHighlighterRef.current.dispose()
       }
-      injectionHighlighterRef.current = createMonacoInjectionHighlighter(editorRef.current, ts)
+      injectionHighlighterRef.current = createMonacoInjectionHighlighter(editor, ts)
     })
 
     return () => {
+      tsInitCancelled = true
       tabDisposable.dispose()
       formatTableDisposable.dispose()
       injectionHighlighterRef.current?.dispose()

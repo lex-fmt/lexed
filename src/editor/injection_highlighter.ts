@@ -187,6 +187,12 @@ export function createMonacoInjectionHighlighter(
       return
     }
 
+    // Capture the model version before the async work so we can detect
+    // an overlapping `highlight()` that started more recently and should
+    // win. Without this, an older pass can resolve after a newer one and
+    // overwrite decorations with stale ranges for the same model.
+    const versionBeforeParse = model.getVersionId()
+
     const text = model.getValue()
     let zones: InjectionZone[]
     try {
@@ -195,6 +201,7 @@ export function createMonacoInjectionHighlighter(
       tree.delete()
     } catch (err) {
       console.warn('[lex] tree-sitter parse failed:', err)
+      clearDecorations()
       return
     }
     currentZones = zones
@@ -203,8 +210,11 @@ export function createMonacoInjectionHighlighter(
 
     // Guard against rapid-fire changes: if the model has been swapped or
     // the highlighter disposed while we were awaiting, drop the result.
+    // Also drop if a newer highlight pass started after us (versionId
+    // advanced while we were awaiting getSemanticTokens).
     if (disposed) return
     if (editor.getModel() !== model || model.isDisposed()) return
+    if (model.getVersionId() !== versionBeforeParse) return
 
     lastRanges = ranges
 
