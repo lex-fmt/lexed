@@ -165,11 +165,14 @@ export class SpellcheckService {
   }
 
   /**
-   * Get spelling suggestions for a misspelled word.
+   * Get spelling suggestions for a misspelled word. Capped at
+   * `MAX_SUGGESTIONS` — cspell-trie sometimes returns `numSuggestions + 1`
+   * results, so we slice defensively so the Monaco lightbulb never
+   * shows a longer list than we promised.
    */
   suggest(word: string): string[] {
     if (!this.trie) return []
-    return this.trie.suggest(word, { numSuggestions: MAX_SUGGESTIONS })
+    return this.trie.suggest(word, { numSuggestions: MAX_SUGGESTIONS }).slice(0, MAX_SUGGESTIONS)
   }
 
   /**
@@ -195,12 +198,28 @@ export class SpellcheckService {
     if (this.codeActionDisposable) return
 
     this.codeActionDisposable = monaco.languages.registerCodeActionProvider('lex', {
-      provideCodeActions: (model, _range, context) => {
+      provideCodeActions: (model, range, context) => {
         const actions: monaco.languages.CodeAction[] = []
+        // Monaco may pass markers from anywhere in the buffer depending
+        // on how the user triggered the lightbulb (single-word Cmd+.,
+        // range selection, lint panel, …). We only want suggestions for
+        // markers that *actually* overlap the trigger range, and only
+        // one suggestion set per unique misspelling so the list doesn't
+        // explode when the same typo appears twice in view.
+        const seen = new Set<string>()
+        const relevant = context.markers.filter(
+          (m) =>
+            m.source === MARKER_OWNER &&
+            m.endLineNumber >= range.startLineNumber &&
+            m.startLineNumber <= range.endLineNumber &&
+            (m.startLineNumber !== range.endLineNumber || m.startColumn <= range.endColumn) &&
+            (m.endLineNumber !== range.startLineNumber || m.endColumn >= range.startColumn)
+        )
 
-        for (const marker of context.markers) {
-          if (marker.source !== MARKER_OWNER) continue
+        for (const marker of relevant) {
           const word = marker.message.replace('Unknown word: ', '')
+          if (seen.has(word)) continue
+          seen.add(word)
 
           // Spelling suggestions
           const suggestions = this.suggest(word)
