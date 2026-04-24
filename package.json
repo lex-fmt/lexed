@@ -14,20 +14,20 @@
     "node": ">=22.18"
   },
   "scripts": {
-    "predev": "bash scripts/fetch-deps.sh --if-missing",
+    "predev": "bash scripts/fetch-deps.sh --if-missing && bash scripts/download-tree-sitter.sh --if-missing",
     "dev": "vite",
     "dev:local": "vite",
     "icons": "node ./scripts/generate-icons.mjs",
     "prebuild": "npm run icons && npm run build:quicklook",
     "build:quicklook": "bash ./scripts/build-quicklook.sh",
-    "build": "bash scripts/fetch-deps.sh --if-missing && tsc && vite build && electron-builder",
+    "build": "bash scripts/fetch-deps.sh --if-missing && bash scripts/download-tree-sitter.sh --if-missing && tsc && vite build && electron-builder",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix --max-warnings 0",
     "format": "prettier --write 'src/**/*.{ts,tsx}' 'electron/**/*.ts' 'tests/**/*.ts'",
     "format:check": "prettier --check 'src/**/*.{ts,tsx}' 'electron/**/*.ts' 'tests/**/*.ts'",
     "preview": "vite preview",
-    "pretest:e2e": "npm run icons",
+    "pretest:e2e": "npm run icons && bash scripts/download-tree-sitter.sh --if-missing",
     "test:e2e": "LEX_HIDE_WINDOW=1 PLAYWRIGHT_BROWSERS_PATH=0 LEX_DISABLE_PERSISTENCE=1 npx playwright test tests/e2e",
     "test:e2e:dev": "LEX_SKIP_E2E_BUILD=1 LEX_DISABLE_PERSISTENCE=1 npx playwright test tests/e2e",
     "test:e2e:built": "LEX_E2E_USE_BUILD=1 LEX_SKIP_E2E_BUILD=1 LEX_HIDE_WINDOW=1 PLAYWRIGHT_BROWSERS_PATH=0 LEX_DISABLE_PERSISTENCE=1 npx playwright test tests/e2e",
@@ -60,7 +60,8 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
     "vscode-languageserver-protocol": "^3.17.5",
-    "vscode-ws-jsonrpc": "^3.5.0"
+    "vscode-ws-jsonrpc": "^3.5.0",
+    "web-tree-sitter": "^0.25.10"
   },
   "devDependencies": {
     "@cspell/cspell-tools": "^10.0.0",

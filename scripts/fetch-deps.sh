@@ -200,6 +200,13 @@ else
 fi
 
 for dep in "${DEPS[@]}"; do
+  # tree-sitter is fetched via the dedicated download-tree-sitter.sh
+  # (non-platform archive), so skip it here when iterating the full
+  # dep list.
+  if [[ "$dep" == "tree-sitter" ]]; then
+    continue
+  fi
+
   binary_name="$dep"
   [[ "$TARGET_TRIPLE" == *windows* ]] && binary_name="${dep}.exe"
   dest="$RESOURCES_DIR/$binary_name"
