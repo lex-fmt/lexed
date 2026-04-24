@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* Geist font (bundled for offline use) */
 @font-face {
@@ -36,7 +36,7 @@
 }
 
 /* Light theme */
-[data-theme="light"] {
+[data-theme='light'] {
   --color-background: #ffffff;
   --color-foreground: #333333;
   --color-muted: #999999;
@@ -76,12 +76,12 @@
   .monaco-editor .margin {
     border-right: 1px solid #cacaca;
   }
-.monaco-editor .margin-view-overlays .line-numbers {
-  font-family: "Geist Mono", monospace;
-  font-size: 12px
-}
+  .monaco-editor .margin-view-overlays .line-numbers {
+    font-family: 'Geist Mono', monospace;
+    font-size: 12px;
+  }
 
-  [data-theme="dark"] .monaco-editor .margin {
+  [data-theme='dark'] .monaco-editor .margin {
     border-right: 1px solid #555555;
   }
 
@@ -103,7 +103,50 @@
     margin: 0;
     min-width: 320px;
     min-height: 100vh;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
     font-size: 12px;
+  }
+
+  /* Monaco code-action (Cmd+.) popup — styled to match the right-click
+     FileContextMenu so the two popups feel like part of the same app
+     instead of a VS Code transplant. Icons inside rows are hidden;
+     suggestions read as plain text. */
+  .action-widget,
+  .action-widget .monaco-list,
+  .action-widget .monaco-list-row {
+    background-color: var(--color-panel) !important;
+    color: var(--color-foreground) !important;
+  }
+  .action-widget {
+    border: 1px solid var(--color-border) !important;
+    border-radius: 6px !important;
+    box-shadow:
+      0 10px 15px -3px rgba(0, 0, 0, 0.25),
+      0 4px 6px -4px rgba(0, 0, 0, 0.2) !important;
+    padding: 4px 0 !important;
+    font-family:
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif !important;
+    font-size: 12px !important;
+  }
+  .action-widget .monaco-list-row {
+    padding: 4px 12px !important;
+    border-radius: 0 !important;
+  }
+  .action-widget .monaco-list-row.focused,
+  .action-widget .monaco-list-row:hover {
+    background-color: var(--color-panel-hover) !important;
+    color: var(--color-foreground) !important;
+  }
+  /* Kill the codicon prefix on each action (lightbulb, wrench, etc.)
+     so rows read as plain text, matching FileContextMenu. */
+  .action-widget .monaco-list-row .codicon,
+  .action-widget .action-icon {
+    display: none !important;
+  }
+  /* Hide the action-bar footer Monaco tacks onto the widget (with the
+     "More actions…" / preview toggle) — noise for our single-intent
+     spellcheck menu. */
+  .action-widget .action-widget-action-bar {
+    display: none !important;
   }
 }
