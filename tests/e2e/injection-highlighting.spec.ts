@@ -142,7 +142,7 @@ test.describe('Injection Highlighting', () => {
       )
       .toBeGreaterThan(0)
 
-    // Any element carrying a `inline-injection-*` class means the Monaco
+    // Any element carrying an `inline-injection-*` class means the Monaco
     // `inlineClassName` landed on the rendered tokens.
     await expect
       .poll(
