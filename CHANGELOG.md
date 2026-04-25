@@ -2,13 +2,22 @@
 
 ## Unreleased
 
-## v0.6.6 (2026-04-25)
+## v0.6.7 (2026-04-25)
 
 ### Fixed
 
-- Windows release builds were failing in 7-Zip when packaging the bundled `welcome-to-lex.lex` symlink — no Windows asset shipped on v0.6.2–v0.6.5. The bundled welcome doc is now `welcome-to-lex.lexd`, and lexed registers `.lexd` as a Lex extension (Monaco language, file associations, file tree, tab icon, CLI/`open-file` routing). Existing `.lex` files keep working unchanged. (#28)
+- Windows release builds were failing in 7-Zip when packaging the bundled welcome doc. Root cause was the `welcome/welcome-to-lex.lex` git symlink — Windows checkout left it as an unresolvable pointer and 7za bailed with "directory name is invalid". The welcome file is now a real (non-symlink) copy of `general.lex` at `welcome/welcome-to-lex.lexd`. Renaming the extension on its own (v0.6.6) was not sufficient. (#28)
 - macOS Intel (x64) was silently mis-built: the `macos-x64` matrix entry ran on `macos-15` (Apple-silicon hardware) and produced an arm64 DMG that clobbered the real arm64 DMG on upload. The `macos-x64` entry is removed; releases now ship a single Apple-silicon DMG. (#29)
+- `latest-mac.yml` is uploaded inline with the macOS build instead of via a separate merge job (the merge job existed only to combine two arches; with one arch it could be skipped if any other matrix entry failed).
 - Bumped `package.json` version so DMG filenames reflect the tag (was stuck at `0.6.2` since the QuickLook re-sign step reads the version from `package.json`).
+
+### Added
+
+- `.lexd` is recognized as a Lex extension throughout the editor (Monaco language, file associations, file tree, tab icon, CLI/`open-file` routing), in preparation for the project-wide rename to `lexd`. Existing `.lex` files keep working unchanged.
+
+## v0.6.6 (2026-04-25)
+
+Botched release: Windows asset is corrupt (7za failed mid-zip but the partial file was uploaded), `latest-mac.yml` missing, no NSIS installer. Use v0.6.7 instead.
 
 ## v0.6.5 (2026-04-24)
 
