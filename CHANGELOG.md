@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.6.5 (2026-04-24)
+
 ### Breaking
 
 - LSP binary renamed from `lex-lsp` to `lexd-lsp` (matches lex-fmt/lex#450)
@@ -12,7 +14,8 @@ Updates all references to the renamed binary: electron-builder config, fetch-dep
 
 ### Changed
 
-- Bumped pinned LSP version to v0.8.5 (picks up the table-scoped footnote resolver fix from lex-fmt/lex#460 and the rowspan diagnostic fix from lex-fmt/lex#458).
+- Bumped pinned LSP version to v0.8.7 (picks up table-scoped footnote resolver fix from lex-fmt/lex#460, rowspan diagnostic fix from lex-fmt/lex#458, and the comms v0.14.0 spec content).
+- Bumped pinned tree-sitter grammar to v0.9.1 (new `[::label]` annotation reference syntax and directly-nested inline formatting markers).
 - Spellcheck engine swapped from `nspell` (pure-JS Hunspell port, eager affix expansion) to `cspell-trie-lib` (precompiled trie, lazy lookup). Per-language `.trie.gz` artifacts are built offline from the Hunspell source + the tech-vocab supplement and committed to `dictionaries/`. Measured startup for the worst case (pt_BR, 4+ MB source, 312k entries) went from >60 s of blocked renderer to 317 ms of trie parse; lookups are now O(word length) at ~0.3 µs each. Suggestions are still similar-cost to before (~50–250 ms). Unblocks non-English developers (French, Italian, Portuguese, Polish, Russian locales were effectively unusable before) and removes the `deferUntilLspReady` gate that was working around the freeze.
 - Dictionary layout: Hunspell sources moved to `dictionaries/source/` (build-input only, not shipped). Runtime resources are `dictionaries/*.trie.gz` + `dictionaries/licenses/`. Shipped bundle size drops ~13 MB (no more 20 MB of `.aff`/`.dic` sources, 7.9 MB of tries instead). New split npm scripts: `supplement:update|check` (regenerates `source/supplement.txt` from cspell-dicts), `tries:update|check` (compiles `.trie.gz` from sources+supplement), and `dictionaries:update|check` which chains both.
 - Spellcheck word extraction now treats `-` as a word boundary (like whitespace), so hyphenated tokens in grammar/spec documents (`table-row`, `subject-line`…) are checked part-by-part against the dictionary instead of looked up as compounds the en_US Hunspell build doesn't carry.
