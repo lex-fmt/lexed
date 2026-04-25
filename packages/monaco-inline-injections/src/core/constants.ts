@@ -1,16 +1,15 @@
-import type { DecorationCategory } from './types.js';
+import type { DecorationCategory } from './types'
 
 /**
  * Debounce window between document edits and the next highlight refresh.
- * Lifted verbatim from the original vscode implementation.
  */
-export const DEBOUNCE_MS = 250;
+export const DEBOUNCE_MS = 250
 
 /**
  * URI scheme used for virtual documents that back semantic-token requests.
  * Hosts register a text-document content provider against this scheme.
  */
-export const VIRTUAL_DOC_SCHEME = 'lex-embedded';
+export const VIRTUAL_DOC_SCHEME = 'inline-injection-embedded'
 
 /**
  * Common annotation aliases → host language IDs.
@@ -35,7 +34,7 @@ export const LANGUAGE_ALIASES: Readonly<Record<string, string>> = {
   cc: 'cpp',
   htm: 'html',
   golang: 'go',
-};
+}
 
 /**
  * Standard semantic token types → decoration categories. Types not listed
@@ -61,21 +60,21 @@ export const SEMANTIC_TOKEN_MAP: Readonly<Record<string, DecorationCategory>> = 
   typeParameter: 'type',
   namespace: 'type',
   operator: 'operator',
-};
+}
 
 /**
  * Theme color IDs per category. Hosts translate these into native decoration
- * types (`vscode.ThemeColor` / monaco theme token, etc.).
+ * types.
  */
 export const CATEGORY_COLORS: Readonly<Record<DecorationCategory, string>> = {
-  keyword: 'lex.injection.keyword',
-  string: 'lex.injection.string',
-  comment: 'lex.injection.comment',
-  number: 'lex.injection.number',
-  type: 'lex.injection.type',
-  function: 'lex.injection.function',
-  operator: 'lex.injection.operator',
-};
+  keyword: 'inline-injection.keyword',
+  string: 'inline-injection.string',
+  comment: 'inline-injection.comment',
+  number: 'inline-injection.number',
+  type: 'inline-injection.type',
+  function: 'inline-injection.function',
+  operator: 'inline-injection.operator',
+}
 
 /**
  * Font-style overrides per category. Missing entries default to the editor's
@@ -84,4 +83,4 @@ export const CATEGORY_COLORS: Readonly<Record<DecorationCategory, string>> = {
 export const CATEGORY_STYLES: Readonly<Partial<Record<DecorationCategory, string>>> = {
   comment: 'italic',
   keyword: 'bold',
-};
+}

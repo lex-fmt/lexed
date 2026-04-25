@@ -44,6 +44,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@lex/monaco-inline-injections": "file:./packages/monaco-inline-injections",
     "@lex/shared": "file:./shared",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

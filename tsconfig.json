@@ -24,7 +24,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@lex/shared": ["./shared/src/index.ts"]
+      "@lex/shared": ["./shared/src/index.ts"],
+      "@lex/monaco-inline-injections": ["./packages/monaco-inline-injections/src/index.ts"]
     }
   },
   "include": ["src", "electron"],

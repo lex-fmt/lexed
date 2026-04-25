@@ -1,0 +1,59 @@
+/*
+ * Default colours for embedded code highlighting.
+ *
+ * These selectors use `!important` so the injection colour wins over the
+ * host's normal foreground rules (which usually come from the editor's
+ * theme tokeniser). Hosts can override these vars or replace the rules
+ * entirely from their own stylesheet.
+ */
+
+:root,
+[data-theme='dark'] {
+  --inline-injection-keyword: #569cd6;
+  --inline-injection-string: #ce9178;
+  --inline-injection-comment: #6a9955;
+  --inline-injection-number: #b5cea8;
+  --inline-injection-type: #4ec9b0;
+  --inline-injection-function: #dcdcaa;
+  --inline-injection-operator: #d4d4d4;
+}
+
+[data-theme='light'] {
+  --inline-injection-keyword: #0000ff;
+  --inline-injection-string: #a31515;
+  --inline-injection-comment: #008000;
+  --inline-injection-number: #098658;
+  --inline-injection-type: #267f99;
+  --inline-injection-function: #795e26;
+  --inline-injection-operator: #000000;
+}
+
+.inline-injection-keyword {
+  color: var(--inline-injection-keyword) !important;
+  font-weight: 600;
+}
+
+.inline-injection-string {
+  color: var(--inline-injection-string) !important;
+}
+
+.inline-injection-comment {
+  color: var(--inline-injection-comment) !important;
+  font-style: italic;
+}
+
+.inline-injection-number {
+  color: var(--inline-injection-number) !important;
+}
+
+.inline-injection-type {
+  color: var(--inline-injection-type) !important;
+}
+
+.inline-injection-function {
+  color: var(--inline-injection-function) !important;
+}
+
+.inline-injection-operator {
+  color: var(--inline-injection-operator) !important;
+}

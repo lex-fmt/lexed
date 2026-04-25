@@ -184,6 +184,7 @@ export default [
       'node_modules/**',
       'build/**',
       'shared/**',
+      'packages/**',
       '*.config.js',
       '*.config.ts',
       'vite.config.ts',

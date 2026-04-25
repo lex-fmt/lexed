@@ -33,6 +33,10 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@lex/shared': path.resolve(__dirname, './shared/src/index.ts'),
+      '@lex/monaco-inline-injections': path.resolve(
+        __dirname,
+        './packages/monaco-inline-injections/src/index.ts'
+      ),
     },
   },
   server: {
