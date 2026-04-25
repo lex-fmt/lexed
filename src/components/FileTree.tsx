@@ -35,7 +35,7 @@ interface FileTreeProps {
 }
 
 /** File extensions that can be opened in the editor */
-const OPENABLE_EXTENSIONS = ['.lex', '.txt', '.md', '.html']
+const OPENABLE_EXTENSIONS = ['.lex', '.lexd', '.txt', '.md', '.html']
 
 /** Check if a file can be opened in the editor */
 function isOpenable(filename: string): boolean {
@@ -54,6 +54,7 @@ function getFileIcon(filename: string, size: number = 14) {
   const ext = getExtension(filename)
   switch (ext) {
     case '.lex':
+    case '.lexd':
       return (
         <img src="/lex.svg" alt="" style={{ width: size, height: size }} className="shrink-0" />
       )

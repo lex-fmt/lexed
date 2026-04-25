@@ -4,6 +4,7 @@ export function getLanguageForFile(path: string): string {
   const ext = path.toLowerCase().split('.').pop()
   switch (ext) {
     case 'lex':
+    case 'lexd':
       return 'lex'
     case 'md':
       return 'markdown'
@@ -19,7 +20,8 @@ export function getLanguageForFile(path: string): string {
 
 export function isLexFile(path: string | null | undefined): boolean {
   if (!path) return false
-  return path.toLowerCase().endsWith('.lex')
+  const lower = path.toLowerCase()
+  return lower.endsWith('.lex') || lower.endsWith('.lexd')
 }
 
 export function isMarkdownFile(path: string | null | undefined): boolean {

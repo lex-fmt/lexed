@@ -2,7 +2,7 @@
   "name": "lexed",
   "productName": "LexEd",
   "private": true,
-  "version": "0.6.2",
+  "version": "0.6.6",
   "description": "LexEd editor for Lex",
   "author": {
     "name": "Arthur Debert",
@@ -142,7 +142,8 @@
             ],
             "UTTypeTagSpecification": {
               "public.filename-extension": [
-                "lex"
+                "lex",
+                "lexd"
               ]
             }
           },
@@ -199,6 +200,12 @@
     "fileAssociations": [
       {
         "ext": "lex",
+        "name": "Lex Document",
+        "role": "Editor",
+        "mimeType": "text/x-lex"
+      },
+      {
+        "ext": "lexd",
         "name": "Lex Document",
         "role": "Editor",
         "mimeType": "text/x-lex"

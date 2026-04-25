@@ -303,7 +303,7 @@ async function setupFirstLaunch(): Promise<string | null> {
   }
 
   const projectPath = getDefaultProjectPath()
-  const welcomeFilePath = path.join(projectPath, 'welcome-to-lex.lex')
+  const welcomeFilePath = path.join(projectPath, 'welcome-to-lex.lexd')
 
   // Check if this is first launch by checking if our project folder exists
   try {
@@ -321,7 +321,7 @@ async function setupFirstLaunch(): Promise<string | null> {
     await fs.mkdir(projectPath, { recursive: true })
 
     // Copy welcome document from bundled resources
-    const bundledWelcomePath = path.join(getWelcomeFolderPath(), 'welcome-to-lex.lex')
+    const bundledWelcomePath = path.join(getWelcomeFolderPath(), 'welcome-to-lex.lexd')
     const welcomeContent = await fs.readFile(bundledWelcomePath, 'utf-8')
     await fs.writeFile(welcomeFilePath, welcomeContent, 'utf-8')
 
@@ -405,7 +405,7 @@ function extractPathsFromArgv(argv: string[]): CliPaths {
       }
     } catch {
       // Path doesn't exist - could be a new file
-      if (p.endsWith('.lex')) {
+      if (p.endsWith('.lex') || p.endsWith('.lexd')) {
         files.push(p)
       }
     }
@@ -1666,7 +1666,7 @@ if (!gotTheLock) {
   let appIsReady = false
   app.on('open-file', (event, filePath) => {
     event.preventDefault()
-    if (!filePath.endsWith('.lex')) return
+    if (!filePath.endsWith('.lex') && !filePath.endsWith('.lexd')) return
     if (!appIsReady) {
       pendingOpenFiles.push(filePath)
       return

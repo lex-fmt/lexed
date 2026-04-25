@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## v0.6.6 (2026-04-25)
+
+### Fixed
+
+- Windows release builds were failing in 7-Zip when packaging the bundled `welcome-to-lex.lex` symlink — no Windows asset shipped on v0.6.2–v0.6.5. The bundled welcome doc is now `welcome-to-lex.lexd`, and lexed registers `.lexd` as a Lex extension (Monaco language, file associations, file tree, tab icon, CLI/`open-file` routing). Existing `.lex` files keep working unchanged. (#28)
+- macOS Intel (x64) was silently mis-built: the `macos-x64` matrix entry ran on `macos-15` (Apple-silicon hardware) and produced an arm64 DMG that clobbered the real arm64 DMG on upload. The `macos-x64` entry is removed; releases now ship a single Apple-silicon DMG. (#29)
+- Bumped `package.json` version so DMG filenames reflect the tag (was stuck at `0.6.2` since the QuickLook re-sign step reads the version from `package.json`).
+
 ## v0.6.5 (2026-04-24)
 
 ### Breaking

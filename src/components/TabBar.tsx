@@ -170,7 +170,7 @@ export function TabBar({
           )}
           onClick={() => onTabSelect(tab.id)}
         >
-          {tab.name.endsWith('.lex') && (
+          {(tab.name.endsWith('.lex') || tab.name.endsWith('.lexd')) && (
             <img src="/lex.svg" alt="" className="w-3.5 h-3.5 shrink-0" />
           )}
           <span className="text-sm whitespace-nowrap">{truncateName(tab.name)}</span>
