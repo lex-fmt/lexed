@@ -8,7 +8,7 @@ import {
   useMemo,
 } from 'react'
 import { Editor, EditorHandle } from './Editor'
-import type { MonacoInjectionHighlighterApi } from '@/editor/injection_highlighter'
+import type { MonacoInjectionHighlighterApi } from '@lex/monaco-inline-injections'
 import { PreviewPane } from './PreviewPane'
 import { WelcomeView } from './WelcomeView'
 import { TabBar, Tab, TabDropData } from './TabBar'

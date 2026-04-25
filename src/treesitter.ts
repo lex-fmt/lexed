@@ -20,20 +20,12 @@ import runtimeWasmUrl from 'web-tree-sitter/tree-sitter.wasm?url'
 import grammarWasmUrl from '../resources/tree-sitter-lex.wasm?url'
 import highlightsQuerySrc from '../resources/queries/highlights.scm?raw'
 import injectionsQuerySrc from '../resources/queries/injections.scm?raw'
+import type { InjectionZone, InjectionZoneProvider } from '@lex/monaco-inline-injections'
 
 export type { Tree, Node }
 
 export interface CaptureResult {
   name: string
-  startRow: number
-  startCol: number
-  endRow: number
-  endCol: number
-  text: string
-}
-
-export interface InjectionZone {
-  language: string
   startRow: number
   startCol: number
   endRow: number
@@ -171,5 +163,24 @@ async function loadTreeSitter(): Promise<LexTreeSitter | null> {
   } catch (err) {
     console.warn('[lex] Failed to initialize tree-sitter:', err)
     return null
+  }
+}
+
+/**
+ * Wraps a `LexTreeSitter` instance into the host-neutral
+ * `InjectionZoneProvider` contract consumed by `@lex/monaco-inline-injections`.
+ * Owns the per-call `parse → queryInjections → tree.delete()` cycle so the
+ * highlighter never sees a tree-sitter `Tree` object directly.
+ */
+export function createLexZoneProvider(ts: LexTreeSitter): InjectionZoneProvider {
+  return {
+    getZones(content: string): InjectionZone[] {
+      const tree = ts.parse(content)
+      try {
+        return ts.queryInjections(tree)
+      } finally {
+        tree.delete()
+      }
+    },
   }
 }

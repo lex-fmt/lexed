@@ -1,37 +1,32 @@
 /**
- * Monaco host adapter for the shared injection highlighter.
+ * Monaco host adapter for the host-neutral injection highlighter.
  *
- * Responsibilities (matches vscode/src/injections.ts):
- *   - Owns tree-sitter parsing (`ts.parse` + `ts.queryInjections`).
- *   - Debounced re-highlight on content change (250 ms, same as vscode).
- *   - Initial highlight on install, and re-highlight on language change.
- *   - Translates the shared module's `InjectionRange[]` output into Monaco
+ * Responsibilities:
+ *   - Calls the supplied `InjectionZoneProvider` to discover annotated
+ *     zones in the document on every (debounced) content change.
+ *   - Synthesises an LSP-shaped `SemanticTokens` payload from Monaco's
+ *     built-in Monarch tokenizers (`monaco.editor.tokenize`). Languages
+ *     without a Monarch tokenizer are silently skipped.
+ *   - Translates the core module's `InjectionRange[]` output into Monaco
  *     decorations via `IEditorDecorationsCollection`.
  *
- * Differences from the vscode adapter:
- *   - Monaco has no equivalent of `vscode.commands.executeCommand(
- *     'vscode.provideDocumentSemanticTokens')` for arbitrary languages, so we
- *     synthesise an LSP-shaped `SemanticTokens` payload from Monaco's built-in
- *     Monarch tokenizers (`monaco.editor.tokenize`). Languages without a
- *     Monarch tokenizer in the `monaco-editor` bundle are silently skipped,
- *     matching the vscode behaviour of "no provider → no highlighting".
- *   - Decorations carry an `inlineClassName` keyed by category; the actual
- *     colours live in `src/editor/injection_highlighter.css`.
- *   - Registered-language cache is refreshed by scanning `monaco.languages.
- *     getLanguages()` — that set is stable for the editor lifetime so we
- *     only fetch it once (no 30-second expiry like vscode, since newly
- *     registered languages in a Monaco renderer are a developer event, not
- *     a runtime one).
+ * Decorations carry an `inlineClassName` keyed by category; the actual
+ * colours live in `injection_highlighter.css`.
  */
 
 import * as monaco from 'monaco-editor'
-import { injections } from '@lex/shared'
-import type { LexTreeSitter } from '../treesitter'
+import {
+  computeInjectionDecorations,
+  DEBOUNCE_MS,
+  SEMANTIC_TOKEN_MAP,
+  type DecorationCategory,
+  type InjectionHostAdapter,
+  type InjectionRange,
+  type InjectionZone,
+  type InjectionZoneProvider,
+  type SemanticTokens,
+} from '../core'
 import './injection_highlighter.css'
-
-type DecorationCategory = injections.DecorationCategory
-type InjectionZone = injections.InjectionZone
-type InjectionRange = injections.InjectionRange
 
 export interface MonacoInjectionHighlighterApi {
   getInjectionZones(): InjectionZone[]
@@ -42,23 +37,30 @@ export interface MonacoInjectionHighlighterApi {
   dispose(): void
 }
 
-const CATEGORY_CLASS_PREFIX = 'lex-injection'
+const CATEGORY_CLASS_PREFIX = 'inline-injection'
 
 function classNameFor(category: DecorationCategory): string {
   return `${CATEGORY_CLASS_PREFIX}-${category}`
 }
 
-interface HighlighterOptions {
-  /** Toggle from the settings UI. Defaults to true. */
+export interface HighlighterOptions {
+  /** Toggle from a settings UI. Defaults to true. */
   initialEnabled?: boolean
+  /**
+   * Language ID the editor's model must report for highlighting to run.
+   * When set, content with a different language ID clears decorations.
+   * When omitted, all models are highlighted.
+   */
+  hostLanguageId?: string
 }
 
 export function createMonacoInjectionHighlighter(
   editor: monaco.editor.IStandaloneCodeEditor,
-  ts: LexTreeSitter,
+  zoneProvider: InjectionZoneProvider,
   options: HighlighterOptions = {}
 ): MonacoInjectionHighlighterApi {
   let enabled = options.initialEnabled ?? true
+  const hostLanguageId = options.hostLanguageId
   let disposed = false
 
   const decorationsCollection = editor.createDecorationsCollection()
@@ -102,7 +104,7 @@ export function createMonacoInjectionHighlighter(
     _zoneIndex: number,
     content: string,
     langId: string
-  ): Promise<injections.SemanticTokens | null> {
+  ): Promise<SemanticTokens | null> {
     await primeLanguage(langId)
 
     let rawTokens: monaco.Token[][]
@@ -112,11 +114,8 @@ export function createMonacoInjectionHighlighter(
       return null
     }
 
-    // Build the LSP-shaped legend/data pair. We emit a tiny legend (the
-    // seven shared categories) and lean on the shared module's
-    // `SEMANTIC_TOKEN_MAP` to route each token type.
     const legend = {
-      tokenTypes: Object.keys(injections.SEMANTIC_TOKEN_MAP),
+      tokenTypes: Object.keys(SEMANTIC_TOKEN_MAP),
     }
     const typeIndex = new Map<string, number>()
     for (let i = 0; i < legend.tokenTypes.length; i++) {
@@ -142,9 +141,8 @@ export function createMonacoInjectionHighlighter(
         if (length <= 0) continue
 
         // Monaco token types look like "keyword.python" or "string.quoted.python" —
-        // strip everything from the first dot onwards, since our shared
-        // `SEMANTIC_TOKEN_MAP` keys are bare type names like "keyword",
-        // "string", "comment", etc.
+        // strip everything from the first dot onwards, since `SEMANTIC_TOKEN_MAP`
+        // keys are bare type names like "keyword", "string", "comment", etc.
         const baseType = token.type.split('.')[0]
         if (!baseType) continue
 
@@ -164,7 +162,7 @@ export function createMonacoInjectionHighlighter(
     return { legend, data: new Uint32Array(data) }
   }
 
-  const hostAdapter: injections.InjectionHostAdapter = {
+  const hostAdapter: InjectionHostAdapter = {
     getRegisteredLanguages,
     getSemanticTokens: getSemanticTokensForZone,
   }
@@ -182,7 +180,7 @@ export function createMonacoInjectionHighlighter(
       clearDecorations()
       return
     }
-    if (!enabled || model.getLanguageId() !== 'lex') {
+    if (!enabled || (hostLanguageId !== undefined && model.getLanguageId() !== hostLanguageId)) {
       clearDecorations()
       return
     }
@@ -196,17 +194,15 @@ export function createMonacoInjectionHighlighter(
     const text = model.getValue()
     let zones: InjectionZone[]
     try {
-      const tree = ts.parse(text)
-      zones = ts.queryInjections(tree)
-      tree.delete()
+      zones = zoneProvider.getZones(text)
     } catch (err) {
-      console.warn('[lex] tree-sitter parse failed:', err)
+      console.warn('[inline-injections] zone provider failed:', err)
       clearDecorations()
       return
     }
     currentZones = zones
 
-    const ranges = await injections.computeInjectionDecorations(zones, hostAdapter)
+    const ranges = await computeInjectionDecorations(zones, hostAdapter)
 
     // Guard against rapid-fire changes: if the model has been swapped or
     // the highlighter disposed while we were awaiting, drop the result.
@@ -223,7 +219,7 @@ export function createMonacoInjectionHighlighter(
       if (rs.length === 0) continue
       const className = classNameFor(category)
       for (const r of rs) {
-        // Shared module emits zero-based line/col; Monaco is one-based.
+        // Core module emits zero-based line/col; Monaco is one-based.
         newDecorations.push({
           range: new monaco.Range(r.startLine + 1, r.startCol + 1, r.endLine + 1, r.endCol + 1),
           options: {
@@ -244,7 +240,7 @@ export function createMonacoInjectionHighlighter(
     debounceTimer = setTimeout(() => {
       debounceTimer = undefined
       void highlight()
-    }, injections.DEBOUNCE_MS)
+    }, DEBOUNCE_MS)
   }
 
   // Watch the current model for content + language changes.

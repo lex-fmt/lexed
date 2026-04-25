@@ -13,11 +13,11 @@ import { buildFormattingOptions, notifyLexTest } from '@/lsp/providers/formattin
 import { navigateTableCell, formatTableAtCursor } from '@/lsp/table_commands'
 import type { LspTextEdit } from '@/lsp/types'
 import { dispatchFileTreeRefresh } from '@/lib/events'
-import { initTreeSitter } from '@/treesitter'
+import { initTreeSitter, createLexZoneProvider } from '@/treesitter'
 import {
   createMonacoInjectionHighlighter,
   type MonacoInjectionHighlighterApi,
-} from '@/editor/injection_highlighter'
+} from '@lex/monaco-inline-injections'
 
 initializeMonaco()
 
@@ -296,7 +296,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       if (injectionHighlighterRef.current) {
         injectionHighlighterRef.current.dispose()
       }
-      injectionHighlighterRef.current = createMonacoInjectionHighlighter(editor, ts)
+      injectionHighlighterRef.current = createMonacoInjectionHighlighter(
+        editor,
+        createLexZoneProvider(ts),
+        { hostLanguageId: 'lex' }
+      )
     })
 
     return () => {

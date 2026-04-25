@@ -4,12 +4,13 @@ import { openFixture } from './helpers'
 /**
  * Injection highlighting inside `:: <lang> ::` verbatim blocks.
  *
- * The renderer ports `@lex/shared/injections` (from vscode) on top of a
- * Monaco host adapter that feeds back Monaco's built-in Monarch
- * tokenizers. We verify the end-to-end pipeline — tree-sitter parse →
- * zone detection → host-adapter semantic tokens → decoration ranges —
- * by opening a fixture with two annotated blocks and asserting the
- * shared module produced ranges that fall inside each block. The exact
+ * The renderer wires `@lex/monaco-inline-injections` (the host-neutral
+ * package extracted from the original vscode port) on top of a Monaco
+ * host adapter that feeds back Monaco's built-in Monarch tokenizers. We
+ * verify the end-to-end pipeline — tree-sitter parse → zone detection →
+ * host-adapter semantic tokens → decoration ranges — by opening a fixture
+ * with two annotated blocks and asserting the package produced ranges
+ * that fall inside each block. The exact
  * colours are the host's business; we only care that *some* tokens are
  * categorised, and that they live inside the annotated zones (not in
  * the surrounding prose).
@@ -125,7 +126,7 @@ test.describe('Injection Highlighting', () => {
     await openFixture(page, 'injection-sample.lex')
 
     // Wait for ranges to apply, then verify the DOM carries the
-    // `lex-injection-*` inline classes (at least one category).
+    // `inline-injection-*` inline classes (at least one category).
     await expect
       .poll(
         async () => {
@@ -141,16 +142,16 @@ test.describe('Injection Highlighting', () => {
       )
       .toBeGreaterThan(0)
 
-    // Any element carrying a `lex-injection-*` class means the Monaco
+    // Any element carrying an `inline-injection-*` class means the Monaco
     // `inlineClassName` landed on the rendered tokens.
     await expect
       .poll(
         async () =>
-          (await page.locator('[class*="lex-injection-"]').count()) +
+          (await page.locator('[class*="inline-injection-"]').count()) +
           // Monaco also splits classes across tokens; fall back on the category
           // prefix if the above selector misses (some versions flatten the
           // class list).
-          (await page.locator('.lex-injection-keyword').count()),
+          (await page.locator('.inline-injection-keyword').count()),
         { timeout: 15_000, message: 'Waiting for injection decoration DOM' }
       )
       .toBeGreaterThan(0)
