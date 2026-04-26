@@ -14,6 +14,9 @@ node_modules
 # (fetched by scripts/download-tree-sitter.sh)
 /resources/tree-sitter-lex.wasm
 /resources/queries/
+/resources/embedded-grammars.json
+/resources/embedded-grammars/
+/resources/.tree-sitter-version
 
 # Logs
 logs

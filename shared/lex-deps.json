@@ -5,7 +5,7 @@
       "repo": "lex-fmt/lex"
     },
     "tree-sitter": {
-      "version": "v0.9.1",
+      "version": "v0.10.0",
       "repo": "lex-fmt/tree-sitter-lex"
     }
   }
