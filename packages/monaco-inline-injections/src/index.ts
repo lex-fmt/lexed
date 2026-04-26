@@ -10,6 +10,7 @@
 export {
   createMonacoInjectionHighlighter,
   type HighlighterOptions,
+  type InjectionTokenizer,
   type MonacoInjectionHighlighterApi,
 } from './monaco/injection_highlighter'
 

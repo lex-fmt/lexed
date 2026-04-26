@@ -43,6 +43,23 @@ function classNameFor(category: DecorationCategory): string {
   return `${CATEGORY_CLASS_PREFIX}-${category}`
 }
 
+/**
+ * Pluggable tokenizer that replaces Monaco's built-in Monarch path. The
+ * Monaco fallback is fine for prototyping but inaccurate compared with
+ * tree-sitter; hosts that ship a tree-sitter (or other) tokenizer for
+ * embedded zones supply it here. Languages absent from
+ * `availableLanguages()` are skipped — the host adapter never falls
+ * back to Monaco for them.
+ */
+export interface InjectionTokenizer {
+  availableLanguages(): Set<string>
+  getSemanticTokens(
+    zoneIndex: number,
+    content: string,
+    langId: string
+  ): Promise<SemanticTokens | null>
+}
+
 export interface HighlighterOptions {
   /** Toggle from a settings UI. Defaults to true. */
   initialEnabled?: boolean
@@ -52,6 +69,14 @@ export interface HighlighterOptions {
    * When omitted, all models are highlighted.
    */
   hostLanguageId?: string
+  /**
+   * Optional tokenizer override. When provided, the highlighter sources
+   * `getRegisteredLanguages` from `tokenizer.availableLanguages()` and
+   * delegates `getSemanticTokens` to the tokenizer. Omit to fall back to
+   * Monaco's built-in Monarch tokenizers (the package's original
+   * behaviour).
+   */
+  tokenizer?: InjectionTokenizer
 }
 
 export function createMonacoInjectionHighlighter(
@@ -61,6 +86,7 @@ export function createMonacoInjectionHighlighter(
 ): MonacoInjectionHighlighterApi {
   let enabled = options.initialEnabled ?? true
   const hostLanguageId = options.hostLanguageId
+  const tokenizer = options.tokenizer
   let disposed = false
 
   const decorationsCollection = editor.createDecorationsCollection()
@@ -78,6 +104,7 @@ export function createMonacoInjectionHighlighter(
   let cachedLanguages: Set<string> | null = null
 
   async function getRegisteredLanguages(): Promise<Set<string>> {
+    if (tokenizer) return tokenizer.availableLanguages()
     if (!cachedLanguages) {
       cachedLanguages = new Set(monaco.languages.getLanguages().map((l) => l.id))
     }
@@ -101,10 +128,13 @@ export function createMonacoInjectionHighlighter(
   }
 
   async function getSemanticTokensForZone(
-    _zoneIndex: number,
+    zoneIndex: number,
     content: string,
     langId: string
   ): Promise<SemanticTokens | null> {
+    if (tokenizer) {
+      return tokenizer.getSemanticTokens(zoneIndex, content, langId)
+    }
     await primeLanguage(langId)
 
     let rawTokens: monaco.Token[][]

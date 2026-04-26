@@ -2,9 +2,9 @@ Injection Highlighting Sample
 -----------------------------
 
 This fixture is used by `tests/e2e/injection-highlighting.spec.ts`. The
-two verbatim blocks below carry `:: python ::` and `:: javascript ::`
-closing annotations — the injection highlighter should detect them via
-tree-sitter and apply categorised decorations over each block's content.
+verbatim blocks below carry `:: <lang> ::` closing annotations — the
+injection highlighter detects them via tree-sitter and runs each
+bundled grammar's `highlights.scm` over the zone content.
 
 Python example:
 
@@ -17,9 +17,6 @@ Python example:
 
 :: python ::
 
-Some plain prose between the blocks. This line must *not* be decorated
-by the injection highlighter — only the verbatim content should be.
-
 JavaScript example:
 
     const x = 42;
@@ -30,4 +27,38 @@ JavaScript example:
 
 :: javascript ::
 
-Closing prose — again, no injection decorations here.
+JSON example:
+
+    {
+        "name": "lex",
+        "version": "1.0.0",
+        "tags": ["editor", "syntax"]
+    }
+
+:: json ::
+
+Rust example:
+
+    use std::collections::HashMap;
+
+    fn main() {
+        let mut map: HashMap<String, i32> = HashMap::new();
+        map.insert("hello".to_string(), 42);
+    }
+
+:: rust ::
+
+Bash example:
+
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    for f in *.lex; do
+        echo "Processing $f"
+    done
+
+:: bash ::
+
+Closing prose — none of these lines should be decorated by the
+injection highlighter; only the verbatim content inside the blocks
+above gets per-language tokenization.

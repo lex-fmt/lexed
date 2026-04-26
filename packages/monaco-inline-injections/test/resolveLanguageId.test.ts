@@ -40,12 +40,13 @@ describe('resolveLanguageId', () => {
     expect(resolveLanguageId('   ', registered)).toBe(null)
   })
 
-  it('bash/zsh/sh all alias to shellscript', () => {
-    const registered = new Set(['shellscript'])
-    expect(resolveLanguageId('bash', registered)).toBe('shellscript')
-    expect(resolveLanguageId('zsh', registered)).toBe('shellscript')
-    expect(resolveLanguageId('sh', registered)).toBe('shellscript')
-    expect(resolveLanguageId('shell', registered)).toBe('shellscript')
+  it('zsh/sh/shell/shellscript all alias to bash (tree-sitter parser name)', () => {
+    const registered = new Set(['bash'])
+    expect(resolveLanguageId('bash', registered)).toBe('bash')
+    expect(resolveLanguageId('zsh', registered)).toBe('bash')
+    expect(resolveLanguageId('sh', registered)).toBe('bash')
+    expect(resolveLanguageId('shell', registered)).toBe('bash')
+    expect(resolveLanguageId('shellscript', registered)).toBe('bash')
   })
 
   it('c++ aliases to cpp (special char handling)', () => {
@@ -53,12 +54,6 @@ describe('resolveLanguageId', () => {
     expect(resolveLanguageId('c++', registered)).toBe('cpp')
     expect(resolveLanguageId('cxx', registered)).toBe('cpp')
     expect(resolveLanguageId('cc', registered)).toBe('cpp')
-  })
-
-  it('jsx/tsx aliases', () => {
-    const registered = new Set(['javascriptreact', 'typescriptreact'])
-    expect(resolveLanguageId('jsx', registered)).toBe('javascriptreact')
-    expect(resolveLanguageId('tsx', registered)).toBe('typescriptreact')
   })
 
   it('alias does not leak when target is not registered', () => {

@@ -14,6 +14,7 @@ import { navigateTableCell, formatTableAtCursor } from '@/lsp/table_commands'
 import type { LspTextEdit } from '@/lsp/types'
 import { dispatchFileTreeRefresh } from '@/lib/events'
 import { initTreeSitter, createLexZoneProvider } from '@/treesitter'
+import { createEmbeddedTokenizer, type EmbeddedTokenizer } from '@/embedded'
 import {
   createMonacoInjectionHighlighter,
   type MonacoInjectionHighlighterApi,
@@ -288,18 +289,26 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     // highlighter install is skipped — LSP semantic tokens still colour
     // the rest of the document either way.
     //
+    // The embedded tokenizer is constructed eagerly (cheap — it just
+    // indexes the bundled grammars surfaced by Vite globs) but each
+    // language's parser is loaded lazily on first use.
+    //
     // The cancellation flag guards against a late-resolving init
     // attaching a highlighter to a disposed editor after unmount.
     let tsInitCancelled = false
+    const embeddedTokenizer: EmbeddedTokenizer = createEmbeddedTokenizer()
     void initTreeSitter().then((ts) => {
-      if (tsInitCancelled || !ts || editorRef.current !== editor) return
+      if (tsInitCancelled || !ts || editorRef.current !== editor) {
+        embeddedTokenizer.dispose()
+        return
+      }
       if (injectionHighlighterRef.current) {
         injectionHighlighterRef.current.dispose()
       }
       injectionHighlighterRef.current = createMonacoInjectionHighlighter(
         editor,
         createLexZoneProvider(ts),
-        { hostLanguageId: 'lex' }
+        { hostLanguageId: 'lex', tokenizer: embeddedTokenizer }
       )
     })
 
@@ -309,6 +318,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       formatTableDisposable.dispose()
       injectionHighlighterRef.current?.dispose()
       injectionHighlighterRef.current = null
+      embeddedTokenizer.dispose()
       editor.dispose()
       if (vimModeRef.current) {
         vimModeRef.current.dispose()
