@@ -117,7 +117,12 @@ async function waitForEditorWindow(
 test.beforeAll(async () => {
   app = await electron.launch({
     executablePath: appPath,
-    args: [],
+    // Linux GitHub-hosted runners don't have a usable user-namespace
+    // sandbox for Electron's zygote — `electron.launch()` aborts with
+    // "Process failed to launch!" without `--no-sandbox`. Mirrors what
+    // the dev-mode launchApp helper does on Linux CI. Safe on macOS
+    // and Windows (the flag is just ignored).
+    args: process.platform === 'linux' ? ['--no-sandbox'] : [],
     // The packaged-mode env intentionally OVERRIDES three vars that the
     // dev-mode launch helper sets:
     //
