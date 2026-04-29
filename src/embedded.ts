@@ -140,6 +140,13 @@ export function createEmbeddedTokenizer(): EmbeddedTokenizer {
         const query = new Query(language, assets.queryStr)
         const result: LoadedLanguage = { parser, query }
         loaded.set(langId, result)
+        // E2E hook: signal that this language's grammar finished loading.
+        // The injection-highlighting test waits on these signals (one per
+        // bundled language) instead of polling Monaco's decoration state,
+        // which races on slow CI runners.
+        if (typeof window !== 'undefined' && window.__e2e) {
+          window.__e2e.signal('embedded-grammar:loaded', { lang: langId })
+        }
         return result
       } catch (err) {
         console.warn(`[lex] embedded tokenizer: load failed for ${langId}:`, err)
@@ -211,6 +218,12 @@ export function createEmbeddedTokenizer(): EmbeddedTokenizer {
         }
 
         if (data.length === 0) return null
+        // E2E hook: signal first non-empty token emission per language. This
+        // is the precise moment the renderer has tokens for the zone, ahead
+        // of Monaco's decoration commit.
+        if (typeof window !== 'undefined' && window.__e2e) {
+          window.__e2e.signal('embedded-grammar:tokens', { lang: langId })
+        }
         return { legend, data: new Uint32Array(data) }
       } finally {
         tree.delete()

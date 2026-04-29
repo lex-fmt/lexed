@@ -72,37 +72,26 @@ test.describe('Injection Highlighting', () => {
     // Force a refresh so we don't race the debounce timer.
     await page.evaluate(() => window.__e2e.bridge.refreshInjectionHighlighter())
 
-    // Wait until ranges have materialised for *every* bundled language —
-    // not just any one. Loading + parsing each WASM is async, so the
-    // first refresh may only have a subset wired up.
+    // Deterministic wait via window.__e2e.events — embedded.ts signals
+    // 'embedded-grammar:tokens' the first time each language's tokenizer
+    // returns a non-empty token set. Replaces the prior poll on
+    // getInjectionRanges() which raced on Monaco's downstream decoration
+    // state and was the long-standing CI flake (grammars-load-slow on
+    // ubuntu-latest under xvfb).
     await expect
       .poll(
-        async () => {
-          const result = await page.evaluate(
-            (bundled) => {
-              const api = window.__e2e.bridge
-              const zones = api.getInjectionZones() as Array<{
-                language: string
-                startRow: number
-                endRow: number
-              }>
-              const ranges = api.getInjectionRanges() as Array<{
-                startLine: number
-                endLine: number
-              }>
-              return bundled.filter((lang) => {
-                const zone = zones.find((z) => z.language === lang)
-                if (!zone) return false
-                return ranges.some((r) => r.startLine >= zone.startRow && r.endLine <= zone.endRow)
-              }).length
-            },
-            BUNDLED_LANGUAGES as unknown as string[]
-          )
-          return result
-        },
+        async () =>
+          await page.evaluate(() => {
+            const langs = new Set(
+              window.__e2e.events
+                .filter((e) => e.type === 'embedded-grammar:tokens')
+                .map((e) => (e.payload as { lang: string }).lang)
+            )
+            return langs.size
+          }),
         {
-          timeout: 15_000,
-          message: 'Waiting for ranges to materialise inside every bundled-language zone',
+          timeout: 30_000,
+          message: 'Waiting for embedded-grammar:tokens signal from every bundled language',
         }
       )
       .toBe(BUNDLED_LANGUAGES.length)
