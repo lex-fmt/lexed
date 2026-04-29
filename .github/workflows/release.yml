@@ -122,7 +122,7 @@ jobs:
         if: ${{ steps.target-filter.outputs.skip == 'false' && startsWith(matrix.platform, 'macos-') }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          LEX_HIDE_WINDOW: "1"
+          E2E_HIDE_WINDOW: "1"
           NODE_OPTIONS: --max-old-space-size=4096
           CSC_LINK: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
           CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -132,7 +132,7 @@ jobs:
         if: ${{ steps.target-filter.outputs.skip == 'false' && !startsWith(matrix.platform, 'macos-') }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          LEX_HIDE_WINDOW: "1"
+          E2E_HIDE_WINDOW: "1"
           NODE_OPTIONS: --max-old-space-size=4096
         run: npm run build
 
@@ -202,7 +202,7 @@ jobs:
           PACKAGED_PLATFORM_LABEL: ${{ matrix.platform }}
           # globalSetup would otherwise re-run `npm run build` —
           # pointless since electron-builder just produced the package.
-          LEX_SKIP_E2E_BUILD: '1'
+          E2E_SKIP_BUILD: '1'
         run: ${{ matrix.smoke_prefix }} npx playwright test --project=packaged
 
       # If the smoke test fails, capture screenshots + the playwright

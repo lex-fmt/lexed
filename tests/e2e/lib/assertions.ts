@@ -38,7 +38,7 @@ function matchesMarker(
 export async function expectMarkers(page: Page, expected: MarkerMatch[], { timeout = 10000 } = {}) {
   const getMarkers = () =>
     page.evaluate(() => {
-      const markers = (window as any).lexTest?.getMarkers?.() ?? []
+      const markers = window.__e2e.bridge?.getMarkers?.() ?? []
       return markers.map((m: any) => ({
         message: m.message,
         severity: m.severity,
@@ -74,25 +74,27 @@ export async function expectMarkers(page: Page, expected: MarkerMatch[], { timeo
  */
 export async function resetFormattingRequest(page: Page) {
   await page.evaluate(() => {
-    ;(window as any).lexTest?.resetFormattingRequest?.()
-    ;(window as any).__lexLastFormattingRequest = null
+    window.__e2e.bridge?.resetFormattingRequest?.()
   })
 }
 
 /**
  * Assert on the last formatting request captured by the test bridge.
- * Waits for __lexLastFormattingRequest to be set, then deeply matches.
- * Call resetFormattingRequest() before the triggering action to avoid stale data.
+ * Reads via window.__e2e.bridge.getLastFormattingRequest. Call
+ * resetFormattingRequest() before the triggering action to avoid stale data.
  */
 export async function expectFormattingRequest(
   page: Page,
   expected: { type?: 'document' | 'range'; options?: Record<string, unknown> },
   { timeout = 10000 } = {}
 ) {
-  await page.waitForFunction(() => Boolean((window as any).__lexLastFormattingRequest), null, {
+  await page.waitForFunction(() => window.__e2e.bridge.getLastFormattingRequest?.() != null, null, {
     timeout,
   })
-  const request = await page.evaluate(() => (window as any).__lexLastFormattingRequest)
+  const request = (await page.evaluate(() => window.__e2e.bridge.getLastFormattingRequest?.())) as {
+    type: 'document' | 'range'
+    params: { options?: Record<string, unknown> }
+  } | null
   if (expected.type !== undefined) {
     expect(request?.type).toBe(expected.type)
   }
@@ -113,21 +115,21 @@ export async function expectEditorValue(
 ) {
   if (expected instanceof RegExp) {
     await expect
-      .poll(() => page.evaluate(() => (window as any).lexTest?.getActiveEditorValue() ?? ''), {
+      .poll(() => page.evaluate(() => window.__e2e.bridge?.getActiveEditorValue() ?? ''), {
         timeout,
         message: 'Waiting for editor value to match pattern',
       })
       .toMatch(expected)
   } else if (exact) {
     await expect
-      .poll(() => page.evaluate(() => (window as any).lexTest?.getActiveEditorValue() ?? ''), {
+      .poll(() => page.evaluate(() => window.__e2e.bridge?.getActiveEditorValue() ?? ''), {
         timeout,
         message: 'Waiting for exact editor value',
       })
       .toBe(expected)
   } else {
     await expect
-      .poll(() => page.evaluate(() => (window as any).lexTest?.getActiveEditorValue() ?? ''), {
+      .poll(() => page.evaluate(() => window.__e2e.bridge?.getActiveEditorValue() ?? ''), {
         timeout,
         message: 'Waiting for editor value to contain text',
       })

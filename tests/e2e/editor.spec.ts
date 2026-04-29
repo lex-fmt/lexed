@@ -8,7 +8,7 @@ test.describe('Editor', () => {
     await focusEditor(page)
 
     await page.evaluate(() => {
-      window.lexTest?.setActiveEditorValue?.('# Hello World\nThis is a *test*.')
+      window.__e2e.bridge?.setActiveEditorValue?.('# Hello World\nThis is a *test*.')
     })
 
     await expectEditorValue(page, '# Hello World')

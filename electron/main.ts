@@ -38,9 +38,20 @@ const DEFAULT_WINDOW_BOUNDS = { width: 1200, height: 800 }
 // on startup and can otherwise blow past test timeouts for large
 // locales). Must run before electron-store instantiates its settings
 // path and before any app.getPath('userData') call.
-const userDataOverride = process.env.LEX_USER_DATA_DIR
+const userDataOverride = process.env.E2E_USER_DATA_DIR
 if (userDataOverride) {
   app.setPath('userData', path.resolve(userDataOverride))
+}
+
+// During E2E runs (E2E_HIDE_WINDOW=1) the renderer window is created with
+// `show: false`. Routing and second-instance handlers can still call
+// `win.focus()` / `restoreAndFocus`, which on macOS makes a hidden window
+// jump visible. Wrap focus + restore so hidden runs stay hidden.
+const E2E_HIDE_WINDOW = process.env.E2E_HIDE_WINDOW === '1'
+function restoreAndFocus(win: BrowserWindow) {
+  if (E2E_HIDE_WINDOW) return
+  if (win.isMinimized()) win.restore()
+  win.focus()
 }
 
 // Configure logging
@@ -105,7 +116,7 @@ interface MenuState {
 }
 
 const resolveFixtureRoot = () => {
-  const override = process.env.LEX_TEST_FIXTURES
+  const override = process.env.E2E_FIXTURES
   if (override) {
     return path.resolve(override)
   }
@@ -294,11 +305,11 @@ function getDefaultProjectPath(): string {
 /**
  * Sets up the default project directory and copies welcome document on first launch.
  * Returns the path to the welcome file if this is first launch, null otherwise.
- * Skipped during tests (LEX_DISABLE_PERSISTENCE=1).
+ * Skipped during tests (E2E_DISABLE_PERSISTENCE=1).
  */
 async function setupFirstLaunch(): Promise<string | null> {
   // Skip first-launch setup during tests
-  if (process.env.LEX_DISABLE_PERSISTENCE === '1') {
+  if (process.env.E2E_DISABLE_PERSISTENCE === '1') {
     return null
   }
 
@@ -479,8 +490,7 @@ async function openFilesViaRouter(filePaths: string[]): Promise<FileRouteDestina
       app.addRecentDocument(file)
       destinations.push({ filePath: file, kind: 'existingWindow', windowId })
     }
-    if (win.isMinimized()) win.restore()
-    win.focus()
+    restoreAndFocus(win)
   }
 
   for (const [root, files] of toNewWindowWithRoot) {
@@ -581,8 +591,7 @@ function openCliPaths(cliPaths: CliPaths) {
       app.addRecentDocument(filePath)
     }
     // Bring window to front
-    if (targetWin.isMinimized()) targetWin.restore()
-    targetWin.focus()
+    restoreAndFocus(targetWin)
   } else {
     // No windows exist, create a new one
     // The folder will be set via settings if provided
@@ -789,7 +798,7 @@ ipcMain.handle('folder-open', async (event) => {
 
 ipcMain.handle('get-initial-folder', async (event) => {
   // During tests, always use the welcome folder to avoid contamination from user settings
-  if (process.env.LEX_DISABLE_PERSISTENCE === '1') {
+  if (process.env.E2E_DISABLE_PERSISTENCE === '1') {
     return getWelcomeFolderPath()
   }
 
@@ -1629,7 +1638,7 @@ if (process.platform === 'win32') {
 
 // Single instance lock - ensure only one instance of the app runs
 const gotTheLock =
-  process.env.LEX_DISABLE_SINGLE_INSTANCE_LOCK === '1' ? true : app.requestSingleInstanceLock()
+  process.env.E2E_DISABLE_SINGLE_INSTANCE_LOCK === '1' ? true : app.requestSingleInstanceLock()
 
 if (!gotTheLock) {
   // Another instance is already running, quit this one
@@ -1652,9 +1661,7 @@ if (!gotTheLock) {
       // No paths, just focus the existing window
       const windows = windowManager.getAllWindows()
       if (windows.length > 0) {
-        const win = windows[0]
-        if (win.isMinimized()) win.restore()
-        win.focus()
+        restoreAndFocus(windows[0])
       }
     }
   })

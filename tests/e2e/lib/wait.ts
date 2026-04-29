@@ -2,11 +2,11 @@ import type { Page } from '@playwright/test'
 import { expect } from '@playwright/test'
 
 /**
- * Wait for the app to be fully mounted (lexTest bridge available).
+ * Wait for the app to be fully mounted (`window.__e2e.ready.app === true`).
  * Use after page reload or any operation that re-creates the renderer.
  */
 export async function waitForApp(page: Page, timeout = 15000) {
-  await page.waitForFunction(() => Boolean((window as any).lexTest), null, { timeout })
+  await page.waitForFunction(() => window.__e2e?.ready?.app === true, null, { timeout })
 }
 
 /**
@@ -14,7 +14,7 @@ export async function waitForApp(page: Page, timeout = 15000) {
  * Replaces all `waitForTimeout(2000) // Wait for LSP` calls.
  */
 export async function waitForLsp(page: Page, timeout = 15000) {
-  await page.waitForFunction(() => Boolean((window as any).__lexLspReady), null, { timeout })
+  await page.waitForFunction(() => window.__e2e?.ready?.lsp === true, null, { timeout })
 }
 
 /**
@@ -34,7 +34,7 @@ export async function waitForEditor(page: Page, timeout = 15000) {
 export async function waitForEditorContent(page: Page, text: string, { timeout = 10000 } = {}) {
   await page.waitForFunction(
     (substring) => {
-      const value = (window as any).lexTest?.getActiveEditorValue() ?? ''
+      const value = (window.__e2e.bridge.getActiveEditorValue?.() as string) ?? ''
       return value.includes(substring)
     },
     text,
@@ -46,7 +46,7 @@ export async function waitForEditorContent(page: Page, text: string, { timeout =
  * Wait for the spellcheck engine to be ready (dictionary loaded, service initialized).
  */
 export async function waitForSpellcheck(page: Page, timeout = 20000) {
-  await page.waitForFunction(() => Boolean((window as any).lexTest?.isSpellcheckReady?.()), null, {
+  await page.waitForFunction(() => Boolean(window.__e2e.bridge.isSpellcheckReady?.()), null, {
     timeout,
   })
 }

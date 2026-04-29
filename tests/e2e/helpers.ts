@@ -15,7 +15,7 @@ export async function launchApp(options: AppLaunchOptions = {}) {
   // Electron's SUID sandbox doesn't work in CI containers; disable it on Linux CI
   const ciArgs = process.platform === 'linux' && process.env.CI ? ['--no-sandbox'] : []
   const extraArgs = [...ciArgs, ...userArgs]
-  const useBuiltRenderer = process.env.LEX_E2E_USE_BUILD === '1'
+  const useBuiltRenderer = process.env.E2E_USE_BUILD === '1'
   const devServerUrl =
     process.env.VITE_DEV_SERVER_URL || (useBuiltRenderer ? undefined : 'http://localhost:5173')
 
@@ -24,30 +24,30 @@ export async function launchApp(options: AppLaunchOptions = {}) {
   // spellcheck language bleeds in and can blow test timeouts for large
   // Hunspell locales (e.g. pt_BR at 4+ MB). Callers that need
   // cross-launch persistence (e.g. file-routing) can provide their own
-  // via envOverrides.LEX_USER_DATA_DIR or a --user-data-dir extra arg;
+  // via envOverrides.E2E_USER_DATA_DIR or a --user-data-dir extra arg;
   // we only auto-create a fresh dir when neither is set.
   const callerProvidedDir =
-    envOverrides.LEX_USER_DATA_DIR ||
+    envOverrides.E2E_USER_DATA_DIR ||
     extraArgs.find((a) => a.startsWith('--user-data-dir='))?.slice('--user-data-dir='.length)
   const autoCreatedDir = callerProvidedDir
     ? undefined
     : fs.mkdtempSync(path.join(os.tmpdir(), 'lexed-e2e-'))
 
-  // LEX_USER_DATA_DIR goes *after* the envOverrides spread. Some callers
+  // E2E_USER_DATA_DIR goes *after* the envOverrides spread. Some callers
   // build their env objects conditionally and may end up with
-  // `LEX_USER_DATA_DIR: undefined` in the override; if that spread
+  // `E2E_USER_DATA_DIR: undefined` in the override; if that spread
   // came last it would wipe out our isolation dir and reintroduce the
   // machine-dependent state we're trying to avoid.
   const env: ProcessEnv = {
     ...process.env,
     NODE_ENV: useBuiltRenderer ? 'production' : 'development',
-    LEX_DISABLE_SINGLE_INSTANCE_LOCK: '1',
+    E2E_DISABLE_SINGLE_INSTANCE_LOCK: '1',
     ...envOverrides,
-    LEX_USER_DATA_DIR: callerProvidedDir ?? autoCreatedDir,
+    E2E_USER_DATA_DIR: callerProvidedDir ?? autoCreatedDir,
   }
 
-  if (!env.LEX_HIDE_WINDOW) {
-    env.LEX_HIDE_WINDOW = '1'
+  if (!env.E2E_HIDE_WINDOW) {
+    env.E2E_HIDE_WINDOW = '1'
   }
 
   if (devServerUrl) {
@@ -77,25 +77,19 @@ export async function launchApp(options: AppLaunchOptions = {}) {
   return app
 }
 
-type LexTestWindow = Window & {
-  lexTest?: {
-    openFixture: (fixtureName: string) => Promise<{ path: string; content: string }>
-  }
-}
-
 /**
  * Open a test fixture file and wait for the editor to be visible.
- * Prerequisite: page fixture guarantees lexTest and LSP are ready.
+ * Prerequisite: page fixture guarantees the e2e bridge and LSP are ready.
  * For pages not created by the fixture (e.g. packaged.spec.ts),
  * call waitForApp(page) first.
  */
 export async function openFixture(page: Page, fixtureName: string) {
   const result = await page.evaluate(async (name) => {
-    const scopedWindow = window as LexTestWindow
-    if (!scopedWindow.lexTest) {
-      throw new Error('lexTest helpers not available')
+    const openFixtureFn = window.__e2e.bridge.openFixture
+    if (!openFixtureFn) {
+      throw new Error('e2e bridge openFixture not available')
     }
-    return scopedWindow.lexTest.openFixture(name)
+    return openFixtureFn(name) as Promise<{ path: string; content: string }>
   }, fixtureName)
 
   // Guarantee editor is visible before returning to the test

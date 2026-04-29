@@ -15,7 +15,7 @@ import { launchApp } from './helpers'
  *      event and the Windows/Linux `second-instance` argv path).
  *
  * Each test uses its own `--user-data-dir` so electron-store writes never
- * leak into the user's real settings. `LEX_DISABLE_PERSISTENCE=0` is
+ * leak into the user's real settings. `E2E_DISABLE_PERSISTENCE=0` is
  * required: the default fixture forces it to `1`, which short-circuits the
  * very persistence we're trying to verify here.
  */
@@ -27,12 +27,12 @@ type LaunchHandle = {
 
 async function launchReady(userData: string): Promise<LaunchHandle> {
   const app = await launchApp({
-    env: { LEX_DISABLE_PERSISTENCE: '0' },
+    env: { E2E_DISABLE_PERSISTENCE: '0' },
     extraArgs: [`--user-data-dir=${userData}`],
   })
   const page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
-  await page.waitForFunction(() => Boolean((window as Window).lexTest), null, {
+  await page.waitForFunction(() => window.__e2e?.ready?.app === true, null, {
     timeout: 15000,
   })
   return { app, page }
@@ -40,7 +40,7 @@ async function launchReady(userData: string): Promise<LaunchHandle> {
 
 async function setWorkspace(page: Page, folderPath: string): Promise<void> {
   await page.evaluate(async (dir) => {
-    await window.lexTest!.openFolder!(dir)
+    await window.__e2e.bridge!.openFolder!(dir)
   }, folderPath)
   // Give the setLastFolder IPC round-trip a tick to complete.
   await page.waitForFunction(
@@ -177,7 +177,7 @@ test.describe('File routing & workspace persistence', () => {
 
       const newPage = await newWindowPromise
       await newPage.waitForLoadState('domcontentloaded')
-      await newPage.waitForFunction(() => Boolean((window as Window).lexTest), null, {
+      await newPage.waitForFunction(() => window.__e2e?.ready?.app === true, null, {
         timeout: 15000,
       })
       await newPage.waitForFunction(

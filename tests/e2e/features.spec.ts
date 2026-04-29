@@ -41,10 +41,14 @@ test.describe('LexEd Features', () => {
     await openFixture(page, 'format-basic.lex')
     await focusEditor(page)
 
-    // Select a range (lines 1-2)
+    // Select a range (lines 1-2). NOTE: bridge.editor is not currently exposed,
+    // so this block is a no-op — preserved from pre-migration behavior. See
+    // followup needed: expose an editor accessor on window.__e2e.bridge or
+    // route through bridge.setSelection(line, col).
     await page.evaluate(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const scopedWindow = window as any
-      const editor = scopedWindow.lexTest?.editor
+      const editor = scopedWindow.__e2e?.bridge?.editor
       if (editor && scopedWindow.monaco?.Selection) {
         editor.setSelection(new scopedWindow.monaco.Selection(1, 1, 2, 1))
       }
@@ -52,7 +56,7 @@ test.describe('LexEd Features', () => {
 
     // Trigger Format Selection
     await page.evaluate(() => {
-      ;(window as any).lexTest?.editor?.trigger('source', 'editor.action.formatSelection')
+      window.__e2e.bridge?.editor?.trigger('source', 'editor.action.formatSelection')
     })
 
     // The range formatting provider sends the request to the LSP and applies edits.

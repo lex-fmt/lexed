@@ -28,14 +28,8 @@ export const buildFormattingOptions = (tabSize: number, insertSpaces: boolean) =
 
 export const notifyLexTest = (payload: { type: 'document' | 'range'; params: unknown }) => {
   if (typeof window === 'undefined') return
-  const scopedWindow = window as typeof window & {
-    lexTest?: {
-      notifyFormattingRequest?: (info: { type: 'document' | 'range'; params: unknown }) => void
-    }
-    __lexLastFormattingRequest?: { type: 'document' | 'range'; params: unknown } | null
-  }
-  scopedWindow.__lexLastFormattingRequest = payload
-  scopedWindow.lexTest?.notifyFormattingRequest?.(payload)
+  window.__e2e.bridge.notifyFormattingRequest?.(payload)
+  window.__e2e.signal('format:request', payload)
 }
 
 export function registerFormattingProvider(

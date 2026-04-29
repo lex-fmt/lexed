@@ -15,7 +15,7 @@ test.describe('Path completion', () => {
 
     await focusEditor(page)
     await page.keyboard.type('a')
-    await page.evaluate(() => (window as any).lexTest.triggerSuggest())
+    await page.evaluate(() => window.__e2e.bridge.triggerSuggest())
 
     await expectNoCompletionItem(page, { detail: 'path reference' })
   })
@@ -59,7 +59,7 @@ test.describe('Path completion', () => {
 
       // Type @ trigger and verify path completion appears
       await page.keyboard.type('@ima')
-      await page.evaluate(() => (window as any).lexTest.triggerSuggest())
+      await page.evaluate(() => window.__e2e.bridge.triggerSuggest())
 
       await expectCompletionItem(page, { insertText: expectedRelative }, { timeout: 20000 })
     } finally {

@@ -1,3 +1,20 @@
+// Canonical E2E hooks — see ~/.claude/skills/electron-e2e-testing/SKILL.md.
+// Initialized before any code that touches window.__e2e (lsp/client.ts, bridge hook).
+const MAX_E2E_EVENTS = 1000
+
+window.__e2e = {
+  ready: { app: false, lsp: false, spellcheck: false },
+  events: [],
+  bridge: {},
+  signal(type, payload) {
+    this.events.push({ type, ts: Date.now(), payload })
+    // Cap at MAX_E2E_EVENTS to prevent unbounded growth in long sessions.
+    if (this.events.length > MAX_E2E_EVENTS) {
+      this.events.splice(0, this.events.length - MAX_E2E_EVENTS)
+    }
+  },
+}
+
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { Toaster } from 'sonner'

@@ -127,7 +127,7 @@ export function useLexTestBridge({
         if (!model) return []
         return monaco.editor.getModelMarkers({ resource: model.uri })
       },
-      isLspReady: () => Boolean(window.__lexLspReady),
+      isLspReady: () => Boolean(window.__e2e.ready.lsp),
       isSpellcheckReady: () => spellcheckService.isReady(),
       spellcheckLanguage: () => spellcheckService.currentLanguage(),
       recheckSpelling: () => {
@@ -239,10 +239,10 @@ export function useLexTestBridge({
         return true
       },
     }
-    window.lexTest = api
+    window.__e2e.bridge = api
     return () => {
-      if (window.lexTest === api) {
-        delete window.lexTest
+      if (window.__e2e.bridge === api) {
+        window.__e2e.bridge = {}
       }
     }
   }, [activePaneId, openFileInPane, panes, paneHandles, panesRef, setRootPath])

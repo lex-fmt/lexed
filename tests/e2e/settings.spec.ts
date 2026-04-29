@@ -1,6 +1,6 @@
 import { test, expect, resetSettings, openSettings, closeSettings } from './lib'
 
-test.use({ appLaunchOptions: { env: { LEX_DISABLE_PERSISTENCE: '0' } } })
+test.use({ appLaunchOptions: { env: { E2E_DISABLE_PERSISTENCE: '0' } } })
 
 test.describe('Settings', () => {
   test('loads latest formatter values when switching tabs', async ({ page }) => {
