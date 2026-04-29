@@ -32,7 +32,7 @@ async function launchReady(userData: string): Promise<LaunchHandle> {
   })
   const page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
-  await page.waitForFunction(() => Boolean(window.__e2e.bridge), null, {
+  await page.waitForFunction(() => window.__e2e?.ready?.app === true, null, {
     timeout: 15000,
   })
   return { app, page }
@@ -177,7 +177,7 @@ test.describe('File routing & workspace persistence', () => {
 
       const newPage = await newWindowPromise
       await newPage.waitForLoadState('domcontentloaded')
-      await newPage.waitForFunction(() => Boolean(window.__e2e.bridge), null, {
+      await newPage.waitForFunction(() => window.__e2e?.ready?.app === true, null, {
         timeout: 15000,
       })
       await newPage.waitForFunction(
