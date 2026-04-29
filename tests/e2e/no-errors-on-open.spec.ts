@@ -30,7 +30,7 @@ test.describe('Runtime error sentinel', () => {
     await expect
       .poll(() =>
         page.evaluate(() => {
-          const active = (window as any).lexTest?.getActiveEditorValue?.() as string | undefined
+          const active = window.__e2e.bridge?.getActiveEditorValue?.() as string | undefined
           return typeof active === 'string' && active.length > 0
         })
       )

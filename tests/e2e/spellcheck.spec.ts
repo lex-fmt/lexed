@@ -21,7 +21,7 @@ test.describe('Spellcheck', () => {
 
     // "word" should be valid (no marker for it)
     const markersEn = await page.evaluate(() => {
-      const lt = (window as any).lexTest
+      const lt = window.__e2e.bridge
       if (!lt) return []
       lt.recheckSpelling()
       return (lt.getMarkers() || []).map((m: any) => m.message)
@@ -38,7 +38,7 @@ test.describe('Spellcheck', () => {
     // in BOTH en_US and fr_FR (it's not in either dict), so the poll
     // would return on the stale en_US marker before the switch lands.
     await page.waitForFunction(
-      () => (window as any).lexTest?.spellcheckLanguage?.() === 'fr_FR',
+      () => window.__e2e.bridge?.spellcheckLanguage?.() === 'fr_FR',
       null,
       { timeout: 30000 }
     )
@@ -46,7 +46,7 @@ test.describe('Spellcheck', () => {
 
     // "est" should be valid in French, "word" should be flagged
     const markersFr = await page.evaluate(() => {
-      const lt = (window as any).lexTest
+      const lt = window.__e2e.bridge
       if (!lt) return []
       lt.recheckSpelling()
       return (lt.getMarkers() || []).map((m: any) => m.message)
@@ -116,10 +116,10 @@ test.describe('Spellcheck', () => {
 
     // Move cursor to the misspelled word
     await page.evaluate(async () => {
-      const markers = (window as any).lexTest?.getMarkers() || []
+      const markers = window.__e2e.bridge?.getMarkers() || []
       const marker = markers.find((m: any) => m.message.includes('foobarbaz'))
       if (marker) {
-        ;(window as any).lexTest?.setCursor(marker.startLineNumber, marker.startColumn + 1)
+        window.__e2e.bridge?.setCursor(marker.startLineNumber, marker.startColumn + 1)
       }
     })
 
@@ -150,7 +150,7 @@ test.describe('Spellcheck', () => {
       .poll(
         async () => {
           return await page.evaluate((w) => {
-            const lt = (window as any).lexTest
+            const lt = window.__e2e.bridge
             if (!lt) return false
             lt.recheckSpelling()
             return (lt.getMarkers() || []).some((m: any) =>

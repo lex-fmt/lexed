@@ -1,3 +1,14 @@
+// Canonical E2E hooks — see ~/.claude/skills/electron-e2e-testing/SKILL.md.
+// Initialized before any code that touches window.__e2e (lsp/client.ts, bridge hook).
+window.__e2e = {
+  ready: { app: false, lsp: false, spellcheck: false },
+  events: [],
+  bridge: {},
+  signal(type, payload) {
+    this.events.push({ type, ts: Date.now(), payload })
+  },
+}
+
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { Toaster } from 'sonner'

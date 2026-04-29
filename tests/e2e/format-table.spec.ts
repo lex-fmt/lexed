@@ -20,13 +20,11 @@ test.describe('Format Table at Cursor', () => {
     await focusEditor(page)
 
     // Place the cursor inside the "Alpha" cell (line 5).
-    await page.evaluate(() => (window as any).lexTest.setCursor(5, 11))
+    await page.evaluate(() => window.__e2e.bridge.setCursor(5, 11))
 
-    const before = await page.evaluate(
-      () => (window as any).lexTest.getActiveEditorValue() as string
-    )
+    const before = await page.evaluate(() => window.__e2e.bridge.getActiveEditorValue() as string)
 
-    const invoked = await page.evaluate(() => (window as any).lexTest.triggerFormatTable())
+    const invoked = await page.evaluate(() => window.__e2e.bridge.triggerFormatTable())
     expect(invoked).toBe(true)
 
     // Wait until the editor value changes (or the timeout elapses — if
@@ -35,7 +33,7 @@ test.describe('Format Table at Cursor', () => {
     await page
       .waitForFunction(
         (previousValue) => {
-          const current = (window as any).lexTest.getActiveEditorValue() as string
+          const current = window.__e2e.bridge.getActiveEditorValue() as string
           return current !== previousValue
         },
         before,
@@ -45,9 +43,7 @@ test.describe('Format Table at Cursor', () => {
         /* fall through — we'll assert below */
       })
 
-    const after = await page.evaluate(
-      () => (window as any).lexTest.getActiveEditorValue() as string
-    )
+    const after = await page.evaluate(() => window.__e2e.bridge.getActiveEditorValue() as string)
 
     if (after === before) {
       // Table already canonical → not a failure for this test's intent.

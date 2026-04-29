@@ -243,7 +243,7 @@ export class WindowManager {
     restoreState?: WindowState,
     options?: { showSplash?: boolean; openFiles?: string[] }
   ) {
-    const hideWindow = process.env.LEX_HIDE_WINDOW === '1'
+    const hideWindow = process.env.E2E_HIDE_WINDOW === '1'
     const stateId = restoreState?.id || randomUUID()
     const showSplash = options?.showSplash && !hideWindow
 
@@ -352,7 +352,7 @@ export class WindowManager {
   }
 
   public saveWindowState(windowId: number) {
-    if (process.env.LEX_DISABLE_PERSISTENCE === '1') return
+    if (process.env.E2E_DISABLE_PERSISTENCE === '1') return
     const entry = this.windows.get(windowId)
     if (!entry) return
 
@@ -377,7 +377,7 @@ export class WindowManager {
   }
 
   public removeWindowState(stateId: string) {
-    if (process.env.LEX_DISABLE_PERSISTENCE === '1') return
+    if (process.env.E2E_DISABLE_PERSISTENCE === '1') return
 
     const currentSettings = this.store.store
     const openWindows = currentSettings.openWindows || []
@@ -395,7 +395,7 @@ export class WindowManager {
   }
 
   public restoreWindows() {
-    if (process.env.LEX_DISABLE_PERSISTENCE === '1') {
+    if (process.env.E2E_DISABLE_PERSISTENCE === '1') {
       this.createWindow(undefined, { showSplash: true })
       return
     }

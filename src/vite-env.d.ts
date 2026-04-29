@@ -1,8 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /// <reference types="vite/client" />
 
+// Canonical E2E hooks contract — see ~/.claude/skills/electron-e2e-testing/SKILL.md.
+// Bridge is an open record so projects can add verbs without updating this type;
+// per-test typing is the test author's responsibility (cast or augment).
+interface E2EHooks {
+  ready: { app: boolean; lsp: boolean; spellcheck: boolean; [k: string]: boolean }
+  events: Array<{ type: string; ts: number; payload?: unknown }>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  bridge: Record<string, (...args: any[]) => any>
+  signal(type: string, payload?: unknown): void
+}
+
 interface Window {
-  __lexLspReady?: boolean
+  __e2e: E2EHooks
   ipcRenderer: {
     on(channel: string, func: (...args: unknown[]) => void): () => void
     off(channel: string, func: (...args: unknown[]) => void): void
@@ -101,26 +112,5 @@ interface Window {
     onShowToast: (
       callback: (type: 'success' | 'error' | 'info', message: string) => void
     ) => () => void
-  }
-  lexTest?: {
-    openFixture: (
-      fixtureName: string,
-      paneId?: string | null
-    ) => Promise<{ path: string; content: string }>
-    readFixture: (fixtureName: string) => Promise<{ path: string; content: string }>
-    getActiveEditorValue: () => string
-    setActiveEditorValue?: (value: string) => boolean
-    focusEditor?: () => boolean
-    triggerSuggest?: () => boolean
-    triggerMockDiagnostics: () => boolean
-    resetFormattingRequest?: () => void
-    getLastFormattingRequest?: () => { type: 'document' | 'range'; params: unknown } | null
-    notifyFormattingRequest?: (payload: { type: 'document' | 'range'; params: unknown }) => void
-    getMarkers?: () => unknown[]
-    isLspReady?: () => boolean
-    isSpellcheckReady?: () => boolean
-    spellcheckLanguage?: () => string | null
-    recheckSpelling?: () => boolean
-    setCursor?: (line: number, col: number) => boolean
   }
 }

@@ -12,7 +12,7 @@ import path from 'node:path'
 /** Focus the Monaco editor: click + programmatic focus via test bridge. */
 export async function focusEditor(page: Page): Promise<void> {
   await loc.editor(page).click()
-  await page.evaluate(() => (window as any).lexTest.focusEditor())
+  await page.evaluate(() => window.__e2e.bridge.focusEditor())
 }
 
 /** Focus the editor and type text. */
@@ -127,7 +127,7 @@ export async function openWorkspace(
     fs.writeFileSync(filePath, file.content)
   }
 
-  await page.evaluate(async (dirPath) => (window as any).lexTest.openFolder(dirPath), root)
+  await page.evaluate(async (dirPath) => window.__e2e.bridge.openFolder(dirPath), root)
 
   // Wait for the file tree to reflect the workspace
   await expect(loc.fileTree(page)).toBeVisible({ timeout: 15000 })

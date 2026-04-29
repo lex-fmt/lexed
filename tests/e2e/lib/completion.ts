@@ -48,9 +48,9 @@ export async function triggerCompletion(
   { timeout = 10000 } = {}
 ): Promise<void> {
   await loc.editor(page).click()
-  await page.evaluate(() => (window as any).lexTest.focusEditor())
+  await page.evaluate(() => window.__e2e.bridge.focusEditor())
   await page.keyboard.type(text)
-  await page.evaluate(() => (window as any).lexTest.triggerSuggest())
+  await page.evaluate(() => window.__e2e.bridge.triggerSuggest())
   await expect(loc.suggestWidget(page)).toBeVisible({ timeout })
 }
 

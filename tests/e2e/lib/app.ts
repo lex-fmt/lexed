@@ -11,7 +11,7 @@ import { launchApp, type AppLaunchOptions } from '../helpers'
  *   test('my test', async ({ electronApp, page }) => { ... })
  *
  * To customize launch options for a describe block:
- *   test.use({ appLaunchOptions: { env: { LEX_DISABLE_PERSISTENCE: '0' } } })
+ *   test.use({ appLaunchOptions: { env: { E2E_DISABLE_PERSISTENCE: '0' } } })
  */
 
 /** A runtime error observed in the renderer during a test. */
@@ -33,7 +33,7 @@ export type AppFixtures = {
 }
 
 const defaultAppLaunchOptions: AppLaunchOptions = {
-  env: { LEX_DISABLE_PERSISTENCE: '1' },
+  env: { E2E_DISABLE_PERSISTENCE: '1' },
 }
 
 /**
@@ -54,7 +54,7 @@ const IGNORED_ERROR_PATTERNS: ReadonlyArray<string> = [
   //   harness PR isn't blocked; track as its own bug with a
   //   minimum-repro document.
   'Invalid Semantic Tokens Data From Extension',
-  // TODO: lexed — `LEX_E2E_USE_BUILD=1` (production bundle) path
+  // TODO: lexed — `E2E_USE_BUILD=1` (production bundle) path
   //   logs `net::ERR_FILE_NOT_FOUND` in the renderer on startup,
   //   suggesting something in the built index.html references an
   //   asset that doesn't ship. Pre-existing; allowlisted so the
@@ -81,9 +81,9 @@ export const test = base.extend<AppFixtures>({
 
     // Guarantee the app is fully mounted and LSP is ready before any test runs.
     // Individual tests should never need to call waitForApp/waitForLsp.
-    const timeout = process.env.LEX_E2E_USE_BUILD === '1' ? 15000 : 10000
-    await page.waitForFunction(() => Boolean((window as any).lexTest), null, { timeout })
-    await page.waitForFunction(() => Boolean((window as any).__lexLspReady), null, { timeout })
+    const timeout = process.env.E2E_USE_BUILD === '1' ? 15000 : 10000
+    await page.waitForFunction(() => window.__e2e?.ready?.app === true, null, { timeout })
+    await page.waitForFunction(() => window.__e2e?.ready?.lsp === true, null, { timeout })
 
     await use(page)
   },

@@ -108,6 +108,12 @@ function AppContent() {
     panesRef.current = panes
   }, [panes])
 
+  // Signal app readiness for E2E tests once the AppContent tree has mounted.
+  useEffect(() => {
+    window.__e2e.ready.app = true
+    window.__e2e.signal('app:ready')
+  }, [])
+
   useEffect(() => {
     keybindingManagerRef.current?.updateOverrides(settings.keybindings)
   }, [settings.keybindings])

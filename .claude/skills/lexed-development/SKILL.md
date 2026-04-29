@@ -89,10 +89,10 @@ npm run test:unit          # Run unit tests
 ```
 
 ### Test Environment Variables
-- `LEX_DISABLE_PERSISTENCE=1` - Disable settings persistence
-- `LEX_DISABLE_SINGLE_INSTANCE_LOCK=1` - Allow multiple instances
-- `LEX_HIDE_WINDOW=1` - Hide window during tests
-- `LEX_TEST_FIXTURES` - Override fixtures directory
+- `E2E_DISABLE_PERSISTENCE=1` - Disable settings persistence
+- `E2E_DISABLE_SINGLE_INSTANCE_LOCK=1` - Allow multiple instances
+- `E2E_HIDE_WINDOW=1` - Hide window during tests
+- `E2E_FIXTURES` - Override fixtures directory
 
 ## macOS-Specific Features
 

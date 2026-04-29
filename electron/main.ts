@@ -38,7 +38,7 @@ const DEFAULT_WINDOW_BOUNDS = { width: 1200, height: 800 }
 // on startup and can otherwise blow past test timeouts for large
 // locales). Must run before electron-store instantiates its settings
 // path and before any app.getPath('userData') call.
-const userDataOverride = process.env.LEX_USER_DATA_DIR
+const userDataOverride = process.env.E2E_USER_DATA_DIR
 if (userDataOverride) {
   app.setPath('userData', path.resolve(userDataOverride))
 }
@@ -105,7 +105,7 @@ interface MenuState {
 }
 
 const resolveFixtureRoot = () => {
-  const override = process.env.LEX_TEST_FIXTURES
+  const override = process.env.E2E_FIXTURES
   if (override) {
     return path.resolve(override)
   }
@@ -294,11 +294,11 @@ function getDefaultProjectPath(): string {
 /**
  * Sets up the default project directory and copies welcome document on first launch.
  * Returns the path to the welcome file if this is first launch, null otherwise.
- * Skipped during tests (LEX_DISABLE_PERSISTENCE=1).
+ * Skipped during tests (E2E_DISABLE_PERSISTENCE=1).
  */
 async function setupFirstLaunch(): Promise<string | null> {
   // Skip first-launch setup during tests
-  if (process.env.LEX_DISABLE_PERSISTENCE === '1') {
+  if (process.env.E2E_DISABLE_PERSISTENCE === '1') {
     return null
   }
 
@@ -789,7 +789,7 @@ ipcMain.handle('folder-open', async (event) => {
 
 ipcMain.handle('get-initial-folder', async (event) => {
   // During tests, always use the welcome folder to avoid contamination from user settings
-  if (process.env.LEX_DISABLE_PERSISTENCE === '1') {
+  if (process.env.E2E_DISABLE_PERSISTENCE === '1') {
     return getWelcomeFolderPath()
   }
 
@@ -1629,7 +1629,7 @@ if (process.platform === 'win32') {
 
 // Single instance lock - ensure only one instance of the app runs
 const gotTheLock =
-  process.env.LEX_DISABLE_SINGLE_INSTANCE_LOCK === '1' ? true : app.requestSingleInstanceLock()
+  process.env.E2E_DISABLE_SINGLE_INSTANCE_LOCK === '1' ? true : app.requestSingleInstanceLock()
 
 if (!gotTheLock) {
   // Another instance is already running, quit this one

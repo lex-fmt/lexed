@@ -55,9 +55,9 @@ test.describe('Injection Highlighting', () => {
     await expect
       .poll(
         async () => {
-          const zones = (await page.evaluate(() =>
-            (window as any).lexTest?.getInjectionZones?.()
-          )) as InjectionZone[] | undefined
+          const zones = (await page.evaluate(() => window.__e2e.bridge?.getInjectionZones?.())) as
+            | InjectionZone[]
+            | undefined
           if (!zones) return 0
           const langs = new Set(zones.map((z) => z.language))
           return BUNDLED_LANGUAGES.filter((l) => langs.has(l)).length
@@ -70,7 +70,7 @@ test.describe('Injection Highlighting', () => {
       .toBe(BUNDLED_LANGUAGES.length)
 
     // Force a refresh so we don't race the debounce timer.
-    await page.evaluate(() => (window as any).lexTest.refreshInjectionHighlighter())
+    await page.evaluate(() => window.__e2e.bridge.refreshInjectionHighlighter())
 
     // Wait until ranges have materialised for *every* bundled language —
     // not just any one. Loading + parsing each WASM is async, so the
@@ -80,7 +80,7 @@ test.describe('Injection Highlighting', () => {
         async () => {
           const result = await page.evaluate(
             (bundled) => {
-              const api = (window as any).lexTest
+              const api = window.__e2e.bridge
               const zones = api.getInjectionZones() as Array<{
                 language: string
                 startRow: number
@@ -108,7 +108,7 @@ test.describe('Injection Highlighting', () => {
       .toBe(BUNDLED_LANGUAGES.length)
 
     const { zones, ranges, byCategory } = await page.evaluate(() => {
-      const api = (window as any).lexTest
+      const api = window.__e2e.bridge
       return {
         zones: api.getInjectionZones() as InjectionZone[],
         ranges: api.getInjectionRanges() as InjectionRange[],
@@ -167,7 +167,7 @@ test.describe('Injection Highlighting', () => {
       .poll(
         async () => {
           const count = await page.evaluate(() => {
-            const ranges = (window as any).lexTest?.getInjectionRanges?.() as
+            const ranges = window.__e2e.bridge?.getInjectionRanges?.() as
               | InjectionRange[]
               | undefined
             return ranges?.length ?? 0

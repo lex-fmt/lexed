@@ -4,7 +4,7 @@ import { defineConfig } from '@playwright/test'
 //
 // - `dev` (default) runs the full e2e suite against a freshly-built dev
 //   bundle. Uses globalSetup to run `npm run build` (skipped via
-//   LEX_SKIP_E2E_BUILD=1).
+//   E2E_SKIP_BUILD=1).
 // - `packaged` runs only the packaged-binary smoke test (`packaged.spec.ts`)
 //   against the electron-builder output in `release/`. Cold-start of the
 //   packaged binary is slower, especially on Windows runners, so its

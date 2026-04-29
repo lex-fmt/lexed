@@ -28,8 +28,8 @@
  * `LEX_LSP_PATH` — the packaged app must discover lexd-lsp from its
  * own bundled Resources (Contents/Resources/lexd-lsp on macOS,
  * resources/lexd-lsp on linux/win); discovering it is exactly what
- * this test verifies. It does NOT set `LEX_HIDE_WINDOW` or
- * `LEX_DISABLE_PERSISTENCE` either; the smoke test wants the renderer
+ * this test verifies. It does NOT set `E2E_HIDE_WINDOW` or
+ * `E2E_DISABLE_PERSISTENCE` either; the smoke test wants the renderer
  * actually rendering and the app able to write its first-run state.
  */
 import {
@@ -129,14 +129,14 @@ test.beforeAll(async () => {
     // - LEX_LSP_PATH: must be unset so the app's packaged-mode resolver
     //   picks up the bundled `lexd-lsp` from Resources/, which is the
     //   thing this smoke test is verifying actually works.
-    // - LEX_HIDE_WINDOW: cleared so the renderer is visible to Playwright.
-    // - LEX_DISABLE_PERSISTENCE: cleared so the app can complete first-run
+    // - E2E_HIDE_WINDOW: cleared so the renderer is visible to Playwright.
+    // - E2E_DISABLE_PERSISTENCE: cleared so the app can complete first-run
     //   initialization (writing user-data dirs) on the runner.
     env: {
       ...process.env,
       LEX_LSP_PATH: '',
-      LEX_HIDE_WINDOW: '',
-      LEX_DISABLE_PERSISTENCE: '',
+      E2E_HIDE_WINDOW: '',
+      E2E_DISABLE_PERSISTENCE: '',
     },
   })
   page = await waitForEditorWindow(app)
@@ -163,16 +163,12 @@ test('packaged app renders the editor pane', async () => {
 })
 
 test('packaged app initializes the bundled lexd-lsp', async () => {
-  // `window.__lexLspReady` is set by lexed's renderer once the LSP
+  // `window.__e2e.ready.lsp` is set by lexed's renderer once the LSP
   // server has responded to its initialize request. If this never
   // becomes true, the bundled lexd-lsp wasn't found, didn't start,
   // or its handshake failed — exactly the class of "ships but doesn't
   // work" regression this smoke test catches.
-  await page.waitForFunction(
-    () => Boolean((window as unknown as { __lexLspReady?: boolean }).__lexLspReady),
-    null,
-    { timeout: 30_000 }
-  )
+  await page.waitForFunction(() => window.__e2e?.ready?.lsp === true, null, { timeout: 30_000 })
 })
 
 test('packaged app captures a screenshot of its initial state', async () => {

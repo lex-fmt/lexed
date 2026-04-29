@@ -3,7 +3,7 @@ import { openFixture } from './helpers'
 import { focusEditor } from './lib/actions'
 
 // These tests exercise the LSP server responses exposed through the
-// test bridge's `window.lexTest.request*` helpers, which call
+// test bridge's `window.__e2e.bridge.request*` helpers, which call
 // `lspClient.sendRequest` directly. They validate the request/response
 // path and the returned data for folding ranges, document links, and
 // references on the same fixtures the editor UI uses.
@@ -21,7 +21,7 @@ test.describe('LSP providers', () => {
     await focusEditor(page)
 
     const ranges = (await page.evaluate(() =>
-      (window as any).lexTest.requestFoldingRanges()
+      window.__e2e.bridge.requestFoldingRanges()
     )) as Array<{ startLine: number; endLine: number }> | null
 
     expect(ranges).not.toBeNull()
@@ -33,9 +33,10 @@ test.describe('LSP providers', () => {
     await openFixture(page, 'table-sample.lex')
     await focusEditor(page)
 
-    const links = (await page.evaluate(() =>
-      (window as any).lexTest.requestDocumentLinks()
-    )) as Array<{ range: unknown; target?: string }> | null
+    const links = (await page.evaluate(() => window.__e2e.bridge.requestDocumentLinks())) as Array<{
+      range: unknown
+      target?: string
+    }> | null
 
     expect(links).not.toBeNull()
     expect(Array.isArray(links)).toBe(true)
@@ -53,7 +54,7 @@ test.describe('LSP providers', () => {
     // without throwing — `null` or an array are both acceptable.
     let errorMessage: string | null = null
     const refs = (await page
-      .evaluate(() => (window as any).lexTest.requestReferences(1, 1))
+      .evaluate(() => window.__e2e.bridge.requestReferences(1, 1))
       .catch((err: Error) => {
         errorMessage = err.message
         return 'threw'
