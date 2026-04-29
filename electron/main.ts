@@ -43,6 +43,17 @@ if (userDataOverride) {
   app.setPath('userData', path.resolve(userDataOverride))
 }
 
+// During E2E runs (E2E_HIDE_WINDOW=1) the renderer window is created with
+// `show: false`. Routing and second-instance handlers can still call
+// `win.focus()` / `restoreAndFocus`, which on macOS makes a hidden window
+// jump visible. Wrap focus + restore so hidden runs stay hidden.
+const E2E_HIDE_WINDOW = process.env.E2E_HIDE_WINDOW === '1'
+function restoreAndFocus(win: BrowserWindow) {
+  if (E2E_HIDE_WINDOW) return
+  if (win.isMinimized()) win.restore()
+  win.focus()
+}
+
 // Configure logging
 log.initialize()
 
@@ -479,8 +490,7 @@ async function openFilesViaRouter(filePaths: string[]): Promise<FileRouteDestina
       app.addRecentDocument(file)
       destinations.push({ filePath: file, kind: 'existingWindow', windowId })
     }
-    if (win.isMinimized()) win.restore()
-    win.focus()
+    restoreAndFocus(win)
   }
 
   for (const [root, files] of toNewWindowWithRoot) {
@@ -581,8 +591,7 @@ function openCliPaths(cliPaths: CliPaths) {
       app.addRecentDocument(filePath)
     }
     // Bring window to front
-    if (targetWin.isMinimized()) targetWin.restore()
-    targetWin.focus()
+    restoreAndFocus(targetWin)
   } else {
     // No windows exist, create a new one
     // The folder will be set via settings if provided
@@ -1652,9 +1661,7 @@ if (!gotTheLock) {
       // No paths, just focus the existing window
       const windows = windowManager.getAllWindows()
       if (windows.length > 0) {
-        const win = windows[0]
-        if (win.isMinimized()) win.restore()
-        win.focus()
+        restoreAndFocus(windows[0])
       }
     }
   })
