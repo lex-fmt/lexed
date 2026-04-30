@@ -209,7 +209,7 @@ jobs:
       # report so the failure can be debugged from the workflow run.
       - name: Upload smoke-test artifacts on failure
         if: failure() && steps.target-filter.outputs.skip == 'false'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: packaged-smoke-${{ matrix.platform }}
           path: |
@@ -304,7 +304,7 @@ jobs:
 
       - name: Upload workflow artifact (debug)
         if: ${{ steps.target-filter.outputs.skip == 'false' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lexed-${{ matrix.platform }}
           path: |
