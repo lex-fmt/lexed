@@ -43,6 +43,15 @@ if (userDataOverride) {
   app.setPath('userData', path.resolve(userDataOverride))
 }
 
+// Hide the macOS dock entry during E2E so test launches don't bounce the
+// dock and steal focus from whatever the developer is working on locally.
+// `show: false` on the BrowserWindow alone doesn't prevent the dock entry —
+// macOS registers it the moment whenReady() resolves. Must run before
+// app.whenReady().
+if (process.env.E2E_HIDE_WINDOW === '1' && process.platform === 'darwin') {
+  app.dock?.hide()
+}
+
 // During E2E runs (E2E_HIDE_WINDOW=1) the renderer window is created with
 // `show: false`. Routing and second-instance handlers can still call
 // `win.focus()` / `restoreAndFocus`, which on macOS makes a hidden window
