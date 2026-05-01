@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, nativeTheme, shell, Menu } from 'electron'
+import { app, BaseWindow, BrowserWindow, ipcMain, dialog, nativeTheme, shell, Menu } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import * as fs from 'fs/promises'
@@ -1220,8 +1220,9 @@ app.on('activate', () => {
 function createMenu() {
   const isMac = process.platform === 'darwin'
 
-  const getTargetWindow = (focusedWindow: BrowserWindow | undefined) => {
-    return focusedWindow || windowManager.getAllWindows()[0]
+  const getTargetWindow = (focusedWindow: BaseWindow | undefined): BrowserWindow | undefined => {
+    if (focusedWindow instanceof BrowserWindow) return focusedWindow
+    return windowManager.getAllWindows()[0]
   }
 
   const template: Electron.MenuItemConstructorOptions[] = [
@@ -1235,7 +1236,7 @@ function createMenu() {
               {
                 label: 'Settings...',
                 accelerator: 'CmdOrCtrl+,' as const,
-                click: (_: Electron.MenuItem, focusedWindow: BrowserWindow | undefined) =>
+                click: (_: Electron.MenuItem, focusedWindow: BaseWindow | undefined) =>
                   getTargetWindow(focusedWindow)?.webContents.send('menu-show-settings'),
               },
               { type: 'separator' as const },
@@ -1408,7 +1409,7 @@ function createMenu() {
               {
                 label: 'Settings',
                 accelerator: 'CmdOrCtrl+,' as const,
-                click: (_: Electron.MenuItem, focusedWindow: BrowserWindow | undefined) =>
+                click: (_: Electron.MenuItem, focusedWindow: BaseWindow | undefined) =>
                   getTargetWindow(focusedWindow)?.webContents.send('menu-show-settings'),
               },
             ]
@@ -1423,7 +1424,8 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+Shift+P',
           id: 'menu-preview',
           enabled: false,
-          click: (_, focusedWindow) => focusedWindow?.webContents.send('menu-preview'),
+          click: (_, focusedWindow) =>
+            getTargetWindow(focusedWindow)?.webContents.send('menu-preview'),
         },
         {
           label: 'Toggle Annotations',

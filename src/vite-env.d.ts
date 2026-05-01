@@ -7,7 +7,6 @@
 interface E2EHooks {
   ready: { app: boolean; lsp: boolean; spellcheck: boolean; [k: string]: boolean }
   events: Array<{ type: string; ts: number; payload?: unknown }>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   bridge: Record<string, (...args: any[]) => any>
   signal(type: string, payload?: unknown): void
 }

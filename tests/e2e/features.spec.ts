@@ -46,7 +46,6 @@ test.describe('LexEd Features', () => {
     // followup needed: expose an editor accessor on window.__e2e.bridge or
     // route through bridge.setSelection(line, col).
     await page.evaluate(() => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const scopedWindow = window as any
       const editor = scopedWindow.__e2e?.bridge?.editor
       if (editor && scopedWindow.monaco?.Selection) {

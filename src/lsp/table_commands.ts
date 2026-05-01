@@ -83,7 +83,7 @@ export async function navigateTableCell(
   const command = direction === 'next' ? 'lex.table.next_cell' : 'lex.table.previous_cell'
 
   pendingNav.set(editor, true)
-  let outcome: TableNavOutcome | null = null
+  let outcome: TableNavOutcome | null
   try {
     outcome = await lspClient.sendRequest<TableNavOutcome | null>('workspace/executeCommand', {
       command,
@@ -126,7 +126,7 @@ export async function formatTableAtCursor(
     return false
   }
 
-  let result: TableFormatResult | null = null
+  let result: TableFormatResult | null
   try {
     result = await lspClient.sendRequest<TableFormatResult | null>('workspace/executeCommand', {
       command: 'lex.table.format',
