@@ -48,20 +48,31 @@ def validate_canonical(canonical: dict) -> None:
     """The emitted TS hard-codes the Intensity / BackgroundKey / ColorPalette
     types. If the canonical schema grows or shrinks an intensity/background,
     the emitted TS will silently fail to typecheck. Fail loudly at generate
-    time instead, so the divergence is obvious."""
-    actual_intensities = tuple(canonical["intensities"].keys())
-    if actual_intensities != EXPECTED_INTENSITIES:
+    time instead, so the divergence is obvious.
+
+    Validation compares key sets (not key order), so a JSON formatter that
+    reorders keys won't break this. Output order is still pinned to
+    EXPECTED_INTENSITIES / EXPECTED_BACKGROUNDS in render() for stable diffs.
+    """
+    actual_intensities = set(canonical["intensities"].keys())
+    expected_intensities = set(EXPECTED_INTENSITIES)
+    if actual_intensities != expected_intensities:
+        missing = [k for k in EXPECTED_INTENSITIES if k not in actual_intensities]
+        unexpected = sorted(actual_intensities - expected_intensities)
         raise SystemExit(
-            f"FAIL: canonical intensities {list(actual_intensities)} != "
-            f"expected {list(EXPECTED_INTENSITIES)}.\n"
+            f"FAIL: canonical intensities must be exactly {list(EXPECTED_INTENSITIES)}.\n"
+            f"      Missing: {missing}; unexpected: {unexpected}.\n"
             f"      Update Intensity / ColorPalette in this generator's render() "
             f"to match comms/shared/theming/lex-theme.json, then re-run."
         )
-    actual_backgrounds = tuple(canonical.get("backgrounds", {}).keys())
-    if actual_backgrounds != EXPECTED_BACKGROUNDS:
+    actual_backgrounds = set(canonical.get("backgrounds", {}).keys())
+    expected_backgrounds = set(EXPECTED_BACKGROUNDS)
+    if actual_backgrounds != expected_backgrounds:
+        missing = [k for k in EXPECTED_BACKGROUNDS if k not in actual_backgrounds]
+        unexpected = sorted(actual_backgrounds - expected_backgrounds)
         raise SystemExit(
-            f"FAIL: canonical backgrounds {list(actual_backgrounds)} != "
-            f"expected {list(EXPECTED_BACKGROUNDS)}.\n"
+            f"FAIL: canonical backgrounds must be exactly {list(EXPECTED_BACKGROUNDS)}.\n"
+            f"      Missing: {missing}; unexpected: {unexpected}.\n"
             f"      Update BackgroundKey / ColorPalette in this generator's render() "
             f"to match comms/shared/theming/lex-theme.json, then re-run."
         )
