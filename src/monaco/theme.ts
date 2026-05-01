@@ -1,8 +1,15 @@
 import * as monaco from 'monaco-editor'
 
+import {
+  FALLBACK_PALETTES,
+  TOKEN_RULES,
+  type ColorPalette,
+  type Intensity,
+} from './theme-data'
+
 export type ThemeMode = 'dark' | 'light'
 
-type ColorKey = 'normal' | 'muted' | 'faint' | 'faintest' | 'background' | 'lineHighlight'
+type ColorKey = keyof ColorPalette | 'background' | 'lineHighlight'
 type MonacoColorPalette = Record<ColorKey, string>
 
 const CSS_COLOR_VARIABLES: Record<ColorKey, string> = {
@@ -10,24 +17,17 @@ const CSS_COLOR_VARIABLES: Record<ColorKey, string> = {
   muted: '--monaco-color-muted',
   faint: '--monaco-color-faint',
   faintest: '--monaco-color-faintest',
+  code_bg: '--monaco-color-code-bg',
   background: '--monaco-editor-background',
   lineHighlight: '--monaco-line-highlight',
 }
 
-const FALLBACK_COLORS: Record<ThemeMode, MonacoColorPalette> = {
+const FALLBACK_CHROME: Record<ThemeMode, { background: string; lineHighlight: string }> = {
   light: {
-    normal: '#000000',
-    muted: '#808080',
-    faint: '#b3b3b3',
-    faintest: '#cacaca',
     background: '#ffffff',
     lineHighlight: '#f6f6f6',
   },
   dark: {
-    normal: '#e0e0e0',
-    muted: '#888888',
-    faint: '#666666',
-    faintest: '#555555',
     background: '#0c0c0cec',
     lineHighlight: '#181818ff',
   },
@@ -70,17 +70,20 @@ function resolveStylesForMode(mode: ThemeMode): StylesResult {
 }
 
 function readColorsFromCss(mode: ThemeMode): MonacoColorPalette {
-  const fallback = FALLBACK_COLORS[mode]
+  const fallback: MonacoColorPalette = {
+    ...FALLBACK_PALETTES[mode],
+    ...FALLBACK_CHROME[mode],
+  }
   const stylesResult = resolveStylesForMode(mode)
 
   if (!stylesResult) {
-    return { ...fallback }
+    return fallback
   }
 
   const { styles, cleanup } = stylesResult
   const colors: MonacoColorPalette = { ...fallback }
 
-  ;(Object.keys(CSS_COLOR_VARIABLES) as Array<keyof MonacoColorPalette>).forEach((key) => {
+  ;(Object.keys(CSS_COLOR_VARIABLES) as ColorKey[]).forEach((key) => {
     const cssVar = CSS_COLOR_VARIABLES[key]
     const value = styles.getPropertyValue(cssVar).trim()
     if (value) {
@@ -93,149 +96,26 @@ function readColorsFromCss(mode: ThemeMode): MonacoColorPalette {
   return colors
 }
 
+function stripHash(value: string): string {
+  return value.startsWith('#') ? value.slice(1) : value
+}
+
 function defineTheme(mode: ThemeMode) {
   const colors = readColorsFromCss(mode)
   const baseTheme = mode === 'dark' ? 'vs-dark' : 'vs'
   const themeName = `${THEME_NAME}-${mode}`
 
+  const intensityColor = (intensity: Intensity): string => stripHash(colors[intensity])
+
   monaco.editor.defineTheme(themeName, {
     base: baseTheme,
     inherit: true,
-    rules: [
-      {
-        token: 'SessionTitleText',
-        foreground: colors.normal.replace('#', ''),
-        fontStyle: 'bold',
-      },
-      {
-        token: 'DefinitionSubject',
-        foreground: colors.normal.replace('#', ''),
-        fontStyle: 'italic',
-      },
-      {
-        token: 'DefinitionContent',
-        foreground: colors.normal.replace('#', ''),
-      },
-      {
-        token: 'InlineStrong',
-        foreground: colors.normal.replace('#', ''),
-        fontStyle: 'bold',
-      },
-      {
-        token: 'InlineEmphasis',
-        foreground: colors.normal.replace('#', ''),
-        fontStyle: 'italic',
-      },
-      { token: 'InlineCode', foreground: colors.normal.replace('#', '') },
-      {
-        token: 'InlineMath',
-        foreground: colors.normal.replace('#', ''),
-        fontStyle: 'italic',
-      },
-      {
-        token: 'VerbatimContent',
-        foreground: colors.normal.replace('#', ''),
-      },
-      { token: 'ListItemText', foreground: colors.normal.replace('#', '') },
-      {
-        token: 'DocumentTitle',
-        foreground: colors.normal.replace('#', ''),
-        fontStyle: 'underline',
-      },
-      {
-        token: 'SessionMarker',
-        foreground: colors.muted.replace('#', ''),
-        fontStyle: 'italic',
-      },
-      {
-        token: 'ListMarker',
-        foreground: colors.muted.replace('#', ''),
-        fontStyle: 'italic',
-      },
-      {
-        token: 'Reference',
-        foreground: colors.muted.replace('#', ''),
-        fontStyle: 'underline',
-      },
-      {
-        token: 'ReferenceCitation',
-        foreground: colors.muted.replace('#', ''),
-        fontStyle: 'underline',
-      },
-      {
-        token: 'ReferenceFootnote',
-        foreground: colors.muted.replace('#', ''),
-        fontStyle: 'underline',
-      },
-      { token: 'AnnotationLabel', foreground: colors.faint.replace('#', '') },
-      {
-        token: 'AnnotationParameter',
-        foreground: colors.faint.replace('#', ''),
-      },
-      {
-        token: 'AnnotationContent',
-        foreground: colors.faint.replace('#', ''),
-      },
-      { token: 'VerbatimSubject', foreground: colors.faint.replace('#', '') },
-      {
-        token: 'VerbatimLanguage',
-        foreground: colors.faint.replace('#', ''),
-      },
-      {
-        token: 'VerbatimAttribute',
-        foreground: colors.faint.replace('#', ''),
-      },
-      {
-        token: 'InlineMarker_strong_start',
-        foreground: colors.faintest.replace('#', ''),
-        fontStyle: 'italic',
-      },
-      {
-        token: 'InlineMarker_strong_end',
-        foreground: colors.faintest.replace('#', ''),
-        fontStyle: 'italic',
-      },
-      {
-        token: 'InlineMarker_emphasis_start',
-        foreground: colors.faintest.replace('#', ''),
-        fontStyle: 'italic',
-      },
-      {
-        token: 'InlineMarker_emphasis_end',
-        foreground: colors.faintest.replace('#', ''),
-        fontStyle: 'italic',
-      },
-      {
-        token: 'InlineMarker_code_start',
-        foreground: colors.faintest.replace('#', ''),
-        fontStyle: 'italic',
-      },
-      {
-        token: 'InlineMarker_code_end',
-        foreground: colors.faintest.replace('#', ''),
-        fontStyle: 'italic',
-      },
-      {
-        token: 'InlineMarker_math_start',
-        foreground: colors.faintest.replace('#', ''),
-        fontStyle: 'italic',
-      },
-      {
-        token: 'InlineMarker_math_end',
-        foreground: colors.faintest.replace('#', ''),
-        fontStyle: 'italic',
-      },
-      {
-        token: 'InlineMarker_ref_start',
-        foreground: colors.faintest.replace('#', ''),
-        fontStyle: 'italic',
-      },
-      {
-        token: 'InlineMarker_ref_end',
-        foreground: colors.faintest.replace('#', ''),
-        fontStyle: 'italic',
-      },
-    ],
+    rules: TOKEN_RULES.map((rule) => ({
+      token: rule.token,
+      foreground: intensityColor(rule.intensity),
+      ...(rule.fontStyle ? { fontStyle: rule.fontStyle } : {}),
+      ...(rule.background ? { background: stripHash(colors[rule.background]) } : {}),
+    })),
     colors: {
       'editor.foreground': colors.normal,
       'editor.background': colors.background,
