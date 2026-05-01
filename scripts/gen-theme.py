@@ -40,17 +40,45 @@ def font_style(token: dict) -> str | None:
     return " ".join(styles) if styles else None
 
 
+EXPECTED_INTENSITIES = ("normal", "muted", "faint", "faintest")
+EXPECTED_BACKGROUNDS = ("code_bg",)
+
+
+def validate_canonical(canonical: dict) -> None:
+    """The emitted TS hard-codes the Intensity / BackgroundKey / ColorPalette
+    types. If the canonical schema grows or shrinks an intensity/background,
+    the emitted TS will silently fail to typecheck. Fail loudly at generate
+    time instead, so the divergence is obvious."""
+    actual_intensities = tuple(canonical["intensities"].keys())
+    if actual_intensities != EXPECTED_INTENSITIES:
+        raise SystemExit(
+            f"FAIL: canonical intensities {list(actual_intensities)} != "
+            f"expected {list(EXPECTED_INTENSITIES)}.\n"
+            f"      Update Intensity / ColorPalette in this generator's render() "
+            f"to match comms/shared/theming/lex-theme.json, then re-run."
+        )
+    actual_backgrounds = tuple(canonical.get("backgrounds", {}).keys())
+    if actual_backgrounds != EXPECTED_BACKGROUNDS:
+        raise SystemExit(
+            f"FAIL: canonical backgrounds {list(actual_backgrounds)} != "
+            f"expected {list(EXPECTED_BACKGROUNDS)}.\n"
+            f"      Update BackgroundKey / ColorPalette in this generator's render() "
+            f"to match comms/shared/theming/lex-theme.json, then re-run."
+        )
+
+
 def render(canonical: dict) -> str:
+    validate_canonical(canonical)
     intensities = canonical["intensities"]
     backgrounds = canonical.get("backgrounds", {})
     tokens = canonical["tokens"]
 
     def palette_block(mode: str) -> str:
         lines = []
-        for name in ("normal", "muted", "faint", "faintest"):
+        for name in EXPECTED_INTENSITIES:
             lines.append(f"    {name}: {s(intensities[name][mode])},")
-        for bg_name, bg_values in backgrounds.items():
-            lines.append(f"    {bg_name}: {s(bg_values[mode])},")
+        for bg_name in EXPECTED_BACKGROUNDS:
+            lines.append(f"    {bg_name}: {s(backgrounds[bg_name][mode])},")
         return "\n".join(lines)
 
     rule_lines: list[str] = []
@@ -114,7 +142,7 @@ def main() -> int:
         )
         return 1
 
-    canonical = json.loads(CANONICAL.read_text())
+    canonical = json.loads(CANONICAL.read_text(encoding="utf-8"))
     expected = render(canonical)
     TARGET.parent.mkdir(parents=True, exist_ok=True)
 
@@ -122,7 +150,9 @@ def main() -> int:
         if not TARGET.exists():
             print(f"FAIL: {TARGET.relative_to(REPO_DIR)} missing", file=sys.stderr)
             return 1
-        actual = TARGET.read_text()
+        # Normalize CRLF→LF so a Windows checkout that rewrote line endings
+        # doesn't false-fail this comparison.
+        actual = TARGET.read_text(encoding="utf-8").replace("\r\n", "\n")
         if actual != expected:
             print(
                 f"FAIL: {TARGET.relative_to(REPO_DIR)} out of sync.\n"
@@ -133,7 +163,7 @@ def main() -> int:
         print(f"  ✓ {TARGET.relative_to(REPO_DIR)} matches generator")
         return 0
 
-    TARGET.write_text(expected)
+    TARGET.write_text(expected, encoding="utf-8")
     print(f"wrote {TARGET.relative_to(REPO_DIR)}")
     return 0
 
