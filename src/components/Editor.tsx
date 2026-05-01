@@ -71,7 +71,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     }
     notifyLexTest({ type: 'document', params })
 
-    let edits: LspTextEdit[] | null = null
+    let edits: LspTextEdit[] | null
     try {
       edits = await lspClient.sendRequest('textDocument/formatting', params)
     } catch (error) {
