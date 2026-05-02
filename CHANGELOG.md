@@ -1,11 +1,19 @@
 # Changelog
 
-## Unreleased
+## v0.7.1 (2026-05-02)
 
 ### Changed
 
 - Monaco syntax-highlighting palette and token rules are now generated from `comms/shared/theming/lex-theme.json` (the cross-editor canonical source) via `scripts/gen-theme.py` → `src/monaco/theme-data.ts`. `theme:check` runs in `pretypecheck`/`prebuild` so stale generated output fails CI. Picks up four canonicalization fixes in the process: `DocumentTitle` gains underline, `DocumentSubtitle` and `ReferenceAnnotation` are now declared, `VerbatimContent` gets the `code_bg` background. (#68)
-- Theme colors are now resolved at generate time, matching the strategy already used by vscode and zed: `theme-data.ts` exports per-mode `PALETTE` and `RULES` with absolute hex values pre-resolved from the canonical intensity/background tiers. Removed the runtime CSS-variable resolution path from `src/monaco/theme.ts` — the `--monaco-color-*` variables it tried to read were never defined anywhere in the codebase, so `FALLBACK_PALETTES` was always the effective source. The `Intensity`/`BackgroundKey` types and the hidden-probe-div machinery are gone with it.
+- Theme colors are now resolved at generate time, matching the strategy already used by vscode and zed: `theme-data.ts` exports per-mode `PALETTE` and `RULES` with absolute hex values pre-resolved from the canonical intensity/background tiers. Removed the runtime CSS-variable resolution path from `src/monaco/theme.ts` — the `--monaco-color-*` variables it tried to read were never defined anywhere in the codebase, so `FALLBACK_PALETTES` was always the effective source. The `Intensity`/`BackgroundKey` types and the hidden-probe-div machinery are gone with it. (#71)
+- Bumped `comms` submodule to v0.15.0 (canonical Lex monochrome theme + EDITORS.lex parity reference + `:: notes ::` annotation samples).
+- Bumped `tree-sitter` pin from v0.10.0 to v0.10.1 in `shared/lex-deps.json`. Picks up the comms catch-up and the new quarterly grammar-bump workflow; tree-sitter v0.10.1 is a CI/comms patch with no grammar changes.
+- Repo onboarded to the canonical lex-fmt CI standardization: `.github/CODEOWNERS`, `.github/workflows/copilot-review.yml`, dependabot config grouping + auto-merge for patch/minor, and a `gh pr merge --auto` retry to handle the CI-race timing window. (#33, #34, #51, #67)
+
+### Fixed
+
+- macOS Electron e2e tests: bundle the main process as CommonJS to unblock e2e test runs that broke after the Electron upgrade. (#70)
+- macOS dock icon: hidden when `E2E_HIDE_WINDOW=1` so e2e test runs don't pollute the dock. (#35)
 
 ## v0.6.7 (2026-04-25)
 
