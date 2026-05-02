@@ -25,7 +25,13 @@ import {
   type OpenWindowState,
   type RecentRoot,
 } from './file-routing'
-import { setWindowFolder, setWindowPaneLayout, upsertWindowState } from './window-state'
+import {
+  appendFilesToWindowPaneLayout,
+  dedupePreservingOrder,
+  setWindowFolder,
+  setWindowPaneLayout,
+  upsertWindowState,
+} from './window-state'
 import { randomUUID } from 'crypto'
 
 const DEFAULT_WINDOW_BOUNDS = { width: 1200, height: 800 }
@@ -496,6 +502,15 @@ async function openFilesViaRouter(filePaths: string[]): Promise<FileRouteDestina
   for (const [windowId, files] of toExistingWindow) {
     const win = BrowserWindow.fromId(windowId)
     if (!win || win.isDestroyed()) continue
+    // Seed the files into the window's persisted pane layout. On a cold start
+    // the window may have been created by restoreWindows() but its renderer
+    // hasn't yet registered the `open-file-path` IPC listener, so the send()
+    // below would be silently dropped. Seeding first means the renderer picks
+    // up the file via `get-open-tabs` on mount; warm windows still respond to
+    // the IPC immediately, and the renderer dedupes by path so we don't
+    // double-open.
+    const stateId = windowManager.getWindowStateId(windowId)
+    if (stateId) seedFilesIntoExistingWindow(stateId, files)
     for (const file of files) {
       win.webContents.send('open-file-path', file)
       app.addRecentDocument(file)
@@ -552,13 +567,17 @@ async function openFilesViaRouter(filePaths: string[]): Promise<FileRouteDestina
  * The renderer loads this state via `get-open-tabs` on mount — deterministic.
  */
 function seedNewWindowState(stateId: string, files: string[], root: string | null): void {
+  // Dedupe: hydration via `get-open-tabs` does not pass through the
+  // renderer's pane-level dedupe, so repeated argv entries (`lexed a a`)
+  // would otherwise materialize as duplicate tabs.
+  const tabs = dedupePreservingOrder(files)
   const paneId = randomUUID()
   const rowId = randomUUID()
   const paneLayout = [
     {
       id: paneId,
-      tabs: files,
-      activeTab: files[files.length - 1] ?? null,
+      tabs,
+      activeTab: tabs[tabs.length - 1] ?? null,
     },
   ]
   const paneRows = [{ id: rowId, paneIds: [paneId] }]
@@ -579,6 +598,30 @@ function seedNewWindowState(stateId: string, files: string[], root: string | nul
 }
 
 /**
+ * Seed `files` into an already-persisted window's pane layout so a freshly
+ * restored renderer picks them up via `get-open-tabs` on mount. Sister to
+ * `seedNewWindowState`; safe to call alongside an `open-file-path` IPC send
+ * because the renderer dedupes tabs by path.
+ *
+ * Falls back to `seedNewWindowState` semantics when the store has no entry
+ * for `stateId` yet — e.g. a brand-new window whose renderer hasn't yet
+ * pushed `set-open-tabs` — so cold-start file routing into a freshly created
+ * window still seeds the pane layout instead of relying on the racy IPC.
+ */
+function seedFilesIntoExistingWindow(stateId: string, files: string[]): void {
+  if (files.length === 0) return
+  const openWindows = store.store.openWindows ?? []
+  const idx = openWindows.findIndex((w) => w.id === stateId)
+  if (idx < 0) {
+    seedNewWindowState(stateId, files, null)
+    return
+  }
+  const updated = openWindows.slice()
+  updated[idx] = appendFilesToWindowPaneLayout(openWindows[idx], files)
+  store.set('openWindows', updated)
+}
+
+/**
  * Open paths from CLI arguments.
  * Handles both files and folders.
  */
@@ -596,7 +639,12 @@ function openCliPaths(cliPaths: CliPaths) {
     if (folder) {
       targetWin.webContents.send('open-folder-path', folder)
     }
-    // Then open files
+    // Then open files (seed first so a still-loading renderer picks them up
+    // via `get-open-tabs`; warm windows respond to the IPC immediately).
+    if (files.length > 0) {
+      const stateId = windowManager.getWindowStateId(targetWin.id)
+      if (stateId) seedFilesIntoExistingWindow(stateId, files)
+    }
     for (const filePath of files) {
       targetWin.webContents.send('open-file-path', filePath)
       app.addRecentDocument(filePath)
@@ -604,12 +652,24 @@ function openCliPaths(cliPaths: CliPaths) {
     // Bring window to front
     restoreAndFocus(targetWin)
   } else {
-    // No windows exist, create a new one
-    // The folder will be set via settings if provided
+    // No windows exist, create a new one with files seeded into its
+    // persisted state — `did-finish-load → send` is racy on cold start.
     if (folder) {
       store.set('lastFolder', folder)
     }
-    windowManager.createWindow(undefined, { showSplash: true, openFiles: files })
+    const newStateId = randomUUID()
+    if (files.length > 0) {
+      seedNewWindowState(newStateId, files, folder ?? null)
+    }
+    windowManager.createWindow(
+      {
+        id: newStateId,
+        width: DEFAULT_WINDOW_BOUNDS.width,
+        height: DEFAULT_WINDOW_BOUNDS.height,
+        ...(folder ? { lastFolder: folder } : {}),
+      },
+      { showSplash: true }
+    )
   }
 }
 
@@ -1774,21 +1834,45 @@ if (!gotTheLock) {
     // Handle first launch setup (create Documents/LexEd and copy welcome doc)
     const welcomeFilePath = await setupFirstLaunch()
 
-    // Handle paths passed via command line on initial launch (CLI support)
+    // Handle paths passed via command line on initial launch (CLI support).
+    // Files are seeded into the window's persisted state so the renderer picks
+    // them up via `get-open-tabs` on mount — `did-finish-load → send` is racy
+    // on cold start.
     const cliPaths = extractPathsFromArgv(process.argv)
     if (cliPaths.files.length > 0 || cliPaths.folder) {
-      // CLI invocation with paths
       if (cliPaths.folder) {
         store.set('lastFolder', cliPaths.folder)
         recordRecentRoot(cliPaths.folder)
       }
-      windowManager.createWindow(undefined, { showSplash: true, openFiles: cliPaths.files })
+      const newStateId = randomUUID()
+      if (cliPaths.files.length > 0) {
+        seedNewWindowState(newStateId, cliPaths.files, cliPaths.folder ?? null)
+      }
+      windowManager.createWindow(
+        {
+          id: newStateId,
+          width: DEFAULT_WINDOW_BOUNDS.width,
+          height: DEFAULT_WINDOW_BOUNDS.height,
+          ...(cliPaths.folder ? { lastFolder: cliPaths.folder } : {}),
+        },
+        { showSplash: true }
+      )
     } else if (welcomeFilePath) {
       // First launch: set the LexEd folder as workspace and open welcome file
       const projectPath = getDefaultProjectPath()
       store.set('lastFolder', projectPath)
       recordRecentRoot(projectPath)
-      windowManager.createWindow(undefined, { showSplash: true, openFiles: [welcomeFilePath] })
+      const newStateId = randomUUID()
+      seedNewWindowState(newStateId, [welcomeFilePath], projectPath)
+      windowManager.createWindow(
+        {
+          id: newStateId,
+          width: DEFAULT_WINDOW_BOUNDS.width,
+          height: DEFAULT_WINDOW_BOUNDS.height,
+          lastFolder: projectPath,
+        },
+        { showSplash: true }
+      )
     } else {
       windowManager.restoreWindows()
     }

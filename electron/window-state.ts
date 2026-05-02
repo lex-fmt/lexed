@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import type { PaneLayoutSettings, PaneRowLayout, WindowState } from './window-manager'
 
 /**
@@ -105,4 +106,81 @@ export function setWindowPaneLayout(
       activePaneId,
     }
   )
+}
+
+/**
+ * Append `files` to the persisted pane layout for `state`, deduplicating tabs
+ * by path and keeping the last requested file as the active tab.
+ *
+ * Used by the file router to seed an existing window's state before the
+ * renderer has finished mounting on a cold start. Without this, the
+ * `open-file-path` IPC fires before the renderer registers its listener and
+ * the file is silently dropped (Finder cold-open regression).
+ *
+ * Idempotent: re-seeding the same files only updates `activeTab`.
+ */
+export function appendFilesToWindowPaneLayout(state: WindowState, files: string[]): WindowState {
+  if (files.length === 0) return state
+
+  const existingPanes = state.paneLayout ?? []
+  const existingRows = state.paneRows ?? []
+
+  if (existingPanes.length === 0) {
+    const paneId = randomUUID()
+    const rowId = randomUUID()
+    return {
+      ...state,
+      paneLayout: [
+        {
+          id: paneId,
+          tabs: dedupePreservingOrder(files),
+          activeTab: files[files.length - 1] ?? null,
+        },
+      ],
+      paneRows: [{ id: rowId, paneIds: [paneId] }],
+      activePaneId: paneId,
+    }
+  }
+
+  const targetPaneId =
+    state.activePaneId && existingPanes.some((p) => p.id === state.activePaneId)
+      ? state.activePaneId
+      : existingPanes[0].id
+
+  const newPanes: PaneLayoutSettings[] = existingPanes.map((pane) => {
+    if (pane.id !== targetPaneId) return pane
+    const seen = new Set(pane.tabs)
+    const tabs = pane.tabs.slice()
+    for (const f of files) {
+      if (!seen.has(f)) {
+        tabs.push(f)
+        seen.add(f)
+      }
+    }
+    return { ...pane, tabs, activeTab: files[files.length - 1] }
+  })
+
+  const rowsCoverTarget = existingRows.some((row) => row.paneIds.includes(targetPaneId))
+  const newRows: PaneRowLayout[] = rowsCoverTarget
+    ? existingRows
+    : [{ id: randomUUID(), paneIds: [targetPaneId] }, ...existingRows]
+
+  return {
+    ...state,
+    paneLayout: newPanes,
+    paneRows: newRows,
+    activePaneId: targetPaneId,
+  }
+}
+
+export function dedupePreservingOrder(items: string[]): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const item of items) {
+    if (!seen.has(item)) {
+      seen.add(item)
+      out.push(item)
+    }
+  }
+  return out
 }
