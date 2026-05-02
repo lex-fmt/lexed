@@ -1,9 +1,12 @@
 import { app, BrowserWindow, nativeTheme } from 'electron'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { readFileSync } from 'node:fs'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+// __dirname is the CJS built-in (main process bundles to .cjs). The
+// previous `path.dirname(fileURLToPath(import.meta.url))` workaround
+// was for ESM mode; it throws under CJS because import.meta.url is
+// undefined. See lex-fmt/lexed#69.
+
 import { randomUUID } from 'crypto'
 import { LspManager } from './lsp-manager'
 import Store from 'electron-store'

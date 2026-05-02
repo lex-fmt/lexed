@@ -103,7 +103,7 @@
     "type": "git",
     "url": "https://github.com/lex-fmt/lexed.git"
   },
-  "main": "dist-electron/main.js",
+  "main": "dist-electron/main.cjs",
   "build": {
     "publish": {
       "provider": "github",
