@@ -1,5 +1,4 @@
 import { app, BaseWindow, BrowserWindow, ipcMain, dialog, nativeTheme, shell, Menu } from 'electron'
-import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import * as fs from 'fs/promises'
 import * as fsSync from 'fs'
@@ -94,7 +93,10 @@ log.info('Logging initialised', {
 // Optional: Catch all unhandled errors
 log.errorHandler.startCatching()
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+// Note: __dirname is the CJS built-in here; vite-plugin-electron emits
+// dist-electron/main.cjs in CommonJS format so the runtime provides it.
+// The previous `path.dirname(fileURLToPath(import.meta.url))` workaround
+// was for ESM mode and would throw under CJS (import.meta.url is undefined).
 
 type ThemeMode = 'dark' | 'light'
 
