@@ -4,7 +4,8 @@
 
 ### Changed
 
-- Monaco syntax-highlighting palette and token rules are now generated from `comms/shared/theming/lex-theme.json` (the cross-editor canonical source) via `scripts/gen-theme.py` → `src/monaco/theme-data.ts`. The CSS-variable live-switch path is preserved; generated values are the fallback. `theme:check` runs in `pretypecheck`/`prebuild` so stale generated output fails CI. Picks up four canonicalization fixes in the process: `DocumentTitle` gains underline, `DocumentSubtitle` and `ReferenceAnnotation` are now declared, `VerbatimContent` gets the `code_bg` background. (#68)
+- Monaco syntax-highlighting palette and token rules are now generated from `comms/shared/theming/lex-theme.json` (the cross-editor canonical source) via `scripts/gen-theme.py` → `src/monaco/theme-data.ts`. `theme:check` runs in `pretypecheck`/`prebuild` so stale generated output fails CI. Picks up four canonicalization fixes in the process: `DocumentTitle` gains underline, `DocumentSubtitle` and `ReferenceAnnotation` are now declared, `VerbatimContent` gets the `code_bg` background. (#68)
+- Theme colors are now resolved at generate time, matching the strategy already used by vscode and zed: `theme-data.ts` exports per-mode `PALETTE` and `RULES` with absolute hex values pre-resolved from the canonical intensity/background tiers. Removed the runtime CSS-variable resolution path from `src/monaco/theme.ts` — the `--monaco-color-*` variables it tried to read were never defined anywhere in the codebase, so `FALLBACK_PALETTES` was always the effective source. The `Intensity`/`BackgroundKey` types and the hidden-probe-div machinery are gone with it.
 
 ## v0.6.7 (2026-04-25)
 
