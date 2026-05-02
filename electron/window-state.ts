@@ -115,7 +115,7 @@ export function setWindowPaneLayout(
  * Used by the file router to seed an existing window's state before the
  * renderer has finished mounting on a cold start. Without this, the
  * `open-file-path` IPC fires before the renderer registers its listener and
- * the file is silently dropped (see lexed#? — Finder cold-open regression).
+ * the file is silently dropped (Finder cold-open regression).
  *
  * Idempotent: re-seeding the same files only updates `activeTab`.
  */
@@ -173,7 +173,7 @@ export function appendFilesToWindowPaneLayout(state: WindowState, files: string[
   }
 }
 
-function dedupePreservingOrder(items: string[]): string[] {
+export function dedupePreservingOrder(items: string[]): string[] {
   const seen = new Set<string>()
   const out: string[] = []
   for (const item of items) {

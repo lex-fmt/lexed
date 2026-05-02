@@ -27,6 +27,7 @@ import {
 } from './file-routing'
 import {
   appendFilesToWindowPaneLayout,
+  dedupePreservingOrder,
   setWindowFolder,
   setWindowPaneLayout,
   upsertWindowState,
@@ -566,13 +567,17 @@ async function openFilesViaRouter(filePaths: string[]): Promise<FileRouteDestina
  * The renderer loads this state via `get-open-tabs` on mount — deterministic.
  */
 function seedNewWindowState(stateId: string, files: string[], root: string | null): void {
+  // Dedupe: hydration via `get-open-tabs` does not pass through the
+  // renderer's pane-level dedupe, so repeated argv entries (`lexed a a`)
+  // would otherwise materialize as duplicate tabs.
+  const tabs = dedupePreservingOrder(files)
   const paneId = randomUUID()
   const rowId = randomUUID()
   const paneLayout = [
     {
       id: paneId,
-      tabs: files,
-      activeTab: files[files.length - 1] ?? null,
+      tabs,
+      activeTab: tabs[tabs.length - 1] ?? null,
     },
   ]
   const paneRows = [{ id: rowId, paneIds: [paneId] }]
@@ -597,12 +602,20 @@ function seedNewWindowState(stateId: string, files: string[], root: string | nul
  * restored renderer picks them up via `get-open-tabs` on mount. Sister to
  * `seedNewWindowState`; safe to call alongside an `open-file-path` IPC send
  * because the renderer dedupes tabs by path.
+ *
+ * Falls back to `seedNewWindowState` semantics when the store has no entry
+ * for `stateId` yet — e.g. a brand-new window whose renderer hasn't yet
+ * pushed `set-open-tabs` — so cold-start file routing into a freshly created
+ * window still seeds the pane layout instead of relying on the racy IPC.
  */
 function seedFilesIntoExistingWindow(stateId: string, files: string[]): void {
   if (files.length === 0) return
   const openWindows = store.store.openWindows ?? []
   const idx = openWindows.findIndex((w) => w.id === stateId)
-  if (idx < 0) return
+  if (idx < 0) {
+    seedNewWindowState(stateId, files, null)
+    return
+  }
   const updated = openWindows.slice()
   updated[idx] = appendFilesToWindowPaneLayout(openWindows[idx], files)
   store.set('openWindows', updated)

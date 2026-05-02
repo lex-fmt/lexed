@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   appendFilesToWindowPaneLayout,
+  dedupePreservingOrder,
   upsertWindowState,
   mergeBounds,
   setWindowFolder,
@@ -224,6 +225,16 @@ describe('appendFilesToWindowPaneLayout', () => {
     expect(result.lastFolder).toBe('/docs')
   })
 
+  it('dedupes duplicate paths within a single seed for a fresh layout', () => {
+    const result = appendFilesToWindowPaneLayout(baseState(), [
+      '/docs/a.lex',
+      '/docs/a.lex',
+      '/docs/b.lex',
+    ])
+    expect(result.paneLayout?.[0].tabs).toEqual(['/docs/a.lex', '/docs/b.lex'])
+    expect(result.paneLayout?.[0].activeTab).toBe('/docs/b.lex')
+  })
+
   it('appends to the active pane and updates activeTab', () => {
     const state: WindowState = {
       ...baseState(),
@@ -315,5 +326,19 @@ describe('appendFilesToWindowPaneLayout', () => {
     expect(result.height).toBe(768)
     expect(result.isMaximized).toBe(true)
     expect(result.lastFolder).toBe('/projects/x')
+  })
+})
+
+describe('dedupePreservingOrder', () => {
+  it('returns an empty array unchanged', () => {
+    expect(dedupePreservingOrder([])).toEqual([])
+  })
+
+  it('preserves first occurrence and drops later duplicates', () => {
+    expect(dedupePreservingOrder(['a', 'b', 'a', 'c', 'b'])).toEqual(['a', 'b', 'c'])
+  })
+
+  it('returns an array with all unique items unchanged', () => {
+    expect(dedupePreservingOrder(['x', 'y', 'z'])).toEqual(['x', 'y', 'z'])
   })
 })
