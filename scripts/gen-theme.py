@@ -50,10 +50,13 @@ EXPECTED_BACKGROUNDS = ("code_bg",)
 
 
 def validate_canonical(canonical: dict) -> None:
-    """The emitted TS hard-codes the Intensity / BackgroundKey / ColorPalette
-    types. If the canonical schema grows or shrinks an intensity/background,
-    the emitted TS will silently fail to typecheck. Fail loudly at generate
-    time instead, so the divergence is obvious.
+    """The emitted TS hard-codes the `ColorPalette` interface fields and
+    pre-resolves every entry of `PALETTE` / `RULES` against the expected
+    intensity and background keys. If the canonical schema grows or
+    shrinks a tier, the generator would silently emit malformed TS (a
+    KeyError mid-render, or a `ColorPalette` whose declared fields no
+    longer match what's emitted). Fail loudly here instead, so the
+    divergence surfaces at generate time with a clear message.
 
     Validation compares key sets (not key order), so a JSON formatter that
     reorders keys won't break this. Output order is still pinned to
@@ -67,8 +70,9 @@ def validate_canonical(canonical: dict) -> None:
         raise SystemExit(
             f"FAIL: canonical intensities must be exactly {list(EXPECTED_INTENSITIES)}.\n"
             f"      Missing: {missing}; unexpected: {unexpected}.\n"
-            f"      Update Intensity / ColorPalette in this generator's render() "
-            f"to match comms/shared/theming/lex-theme.json, then re-run."
+            f"      Update EXPECTED_INTENSITIES and the emitted ColorPalette "
+            f"interface in this generator's render() to match "
+            f"comms/shared/theming/lex-theme.json, then re-run."
         )
     actual_backgrounds = set(canonical.get("backgrounds", {}).keys())
     expected_backgrounds = set(EXPECTED_BACKGROUNDS)
@@ -78,8 +82,9 @@ def validate_canonical(canonical: dict) -> None:
         raise SystemExit(
             f"FAIL: canonical backgrounds must be exactly {list(EXPECTED_BACKGROUNDS)}.\n"
             f"      Missing: {missing}; unexpected: {unexpected}.\n"
-            f"      Update BackgroundKey / ColorPalette in this generator's render() "
-            f"to match comms/shared/theming/lex-theme.json, then re-run."
+            f"      Update EXPECTED_BACKGROUNDS and the emitted ColorPalette "
+            f"interface in this generator's render() to match "
+            f"comms/shared/theming/lex-theme.json, then re-run."
         )
 
 
