@@ -2,18 +2,19 @@
 """Generate src/monaco/theme-data.ts from the canonical theme data in
 `comms/shared/theming/lex-theme.json`.
 
-Emits two structures:
+Emits two structures, both pre-resolved per mode at generate time:
 
-- FALLBACK_PALETTES: the 4 intensity tiers + code_bg, for both modes,
-  used when CSS variables cannot be read (SSR, before document.body).
-- TOKEN_RULES: the token → {intensity, fontStyle?, background?} map.
-  The runtime in `theme.ts` resolves the intensity / background
-  references against the live palette (CSS vars first, fallback
-  otherwise) when defining the Monaco theme.
+- PALETTE: the 4 intensity tiers + code_bg, for each mode. Used by the
+  runtime to look up editor-chrome colors (line numbers etc.) that
+  reference an intensity tier.
+- RULES: per-mode token rule list. Each entry carries already-resolved
+  `foreground` (and optional `background`) hex strings in Monaco's
+  no-`#` form, ready to drop straight into `monaco.editor.defineTheme`'s
+  `rules`.
 
-Splitting structure (here) from color values (resolved at runtime)
-preserves the existing live-CSS-variable behavior while letting the
-generator mirror the canonical schema 1:1.
+Splitting per mode (rather than carrying intensity references the
+runtime resolves) matches how every other editor in the workspace
+ships their theme: canonical → absolute hex at generate time.
 
 Output style matches lexed's prettier config (no semicolons, single
 quotes, tabWidth=2). Run after editing the canonical file. The npm
@@ -40,15 +41,22 @@ def font_style(token: dict) -> str | None:
     return " ".join(styles) if styles else None
 
 
+def strip_hash(value: str) -> str:
+    return value[1:] if value.startswith("#") else value
+
+
 EXPECTED_INTENSITIES = ("normal", "muted", "faint", "faintest")
 EXPECTED_BACKGROUNDS = ("code_bg",)
 
 
 def validate_canonical(canonical: dict) -> None:
-    """The emitted TS hard-codes the Intensity / BackgroundKey / ColorPalette
-    types. If the canonical schema grows or shrinks an intensity/background,
-    the emitted TS will silently fail to typecheck. Fail loudly at generate
-    time instead, so the divergence is obvious.
+    """The emitted TS hard-codes the `ColorPalette` interface fields and
+    pre-resolves every entry of `PALETTE` / `RULES` against the expected
+    intensity and background keys. If the canonical schema grows or
+    shrinks a tier, the generator would silently emit malformed TS (a
+    KeyError mid-render, or a `ColorPalette` whose declared fields no
+    longer match what's emitted). Fail loudly here instead, so the
+    divergence surfaces at generate time with a clear message.
 
     Validation compares key sets (not key order), so a JSON formatter that
     reorders keys won't break this. Output order is still pinned to
@@ -62,8 +70,9 @@ def validate_canonical(canonical: dict) -> None:
         raise SystemExit(
             f"FAIL: canonical intensities must be exactly {list(EXPECTED_INTENSITIES)}.\n"
             f"      Missing: {missing}; unexpected: {unexpected}.\n"
-            f"      Update Intensity / ColorPalette in this generator's render() "
-            f"to match comms/shared/theming/lex-theme.json, then re-run."
+            f"      Update EXPECTED_INTENSITIES and the emitted ColorPalette "
+            f"interface in this generator's render() to match "
+            f"comms/shared/theming/lex-theme.json, then re-run."
         )
     actual_backgrounds = set(canonical.get("backgrounds", {}).keys())
     expected_backgrounds = set(EXPECTED_BACKGROUNDS)
@@ -73,46 +82,52 @@ def validate_canonical(canonical: dict) -> None:
         raise SystemExit(
             f"FAIL: canonical backgrounds must be exactly {list(EXPECTED_BACKGROUNDS)}.\n"
             f"      Missing: {missing}; unexpected: {unexpected}.\n"
-            f"      Update BackgroundKey / ColorPalette in this generator's render() "
-            f"to match comms/shared/theming/lex-theme.json, then re-run."
+            f"      Update EXPECTED_BACKGROUNDS and the emitted ColorPalette "
+            f"interface in this generator's render() to match "
+            f"comms/shared/theming/lex-theme.json, then re-run."
         )
 
 
-def render(canonical: dict) -> str:
-    validate_canonical(canonical)
+def render_palette_block(canonical: dict, mode: str) -> str:
     intensities = canonical["intensities"]
-    backgrounds = canonical.get("backgrounds", {})
+    backgrounds = canonical["backgrounds"]
+    lines = []
+    for name in EXPECTED_INTENSITIES:
+        lines.append(f"    {name}: {s(intensities[name][mode])},")
+    for bg_name in EXPECTED_BACKGROUNDS:
+        lines.append(f"    {bg_name}: {s(backgrounds[bg_name][mode])},")
+    return "\n".join(lines)
+
+
+def render_rules_block(canonical: dict, mode: str) -> str:
+    intensities = canonical["intensities"]
+    backgrounds = canonical["backgrounds"]
     tokens = canonical["tokens"]
-
-    def palette_block(mode: str) -> str:
-        lines = []
-        for name in EXPECTED_INTENSITIES:
-            lines.append(f"    {name}: {s(intensities[name][mode])},")
-        for bg_name in EXPECTED_BACKGROUNDS:
-            lines.append(f"    {bg_name}: {s(backgrounds[bg_name][mode])},")
-        return "\n".join(lines)
-
-    rule_lines: list[str] = []
+    lines: list[str] = []
     for token_id, token in tokens.items():
-        fields = [f"token: {s(token_id)}", f"intensity: {s(token['intensity'])}"]
+        # Monaco token rules want hex without the leading '#'.
+        fg = strip_hash(intensities[token["intensity"]][mode])
+        fields = [f"token: {s(token_id)}", f"foreground: {s(fg)}"]
         fs = font_style(token)
         if fs:
             fields.append(f"fontStyle: {s(fs)}")
         if "background" in token:
-            fields.append(f"background: {s(token['background'])}")
-        rule_lines.append("  { " + ", ".join(fields) + " },")
+            bg = strip_hash(backgrounds[token["background"]][mode])
+            fields.append(f"background: {s(bg)}")
+        lines.append("    { " + ", ".join(fields) + " },")
+    return "\n".join(lines)
 
+
+def render(canonical: dict) -> str:
+    validate_canonical(canonical)
     return (
         "// Generated by scripts/gen-theme.py from\n"
         "// comms/shared/theming/lex-theme.json. Do not edit by hand.\n"
         "//\n"
-        "// Lex Monochrome rules + fallback palette consumed by\n"
-        "// src/monaco/theme.ts. The runtime prefers CSS variables when\n"
-        "// available (so light/dark switches don't need a regenerate);\n"
-        "// FALLBACK_PALETTES is used when CSS vars cannot be read.\n"
-        "\n"
-        "export type Intensity = 'normal' | 'muted' | 'faint' | 'faintest'\n"
-        "export type BackgroundKey = 'code_bg'\n"
+        "// Lex Monochrome rules + palette, pre-resolved per mode. Consumed\n"
+        "// by src/monaco/theme.ts. All colors are absolute hex strings\n"
+        "// resolved from canonical intensity/background tiers at generate\n"
+        "// time — no runtime indirection.\n"
         "\n"
         "export interface ColorPalette {\n"
         "  normal: string\n"
@@ -124,23 +139,28 @@ def render(canonical: dict) -> str:
         "\n"
         "export interface TokenRule {\n"
         "  token: string\n"
-        "  intensity: Intensity\n"
+        "  foreground: string\n"
         "  fontStyle?: string\n"
-        "  background?: BackgroundKey\n"
+        "  background?: string\n"
         "}\n"
         "\n"
-        "export const FALLBACK_PALETTES: { light: ColorPalette; dark: ColorPalette } = {\n"
+        "export const PALETTE: { light: ColorPalette; dark: ColorPalette } = {\n"
         "  light: {\n"
-        f"{palette_block('light')}\n"
+        f"{render_palette_block(canonical, 'light')}\n"
         "  },\n"
         "  dark: {\n"
-        f"{palette_block('dark')}\n"
+        f"{render_palette_block(canonical, 'dark')}\n"
         "  },\n"
         "}\n"
         "\n"
-        "export const TOKEN_RULES: TokenRule[] = [\n"
-        + "\n".join(rule_lines)
-        + "\n]\n"
+        "export const RULES: { light: TokenRule[]; dark: TokenRule[] } = {\n"
+        "  light: [\n"
+        f"{render_rules_block(canonical, 'light')}\n"
+        "  ],\n"
+        "  dark: [\n"
+        f"{render_rules_block(canonical, 'dark')}\n"
+        "  ],\n"
+        "}\n"
     )
 
 
