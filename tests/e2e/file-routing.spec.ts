@@ -154,6 +154,46 @@ test.describe('File routing & workspace persistence', () => {
     }
   })
 
+  test("seeds the file into the existing window's persisted paneLayout (cold-start safe)", async () => {
+    // Regression: on a macOS Finder cold-open, the routed file's
+    // `open-file-path` IPC could fire before the renderer registered its
+    // listener, so the file was silently dropped. The fix is to also seed the
+    // file into the window's persisted state — verified here by reading
+    // openWindows from the store after routing.
+    const workspace = mkTmp('lexed-ws-')
+    try {
+      const filePath = path.join(workspace, 'cold.lex')
+      fs.writeFileSync(filePath, 'content')
+
+      const { app, page } = await launchReady(userData)
+      await setWorkspace(page, workspace)
+
+      const result = await page.evaluate(async (fp) => {
+        return window.ipcRenderer.testRouteOpenFiles([fp])
+      }, filePath)
+      expect(result[0].kind).toBe('existingWindow')
+
+      // The seed lands on the persisted state synchronously inside the router;
+      // the renderer's own auto-save may also fire, but either way the file
+      // must end up in paneLayout.
+      await page.waitForFunction(
+        async (expected) => {
+          const settings = await window.ipcRenderer.getAppSettings()
+          const tabs = settings.openWindows?.[0]?.paneLayout?.flatMap(
+            (p: { tabs: string[] }) => p.tabs
+          )
+          return tabs?.includes(expected) ?? false
+        },
+        filePath,
+        { timeout: 5000 }
+      )
+
+      await app.close()
+    } finally {
+      rmrf(workspace)
+    }
+  })
+
   test('OS-opens a file under a recent (non-current) root in a new window with that root', async () => {
     const workspaceA = mkTmp('lexed-wsA-')
     const workspaceB = mkTmp('lexed-wsB-')

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  appendFilesToWindowPaneLayout,
   upsertWindowState,
   mergeBounds,
   setWindowFolder,
@@ -196,5 +197,123 @@ describe('setWindowPaneLayout', () => {
     expect(result[0].lastFolder).toBe('/docs')
     expect(result[0].paneLayout?.[0].id).toBe('new')
     expect(result[0].activePaneId).toBe('new')
+  })
+})
+
+describe('appendFilesToWindowPaneLayout', () => {
+  const baseState = (): WindowState => ({
+    id: 'abc',
+    width: 1200,
+    height: 800,
+    lastFolder: '/docs',
+  })
+
+  it('returns the state unchanged when given no files', () => {
+    const state = baseState()
+    expect(appendFilesToWindowPaneLayout(state, [])).toBe(state)
+  })
+
+  it('creates a fresh pane + row when state has no paneLayout', () => {
+    const result = appendFilesToWindowPaneLayout(baseState(), ['/docs/a.lex', '/docs/b.lex'])
+    expect(result.paneLayout).toHaveLength(1)
+    expect(result.paneLayout?.[0].tabs).toEqual(['/docs/a.lex', '/docs/b.lex'])
+    expect(result.paneLayout?.[0].activeTab).toBe('/docs/b.lex')
+    expect(result.paneRows).toHaveLength(1)
+    expect(result.paneRows?.[0].paneIds).toEqual([result.paneLayout![0].id])
+    expect(result.activePaneId).toBe(result.paneLayout![0].id)
+    expect(result.lastFolder).toBe('/docs')
+  })
+
+  it('appends to the active pane and updates activeTab', () => {
+    const state: WindowState = {
+      ...baseState(),
+      paneLayout: [
+        { id: 'p1', tabs: ['/docs/old.lex'], activeTab: '/docs/old.lex' },
+        { id: 'p2', tabs: [], activeTab: null },
+      ],
+      paneRows: [{ id: 'r1', paneIds: ['p1', 'p2'] }],
+      activePaneId: 'p1',
+    }
+    const result = appendFilesToWindowPaneLayout(state, ['/docs/new.lex'])
+    expect(result.paneLayout?.[0].tabs).toEqual(['/docs/old.lex', '/docs/new.lex'])
+    expect(result.paneLayout?.[0].activeTab).toBe('/docs/new.lex')
+    expect(result.paneLayout?.[1]).toEqual({ id: 'p2', tabs: [], activeTab: null })
+    expect(result.activePaneId).toBe('p1')
+  })
+
+  it('falls back to the first pane when activePaneId is missing or stale', () => {
+    const state: WindowState = {
+      ...baseState(),
+      paneLayout: [{ id: 'p1', tabs: ['/docs/old.lex'], activeTab: '/docs/old.lex' }],
+      paneRows: [{ id: 'r1', paneIds: ['p1'] }],
+      activePaneId: 'gone',
+    }
+    const result = appendFilesToWindowPaneLayout(state, ['/docs/new.lex'])
+    expect(result.paneLayout?.[0].tabs).toEqual(['/docs/old.lex', '/docs/new.lex'])
+    expect(result.activePaneId).toBe('p1')
+  })
+
+  it('deduplicates already-present tabs but still updates activeTab', () => {
+    const state: WindowState = {
+      ...baseState(),
+      paneLayout: [{ id: 'p1', tabs: ['/docs/a.lex', '/docs/b.lex'], activeTab: '/docs/a.lex' }],
+      paneRows: [{ id: 'r1', paneIds: ['p1'] }],
+      activePaneId: 'p1',
+    }
+    const result = appendFilesToWindowPaneLayout(state, ['/docs/b.lex'])
+    expect(result.paneLayout?.[0].tabs).toEqual(['/docs/a.lex', '/docs/b.lex'])
+    expect(result.paneLayout?.[0].activeTab).toBe('/docs/b.lex')
+  })
+
+  it('is idempotent under repeated seeding of the same files', () => {
+    const start: WindowState = baseState()
+    const once = appendFilesToWindowPaneLayout(start, ['/docs/a.lex', '/docs/b.lex'])
+    const twice = appendFilesToWindowPaneLayout(once, ['/docs/a.lex', '/docs/b.lex'])
+    expect(twice.paneLayout?.[0].tabs).toEqual(['/docs/a.lex', '/docs/b.lex'])
+    expect(twice.paneLayout?.[0].activeTab).toBe('/docs/b.lex')
+    expect(twice.paneLayout?.[0].id).toBe(once.paneLayout?.[0].id)
+  })
+
+  it('inserts a row covering the target pane when none exists', () => {
+    const state: WindowState = {
+      ...baseState(),
+      paneLayout: [{ id: 'p1', tabs: [], activeTab: null }],
+      paneRows: [],
+      activePaneId: 'p1',
+    }
+    const result = appendFilesToWindowPaneLayout(state, ['/docs/a.lex'])
+    expect(result.paneRows).toHaveLength(1)
+    expect(result.paneRows?.[0].paneIds).toContain('p1')
+  })
+
+  it('does not duplicate row coverage when a row already includes the target pane', () => {
+    const state: WindowState = {
+      ...baseState(),
+      paneLayout: [{ id: 'p1', tabs: [], activeTab: null }],
+      paneRows: [{ id: 'r1', paneIds: ['p1'] }],
+      activePaneId: 'p1',
+    }
+    const result = appendFilesToWindowPaneLayout(state, ['/docs/a.lex'])
+    expect(result.paneRows).toHaveLength(1)
+    expect(result.paneRows?.[0].id).toBe('r1')
+  })
+
+  it('preserves untouched fields like lastFolder and bounds', () => {
+    const state: WindowState = {
+      id: 'abc',
+      x: 100,
+      y: 200,
+      width: 1024,
+      height: 768,
+      isMaximized: true,
+      lastFolder: '/projects/x',
+    }
+    const result = appendFilesToWindowPaneLayout(state, ['/projects/x/a.lex'])
+    expect(result.x).toBe(100)
+    expect(result.y).toBe(200)
+    expect(result.width).toBe(1024)
+    expect(result.height).toBe(768)
+    expect(result.isMaximized).toBe(true)
+    expect(result.lastFolder).toBe('/projects/x')
   })
 })
