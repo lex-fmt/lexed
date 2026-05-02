@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- Monaco syntax-highlighting palette and token rules are now generated from `comms/shared/theming/lex-theme.json` (the cross-editor canonical source) via `scripts/gen-theme.py` → `src/monaco/theme-data.ts`. The CSS-variable live-switch path is preserved; generated values are the fallback. `theme:check` runs in `pretypecheck`/`prebuild` so stale generated output fails CI. Picks up four canonicalization fixes in the process: `DocumentTitle` gains underline, `DocumentSubtitle` and `ReferenceAnnotation` are now declared, `VerbatimContent` gets the `code_bg` background. (#68)
+
 ## v0.6.7 (2026-04-25)
 
 ### Fixed
