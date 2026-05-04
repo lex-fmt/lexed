@@ -88,7 +88,12 @@ download_dep() {
   fi
   popd >/dev/null
 
-  if [[ ! -f "$tmp_dir/$binary_name" ]]; then
+  # arthur-debert/release@v1 (lex v0.10.0+) nests the binary under
+  # <name>-<target>/; earlier releases had it at the top level. Locate
+  # by name to handle both layouts.
+  local binary_src
+  binary_src="$(find "$tmp_dir" -name "$binary_name" -type f | head -1)"
+  if [[ -z "$binary_src" ]]; then
     echo "Binary $binary_name not found in archive" >&2
     rm -rf "$tmp_dir"
     exit 1
@@ -96,7 +101,7 @@ download_dep() {
 
   local dest="$RESOURCES_DIR/$dep"
   $is_windows && dest="${dest}.exe"
-  cp "$tmp_dir/$binary_name" "$dest"
+  cp "$binary_src" "$dest"
   chmod +x "$dest"
   rm -rf "$tmp_dir"
 
