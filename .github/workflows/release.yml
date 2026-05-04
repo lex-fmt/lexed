@@ -82,6 +82,10 @@ jobs:
     runs-on: ${{ matrix.runner }}
     env:
       RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
+      # Force UTF-8 stdout/stderr in Python scripts. Default cp1252 on
+      # Windows runners can't encode characters like '✓' that some build
+      # scripts emit (e.g. gen-theme.py status output).
+      PYTHONUTF8: '1'
     steps:
       - name: Evaluate target filter
         id: target-filter
