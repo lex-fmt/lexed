@@ -1,7 +1,7 @@
 import * as monaco from 'monaco-editor'
 import { ProtocolConnection } from 'vscode-languageserver-protocol/browser'
 import { LspCompletionItem, LspCompletionResponse } from '../types'
-import { getSettingsSnapshot } from '@/settings/snapshot'
+import { getWorkspaceRoot } from '../../host'
 
 const PATH_REFERENCE_DETAIL = 'path reference'
 
@@ -158,7 +158,7 @@ export function registerCompletionProvider(
       const modelFsPath = model.uri?.fsPath ?? model.uri?.path ?? null
       const modelDir = getDirname(modelFsPath)
       const workspaceRoot =
-        getSettingsSnapshot().lastFolder ??
+        getWorkspaceRoot() ??
         (typeof window !== 'undefined'
           ? (window as { __lexWorkspaceRoot?: string }).__lexWorkspaceRoot
           : undefined)

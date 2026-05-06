@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { notifyWorkspaceFoldersChanged } from '@/lsp/init'
+import { notifyWorkspaceFoldersChanged } from '@lex-fmt/lex-buffer'
 
 export function useRootFolder() {
   const [rootPath, setRootPath] = useState<string | undefined>(undefined)

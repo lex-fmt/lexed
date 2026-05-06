@@ -1,12 +1,35 @@
 import * as monaco from 'monaco-editor'
-import { lspClient } from '@/lsp/client'
-import { getLanguageForFile, isLexFile } from '@/lib/files'
-import { spellcheckService } from '@/spellcheck/service'
+import { lspClient } from '../lsp/client'
+import { notifyLexModelReady, notifyLexModelChange } from '../host'
 
 const modelCache = new Map<string, monaco.editor.ITextModel>()
 const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
 const DEBOUNCE_DELAY_MS = 100
+
+function getLanguageForFile(path: string): string {
+  const ext = path.toLowerCase().split('.').pop()
+  switch (ext) {
+    case 'lex':
+    case 'lexd':
+      return 'lex'
+    case 'md':
+      return 'markdown'
+    case 'html':
+    case 'htm':
+      return 'html'
+    case 'txt':
+      return 'plaintext'
+    default:
+      return 'plaintext'
+  }
+}
+
+function isLexFile(path: string | null | undefined): boolean {
+  if (!path) return false
+  const lower = path.toLowerCase()
+  return lower.endsWith('.lex') || lower.endsWith('.lexd')
+}
 
 export function getOrCreateModel(path: string, content: string): monaco.editor.ITextModel {
   const cached = modelCache.get(path)
@@ -55,15 +78,14 @@ export function getOrCreateModel(path: string, content: string): monaco.editor.I
             },
             contentChanges: [{ text: model.getValue() }],
           })
-          spellcheckService.scheduleCheck(model)
+          notifyLexModelChange(model)
         }
       }, DEBOUNCE_DELAY_MS)
 
       debounceTimers.set(uriString, timer)
     })
 
-    // Initial spellcheck
-    spellcheckService.scheduleCheck(model)
+    notifyLexModelReady(model)
   }
 
   return model

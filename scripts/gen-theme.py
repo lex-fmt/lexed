@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate src/monaco/theme-data.ts from the canonical theme data in
+"""Generate packages/lex-buffer/src/monaco/theme-data.ts from the canonical theme data in
 `comms/shared/theming/lex-theme.json`.
 
 Emits two structures, both pre-resolved per mode at generate time:
@@ -29,7 +29,7 @@ from pathlib import Path
 
 REPO_DIR = Path(__file__).resolve().parent.parent
 CANONICAL = REPO_DIR / "comms" / "shared" / "theming" / "lex-theme.json"
-TARGET = REPO_DIR / "src" / "monaco" / "theme-data.ts"
+TARGET = REPO_DIR / "packages" / "lex-buffer" / "src" / "monaco" / "theme-data.ts"
 
 
 def s(value: str) -> str:
@@ -125,7 +125,7 @@ def render(canonical: dict) -> str:
         "// comms/shared/theming/lex-theme.json. Do not edit by hand.\n"
         "//\n"
         "// Lex Monochrome rules + palette, pre-resolved per mode. Consumed\n"
-        "// by src/monaco/theme.ts. All colors are absolute hex strings\n"
+        "// by packages/lex-buffer/src/monaco/theme.ts. All colors are absolute hex strings\n"
         "// resolved from canonical intensity/background tiers at generate\n"
         "// time — no runtime indirection.\n"
         "\n"

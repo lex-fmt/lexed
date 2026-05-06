@@ -65,6 +65,7 @@ export default defineConfig({
         __dirname,
         './packages/monaco-inline-injections/src/index.ts'
       ),
+      '@lex-fmt/lex-buffer': path.resolve(__dirname, './packages/lex-buffer/src/index.ts'),
     },
   },
   server: {

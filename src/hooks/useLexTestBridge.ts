@@ -3,7 +3,7 @@ import * as monaco from 'monaco-editor'
 import type { EditorPaneHandle } from '@/components/EditorPane'
 import type { PaneState } from '@/panes/types'
 import { spellcheckService } from '@/spellcheck/service'
-import { lspClient } from '@/lsp/client'
+import { lspClient } from '@lex-fmt/lex-buffer'
 
 type FormattingRequestPayload = {
   type: 'document' | 'range'

@@ -1,5 +1,5 @@
 import * as monaco from 'monaco-editor'
-import { lspClient } from '@/lsp/client'
+import { lspClient } from '../lsp/client'
 
 let registered = false
 
