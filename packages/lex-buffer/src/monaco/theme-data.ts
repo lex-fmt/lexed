@@ -2,7 +2,7 @@
 // comms/shared/theming/lex-theme.json. Do not edit by hand.
 //
 // Lex Monochrome rules + palette, pre-resolved per mode. Consumed
-// by src/monaco/theme.ts. All colors are absolute hex strings
+// by packages/lex-buffer/src/monaco/theme.ts. All colors are absolute hex strings
 // resolved from canonical intensity/background tiers at generate
 // time — no runtime indirection.
 

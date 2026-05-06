@@ -48,6 +48,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@lex-fmt/lex-buffer": "file:./packages/lex-buffer",
     "@lex/monaco-inline-injections": "file:./packages/monaco-inline-injections",
     "@lex/shared": "file:./shared",
     "class-variance-authority": "^0.7.1",

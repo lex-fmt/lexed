@@ -1,0 +1,32 @@
+{
+  "name": "@lex-fmt/lex-buffer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "monaco-editor": "^0.55.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "vscode-languageserver-protocol": "^3.17.0"
+  },
+  "peerDependenciesMeta": {
+    "monaco-vim": {
+      "optional": true
+    }
+  },
+  "optionalDependencies": {
+    "monaco-vim": "^0.4.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "monaco-editor": "^0.55.1",
+    "react": "^19.2.5",
+    "typescript": "^5.0.0",
+    "vscode-languageserver-protocol": "^3.17.5"
+  }
+}

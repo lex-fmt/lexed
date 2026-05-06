@@ -9,7 +9,7 @@ import {
 } from '@/settings/types'
 import { setSettingsSnapshot } from '@/settings/snapshot'
 
-import { lspClient } from '@/lsp/client'
+import { lspClient } from '@lex-fmt/lex-buffer'
 import { SpellcheckSettings, FileTreeSettings } from '@/settings/types'
 import { spellcheckService } from '@/spellcheck/service'
 

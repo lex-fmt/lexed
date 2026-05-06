@@ -7,13 +7,27 @@ import {
   useEffect,
   useMemo,
 } from 'react'
-import { Editor, EditorHandle } from './Editor'
-import type { MonacoInjectionHighlighterApi } from '@lex/monaco-inline-injections'
+import {
+  Editor,
+  type EditorHandle,
+  getOrCreateModel,
+  disposeModel,
+  applyTheme,
+  type ThemeMode,
+} from '@lex-fmt/lex-buffer'
+import {
+  createMonacoInjectionHighlighter,
+  type MonacoInjectionHighlighterApi,
+} from '@lex/monaco-inline-injections'
 import { PreviewPane } from './PreviewPane'
 import { WelcomeView } from './WelcomeView'
 import { TabBar, Tab, TabDropData } from './TabBar'
 import { StatusBar, ExportStatus } from './StatusBar'
+import { useSettings } from '@/contexts/SettingsContext'
 import { usePlatform } from '@/contexts/PlatformContext'
+import { dispatchFileTreeRefresh } from '@/lib/events'
+import { initTreeSitter, createLexZoneProvider } from '@/treesitter'
+import { createEmbeddedTokenizer } from '@/embedded'
 import type { FileContextMenuHandlers } from './FileContextMenu'
 import type * as Monaco from 'monaco-editor'
 
@@ -51,9 +65,6 @@ interface EditorPaneProps {
 /**
  * Computes a simple hash checksum of the given content.
  * Uses the same algorithm as the backend (main.ts) to ensure consistency.
- *
- * This is a fast, non-cryptographic hash suitable for detecting file changes.
- * It's used by auto-save to detect if a file was modified externally.
  */
 function computeChecksum(content: string): string {
   let hash = 0
@@ -80,14 +91,19 @@ export const EditorPane = forwardRef<EditorPaneHandle, EditorPaneProps>(function
   },
   ref
 ) {
-  const [fileToOpen, setFileToOpen] = useState<string | null>(null)
+  const editorRef = useRef<EditorHandle>(null)
   const [editor, setEditor] = useState<Monaco.editor.IStandaloneCodeEditor | null>(null)
   const [vimStatusNode, setVimStatusNode] = useState<HTMLDivElement | null>(null)
-  const editorRef = useRef<EditorHandle>(null)
+  const [activeModel, setActiveModel] = useState<Monaco.editor.ITextModel | null>(null)
+  const [currentFile, setCurrentFile] = useState<string | null>(null)
+  const [theme, setTheme] = useState<ThemeMode | undefined>(undefined)
   const previousTabsRef = useRef<Tab[]>(tabs)
   const latestOnFileLoaded = useRef(onFileLoaded)
   const latestOnCursorChange = useRef(onCursorChange)
+  const injectionHighlighterRef = useRef<MonacoInjectionHighlighterApi | null>(null)
+  const onReadyCleanupsRef = useRef<Array<() => void>>([])
   const platform = usePlatform()
+  const { settings } = useSettings()
 
   useEffect(() => {
     latestOnFileLoaded.current = onFileLoaded
@@ -118,39 +134,48 @@ export const EditorPane = forwardRef<EditorPaneHandle, EditorPaneProps>(function
    *   - If match: safe to save, update checksum to new content
    *   - If mismatch: file was modified externally, take new checksum but don't save
    * - On manual save (Cmd+S): reset interval and checksum
-   *
-   * The checksum comparison prevents a common scenario:
-   * 1. User opens file in Lex, makes edits
-   * 2. User switches to another app (auto-save stops)
-   * 3. User edits the same file in another editor and saves
-   * 4. User returns to Lex (auto-save resumes with fresh checksum)
-   * 5. Auto-save won't overwrite because checksums don't match
    */
   const autoSaveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   /** Checksum of file on disk when interval started. Used to detect external modifications. */
   const autoSaveChecksumRef = useRef<string | null>(null)
 
+  // Push the active tab's file content into the editor by creating
+  // (or reusing) a Monaco model and setting it as the active model.
+  // This replaces the old `Editor.switchToFile(path)` flow — the host
+  // (this component) now owns disk reads and the model lifecycle.
   useEffect(() => {
-    const activeTab = tabs.find((tab) => tab.id === activeTabId)
-    if (activeTab) {
-      // Don't set fileToOpen for preview tabs - they don't have a real file path
-      if (activeTab.type !== 'preview') {
-        setFileToOpen(activeTab.path)
-      } else {
-        setFileToOpen(null)
+    let cancelled = false
+    async function syncActiveModel() {
+      if (!activeTab || activeTab.type === 'preview') {
+        setActiveModel(null)
+        setCurrentFile(null)
+        if (!activeTab && tabs.length === 0) {
+          latestOnFileLoaded.current?.(null)
+        }
+        return
       }
-    } else {
-      setFileToOpen(null)
-      if (tabs.length === 0) {
-        latestOnFileLoaded.current?.(null)
-      }
+      const path = activeTab.path
+      const content = await platform.fileSystem.read(path)
+      if (cancelled) return
+      if (content === null) return
+      const model = getOrCreateModel(path, content)
+      if (cancelled) return
+      setActiveModel(model)
+      setCurrentFile(path)
+      latestOnFileLoaded.current?.(path)
     }
-  }, [tabs, activeTabId])
+    void syncActiveModel()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab?.id, activeTab?.path, activeTab?.type])
 
+  // Dispose models for tabs that have been removed.
   useEffect(() => {
     const previous = previousTabsRef.current
     const removedTabs = previous.filter((prevTab) => !tabs.some((tab) => tab.id === prevTab.id))
-    removedTabs.forEach((tab) => editorRef.current?.closeFile(tab.path))
+    removedTabs.forEach((tab) => disposeModel(tab.path))
     previousTabsRef.current = tabs
   }, [tabs])
 
@@ -169,72 +194,36 @@ export const EditorPane = forwardRef<EditorPaneHandle, EditorPaneProps>(function
     [onTabClose]
   )
 
-  const handleFileLoaded = useCallback((path: string) => {
-    // Update editor reference
-    setEditor(editorRef.current?.getEditor() ?? null)
-    latestOnFileLoaded.current?.(path)
-  }, [])
-
-  /**
-   * Starts the auto-save interval timer.
-   *
-   * Called when:
-   * - Window gains focus
-   * - After a manual save (to reset the timer)
-   *
-   * Captures the current file's checksum from disk as the baseline for
-   * detecting external modifications.
-   */
   const startAutoSaveInterval = useCallback(async () => {
-    // Clear any existing interval to avoid duplicates
     if (autoSaveIntervalRef.current) {
       clearInterval(autoSaveIntervalRef.current)
       autoSaveIntervalRef.current = null
     }
 
-    const currentFile = editorRef.current?.getCurrentFile()
     if (!currentFile) return
 
-    // Capture checksum of file on disk - this is our baseline for detecting external changes
     const diskChecksum = await platform.fileSystem.checksum(currentFile)
     autoSaveChecksumRef.current = diskChecksum
 
     autoSaveIntervalRef.current = setInterval(async () => {
-      const filePath = editorRef.current?.getCurrentFile()
+      const filePath = currentFile
       const editorInstance = editorRef.current?.getEditor()
       if (!filePath || !editorInstance) return
 
-      // Read current checksum from disk to check for external modifications
       const currentDiskChecksum = await platform.fileSystem.checksum(filePath)
 
       if (currentDiskChecksum === autoSaveChecksumRef.current) {
-        // Checksum matches - file hasn't been modified externally, safe to save
-        const content = editorInstance.getValue()
+        const content = editorInstance.getModel()?.getValue() ?? ''
         await platform.fileSystem.write(filePath, content)
-        // Update our baseline checksum to the new content we just saved
         autoSaveChecksumRef.current = computeChecksum(content)
         console.log('[AutoSave] Saved file:', filePath)
       } else {
-        // Checksum mismatch - file was modified by another program.
-        // Don't overwrite! Instead, update our baseline to the new checksum.
-        // This breaks potential infinite loops where we'd never save because
-        // checksums keep mismatching.
         autoSaveChecksumRef.current = currentDiskChecksum
         console.log('[AutoSave] File modified externally, skipping save:', filePath)
       }
     }, AUTO_SAVE_INTERVAL_MS)
-  }, [platform.fileSystem])
+  }, [platform.fileSystem, currentFile])
 
-  /**
-   * Stops the auto-save interval timer.
-   *
-   * Called when:
-   * - Window loses focus (user switched to another app)
-   * - Component unmounts
-   *
-   * Stopping on blur is critical: if the user switches apps and edits the file
-   * elsewhere, we don't want a stale auto-save to overwrite their changes.
-   */
   const stopAutoSaveInterval = useCallback(() => {
     if (autoSaveIntervalRef.current) {
       clearInterval(autoSaveIntervalRef.current)
@@ -243,31 +232,24 @@ export const EditorPane = forwardRef<EditorPaneHandle, EditorPaneProps>(function
     autoSaveChecksumRef.current = null
   }, [])
 
-  /**
-   * Manual save handler.
-   *
-   * After saving, resets the auto-save interval. This ensures:
-   * 1. The timer restarts from zero (user gets full 5 minutes before next auto-save)
-   * 2. The checksum is updated to reflect the just-saved content
-   */
+  // Manual save: format-on-save honors host setting, then writes via
+  // the platform adapter and refreshes the file tree (used to be in
+  // Editor.handleSave, now lives in the host).
   const handleSave = useCallback(async () => {
-    await editorRef.current?.save()
-    // Reset auto-save interval after manual save
+    if (!currentFile || !editorRef.current) return
+    if (settings.formatter.formatOnSave) {
+      await editorRef.current.format()
+    }
+    const content = editorRef.current.getValue()
+    await platform.fileSystem.write(currentFile, content)
+    dispatchFileTreeRefresh()
     await startAutoSaveInterval()
-  }, [startAutoSaveInterval])
+  }, [currentFile, settings.formatter.formatOnSave, platform.fileSystem, startAutoSaveInterval])
 
   const handleFormat = useCallback(async () => {
     await editorRef.current?.format()
   }, [])
 
-  /**
-   * Window focus tracking for auto-save.
-   *
-   * Why focus-based?
-   * - Only save when user is actively using the editor
-   * - Prevents saving stale content when user is away
-   * - Allows safe editing of the same file in other applications
-   */
   useEffect(() => {
     const handleFocus = () => {
       startAutoSaveInterval()
@@ -280,7 +262,6 @@ export const EditorPane = forwardRef<EditorPaneHandle, EditorPaneProps>(function
     window.addEventListener('focus', handleFocus)
     window.addEventListener('blur', handleBlur)
 
-    // Start interval if window is already focused on mount
     if (document.hasFocus()) {
       startAutoSaveInterval()
     }
@@ -292,16 +273,15 @@ export const EditorPane = forwardRef<EditorPaneHandle, EditorPaneProps>(function
     }
   }, [startAutoSaveInterval, stopAutoSaveInterval])
 
-  // Listen for cursor position changes
+  // Listen for cursor position changes (drives the status bar's line
+  // indicator).
   useEffect(() => {
     if (!editor || !latestOnCursorChange.current) return
 
     const disposable = editor.onDidChangeCursorPosition((e) => {
-      // Monaco uses 1-based lines, LSP uses 0-based
       latestOnCursorChange.current?.(e.position.lineNumber - 1)
     })
 
-    // Emit initial position
     const pos = editor.getPosition()
     if (pos) {
       latestOnCursorChange.current?.(pos.lineNumber - 1)
@@ -309,6 +289,25 @@ export const EditorPane = forwardRef<EditorPaneHandle, EditorPaneProps>(function
 
     return () => disposable.dispose()
   }, [editor])
+
+  // Theme: subscribe to platform theme; push down as a prop.
+  useEffect(() => {
+    const initialTheme = document.documentElement.getAttribute('data-theme')
+    if (initialTheme === 'dark' || initialTheme === 'light') {
+      setTheme(initialTheme)
+      applyTheme(initialTheme)
+    } else {
+      void platform.theme.getCurrent().then((mode) => {
+        setTheme(mode)
+        applyTheme(mode)
+      })
+    }
+    const unsubscribe = platform.theme.onChange((mode) => {
+      setTheme(mode)
+      applyTheme(mode)
+    })
+    return unsubscribe
+  }, [platform.theme])
 
   const handleFind = useCallback(() => {
     editorRef.current?.find()
@@ -318,18 +317,79 @@ export const EditorPane = forwardRef<EditorPaneHandle, EditorPaneProps>(function
     editorRef.current?.replace()
   }, [])
 
+  // Editor.onReady: install host-specific decorations (tree-sitter
+  // injection highlighter, insert-asset / insert-verbatim commands)
+  // and remember disposers so we can clean up when the Monaco
+  // instance is torn down (component unmount or model swap that
+  // remounts).
+  const onEditorReady = useCallback(
+    (editor: Monaco.editor.IStandaloneCodeEditor) => {
+      setEditor(editor)
+      onReadyCleanupsRef.current.forEach((fn) => fn())
+      onReadyCleanupsRef.current = []
+
+      // Embedded-code highlighter inside `:: python ::` / `:: js ::`
+      // blocks. Tree-sitter loads lazily; if init fails the package
+      // continues without the injection layer.
+      let tsCancelled = false
+      const embeddedTokenizer = createEmbeddedTokenizer()
+      void initTreeSitter().then((ts) => {
+        if (tsCancelled || !ts) {
+          embeddedTokenizer.dispose()
+          return
+        }
+        if (injectionHighlighterRef.current) {
+          injectionHighlighterRef.current.dispose()
+        }
+        injectionHighlighterRef.current = createMonacoInjectionHighlighter(
+          editor,
+          createLexZoneProvider(ts),
+          { hostLanguageId: 'lex', tokenizer: embeddedTokenizer }
+        )
+      })
+
+      const offAsset = platform.commands?.onCommand('insert-asset', () => {
+        void import('../commands').then(({ insertAssetReference }) => {
+          insertAssetReference(editor)
+        })
+      })
+      const offVerbatim = platform.commands?.onCommand('insert-verbatim', () => {
+        void import('../commands').then(({ insertVerbatimBlock }) => {
+          insertVerbatimBlock(editor)
+        })
+      })
+
+      onReadyCleanupsRef.current.push(() => {
+        tsCancelled = true
+        injectionHighlighterRef.current?.dispose()
+        injectionHighlighterRef.current = null
+        embeddedTokenizer.dispose()
+        offAsset?.()
+        offVerbatim?.()
+      })
+    },
+    [platform.commands]
+  )
+
+  useEffect(() => {
+    return () => {
+      onReadyCleanupsRef.current.forEach((fn) => fn())
+      onReadyCleanupsRef.current = []
+    }
+  }, [])
+
   useImperativeHandle(
     ref,
     () => ({
       save: handleSave,
       format: handleFormat,
-      getCurrentFile: () => editorRef.current?.getCurrentFile() ?? null,
+      getCurrentFile: () => currentFile,
       getEditor: () => editorRef.current?.getEditor() ?? null,
-      getInjectionHighlighter: () => editorRef.current?.getInjectionHighlighter() ?? null,
+      getInjectionHighlighter: () => injectionHighlighterRef.current,
       find: handleFind,
       replace: handleReplace,
     }),
-    [handleSave, handleFormat, handleFind, handleReplace]
+    [handleSave, handleFormat, handleFind, handleReplace, currentFile]
   )
 
   return (
@@ -352,9 +412,12 @@ export const EditorPane = forwardRef<EditorPaneHandle, EditorPaneProps>(function
         ) : (
           <Editor
             ref={editorRef}
-            fileToOpen={fileToOpen}
-            onFileLoaded={handleFileLoaded}
+            model={activeModel}
+            vimEnabled={settings.editor.vimMode}
             vimStatusNode={vimStatusNode}
+            rulerWidth={settings.editor.showRuler ? settings.editor.rulerWidth : undefined}
+            theme={theme}
+            onReady={onEditorReady}
           />
         )}
       </div>

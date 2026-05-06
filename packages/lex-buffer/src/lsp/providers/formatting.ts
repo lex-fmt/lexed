@@ -1,8 +1,7 @@
 import * as monaco from 'monaco-editor'
 import { ProtocolConnection } from 'vscode-languageserver-protocol/browser'
 import { LspTextEdit } from '../types'
-import { getFormatterSettingsSnapshot } from '@/settings/snapshot'
-import type { FormatterSettings } from '@/settings/types'
+import { getFormatterSettings, getE2EBridge, type FormatterSettings } from '../../host'
 
 type LexFormattingProperties = Record<string, number | boolean | string>
 
@@ -18,7 +17,7 @@ const buildLexFormattingProperties = (settings: FormatterSettings): LexFormattin
 })
 
 export const buildFormattingOptions = (tabSize: number, insertSpaces: boolean) => {
-  const formatterSettings = getFormatterSettingsSnapshot()
+  const formatterSettings = getFormatterSettings()
   return {
     tabSize,
     insertSpaces,
@@ -27,9 +26,10 @@ export const buildFormattingOptions = (tabSize: number, insertSpaces: boolean) =
 }
 
 export const notifyLexTest = (payload: { type: 'document' | 'range'; params: unknown }) => {
-  if (typeof window === 'undefined') return
-  window.__e2e.bridge.notifyFormattingRequest?.(payload)
-  window.__e2e.signal('format:request', payload)
+  const e2e = getE2EBridge()
+  if (!e2e) return
+  e2e.notifyFormattingRequest?.(payload)
+  e2e.signal?.('format:request', payload)
 }
 
 export function registerFormattingProvider(

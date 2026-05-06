@@ -1,7 +1,7 @@
 import {
   createProtocolConnection,
   ProtocolConnection,
-  Logger,
+  Logger as RpcLogger,
   InitializeParams,
   InitializeRequest,
   InitializedNotification,
@@ -9,15 +9,23 @@ import {
   MessageReader,
   MessageWriter,
 } from 'vscode-languageserver-protocol/browser'
-import { IpcMessageReader, IpcMessageWriter } from './ipc-connection'
 import * as monaco from 'monaco-editor'
 import { LspPublishDiagnosticsParams } from './types'
-import log from 'electron-log/renderer'
-import type { LspTransport } from '@lex/shared'
+import { log, getE2EBridge } from '../host'
 
 /**
- * Factory function type for creating LSP transport.
- * If not provided, falls back to IPC-based transport for Electron.
+ * Transport contract — a paired reader/writer over the LSP wire. The
+ * embedding host (Electron IPC, browser WebWorker, test stub) decides
+ * what's on the other end.
+ */
+export interface LspTransport {
+  reader: MessageReader
+  writer: MessageWriter
+}
+
+/**
+ * Factory function type for creating LSP transport. Must be set via
+ * `setTransportFactory` before `start()` runs.
  */
 export type TransportFactory = () => LspTransport
 
@@ -42,9 +50,8 @@ export class LspClient {
   }
 
   public start(rootPath?: string): Promise<void> {
-    // If no transport factory set and no ipcRenderer, we can't start
-    if (!this.transportFactory && (typeof window === 'undefined' || !window.ipcRenderer)) {
-      log.warn('[LspClient] No transport factory and ipcRenderer unavailable, skipping startup')
+    if (!this.transportFactory) {
+      log.warn('[LspClient] No transport factory set; call setTransportFactory() first')
       return Promise.resolve()
     }
     if (this.readyPromise) return this.readyPromise
@@ -54,11 +61,8 @@ export class LspClient {
   }
 
   private async initialize(rootPath?: string): Promise<void> {
-    // If no transport factory set and no ipcRenderer, we can't initialize
-    if (!this.transportFactory && (typeof window === 'undefined' || !window.ipcRenderer)) {
-      log.warn(
-        '[LspClient] No transport factory and ipcRenderer unavailable, initialization skipped'
-      )
+    if (!this.transportFactory) {
+      log.warn('[LspClient] No transport factory set; initialization skipped')
       return
     }
     if (this.isDisposed) return
@@ -68,21 +72,11 @@ export class LspClient {
     )
 
     try {
-      // Use transport factory if provided, otherwise fall back to IPC transport
-      let reader: MessageReader
-      let writer: MessageWriter
+      const transport = this.transportFactory!()
+      const reader: MessageReader = transport.reader
+      const writer: MessageWriter = transport.writer
 
-      if (this.transportFactory) {
-        const transport = this.transportFactory()
-        reader = transport.reader
-        writer = transport.writer
-      } else {
-        // Fallback to IPC transport for backward compatibility
-        reader = new IpcMessageReader(window.ipcRenderer)
-        writer = new IpcMessageWriter(window.ipcRenderer)
-      }
-
-      const logger: Logger = {
+      const logger: RpcLogger = {
         error: (message) => log.error('[LSP]', message),
         warn: (message) => log.warn('[LSP]', message),
         info: (message) => log.info('[LSP]', message),
@@ -277,9 +271,11 @@ export class LspClient {
 
       await this.connection.sendNotification(InitializedNotification.type, {})
       log.info('[LspClient] Initialized')
-      window.__e2e.ready.lsp = true
-      window.__e2e.signal('lsp:ready')
-      window.dispatchEvent(new CustomEvent('lexed:lsp-ready'))
+      const e2e = getE2EBridge()
+      if (e2e?.signal) e2e.signal('lsp:ready')
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('lexed:lsp-ready'))
+      }
 
       // Reset retry count on successful connection
       this.retryCount = 0
@@ -366,7 +362,6 @@ export class LspClient {
 
     this.connection = null
     this.readyPromise = null
-    window.__e2e.ready.lsp = false
 
     if (this.retryCount < this.maxRetries) {
       const delay = this.baseRetryDelay * Math.pow(2, this.retryCount)
@@ -381,13 +376,14 @@ export class LspClient {
     } else {
       const message = 'Lex language server unavailable after multiple attempts.'
       log.error(`[LspClient] Max retries exceeded. Giving up.`)
-      window.dispatchEvent(new CustomEvent('lexed:lsp-fatal', { detail: { message } }))
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('lexed:lsp-fatal', { detail: { message } }))
+      }
     }
   }
 
   public dispose() {
     this.isDisposed = true
-    window.__e2e.ready.lsp = false
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer)
       this.reconnectTimer = null
