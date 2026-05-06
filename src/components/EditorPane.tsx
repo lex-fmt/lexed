@@ -157,7 +157,18 @@ export const EditorPane = forwardRef<EditorPaneHandle, EditorPaneProps>(function
       const path = activeTab.path
       const content = await platform.fileSystem.read(path)
       if (cancelled) return
-      if (content === null) return
+      if (content === null) {
+        // Read failed (file gone, permission denied, etc.). Clear the
+        // editor instead of leaving the previous tab's model on screen
+        // while the tab bar shows a different active tab — that
+        // divergence would let a Save write the old tab's content to
+        // the new tab's path.
+        console.error('[EditorPane] Failed to read', path)
+        setActiveModel(null)
+        setCurrentFile(null)
+        latestOnFileLoaded.current?.(null)
+        return
+      }
       const model = getOrCreateModel(path, content)
       if (cancelled) return
       setActiveModel(model)
