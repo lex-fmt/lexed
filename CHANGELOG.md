@@ -19,7 +19,14 @@
   `lex.include` annotation instead of the document head, and `FsLoader`
   picked up symlink-traversal defenses, resource limits
   (`max_total_includes`, `max_file_size`), and rejection of
-  platform-absolute include paths.
+  platform-absolute include paths. The absolute-path rejection is a
+  behavior change for documents that contained
+  `:: lex.include src="C:\path\to\file" ::` style annotations — those
+  now error up front with a clear "absolute path not allowed" message
+  via `IncludeError::AbsolutePath` instead of being caught downstream
+  by the root-escape check with a misleading error. The supported
+  forms are unchanged (relative paths and root-absolute `/path` against
+  the configured includes root).
 
 ## v0.8.0 (2026-05-04)
 
