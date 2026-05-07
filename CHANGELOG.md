@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Bumped `lexd-lsp` pin from v0.10.5 to v0.10.6. Picks up the LSP
+  position UTF-16 column fix: inline tokens (the Monaco highlighter
+  for `*bold*`, `_italic_`, `` `code` ``, `[ref]`) and
+  goto-definition / find-references targets now land on the correct
+  character even when the line contains non-ASCII characters like
+  `→`. Previously the open marker of an inline code span on a line
+  like ``Provision → `Setup` → `PathExport`...`` rendered on the
+  *next* glyph (the `e` of `Setup` instead of the `` ` ``), shifting
+  the inline-code styling one character right of where it should be.
+- Bumped `comms` submodule pin to v0.16.1 and regenerated
+  `packages/lex-buffer/src/monaco/theme-data.ts`. Reference inlines
+  (`Reference`, `ReferenceCitation`, `ReferenceFootnote`,
+  `ReferenceAnnotation`) now render with **bold** instead of
+  underline. Underline reads as "follow this link" and conflicted
+  with the LSP `documentLink` decoration that the editor reserves
+  for actually-clickable URL/file targets; bold matches the way
+  references read in printed text.
+
 ## v0.8.1 (2026-05-07)
 
 ### Changed
