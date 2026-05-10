@@ -68,9 +68,11 @@ setLspTransportFactory(() => electronAdapter.lsp.createTransport())
 // returns resolves when the user clicks Trust / Deny / dismisses
 // the modal — which becomes the LSP response.
 //
-// onRequest awaits the LSP client's start() before binding, so this
-// is safe to call here before initializeMonaco kicks off the LSP.
-void lspClient.onRequest('lex/trustRequest', (params) =>
+// `onRequest` is synchronous: the handler is recorded immediately
+// and bound to the LSP connection before `InitializeRequest` is
+// sent, so a `lex/trustRequest` that fires during workspace boot
+// finds the handler waiting.
+lspClient.onRequest('lex/trustRequest', (params) =>
   trustPromptCoordinator.request(params as Parameters<typeof trustPromptCoordinator.request>[0])
 )
 

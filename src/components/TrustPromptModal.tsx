@@ -23,6 +23,26 @@ export function TrustPromptModal() {
     return unsubscribe
   }, [])
 
+  // Esc dismisses the modal. The click-outside listener on the
+  // overlay div handles that gesture; without this keyboard handler,
+  // users couldn't dismiss with Esc as the prompt body promises.
+  useEffect(() => {
+    if (!pending) return
+    const ns = pending.params.namespace
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        // Same fail-closed behaviour as click-outside.
+        trustPromptCoordinator.resolveCurrent({
+          decision: 'denied',
+          reason: `Trust prompt for namespace \`${ns}\` was dismissed without a decision.`,
+        })
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [pending])
+
   if (!pending) return null
 
   const { params } = pending
@@ -36,8 +56,9 @@ export function TrustPromptModal() {
     })
   }
   const handleDismiss = () => {
-    // Click-outside / Esc / etc. — fail-closed: a dismissed prompt
-    // must not silently grant trust.
+    // Click-outside fail-closed: a dismissed prompt must not silently
+    // grant trust. Keyboard Esc is handled by the keydown listener
+    // above, which routes to the same outcome.
     trustPromptCoordinator.resolveCurrent({
       decision: 'denied',
       reason: `Trust prompt for namespace \`${params.namespace}\` was dismissed without a decision.`,
