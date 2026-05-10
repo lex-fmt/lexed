@@ -86,6 +86,16 @@ test.describe('lex/trustRequest modal', () => {
     await expect(page.getByText('Lex extension trust required')).not.toBeVisible({
       timeout: 5000,
     })
+    // Poll for the .then() callback to have populated __trustResp.
+    // The microtask scheduling of Promise resolution doesn't
+    // guarantee __trustResp is set the instant the modal disappears,
+    // so we wait for the global to populate before asserting.
+    await page.waitForFunction(
+      () =>
+        (window as unknown as Window & { __trustResp?: TrustResponse }).__trustResp !== undefined,
+      null,
+      { timeout: 5000 }
+    )
     const response = await page.evaluate(() => {
       const w = window as unknown as Window & { __trustResp?: TrustResponse }
       return w.__trustResp
@@ -110,6 +120,12 @@ test.describe('lex/trustRequest modal', () => {
     await expect(page.getByText('Lex extension trust required')).not.toBeVisible({
       timeout: 5000,
     })
+    await page.waitForFunction(
+      () =>
+        (window as unknown as Window & { __trustResp?: TrustResponse }).__trustResp !== undefined,
+      null,
+      { timeout: 5000 }
+    )
     const response = await page.evaluate(() => {
       const w = window as unknown as Window & { __trustResp?: TrustResponse }
       return w.__trustResp
@@ -138,6 +154,12 @@ test.describe('lex/trustRequest modal', () => {
     await expect(page.getByText('Lex extension trust required')).not.toBeVisible({
       timeout: 5000,
     })
+    await page.waitForFunction(
+      () =>
+        (window as unknown as Window & { __trustResp?: TrustResponse }).__trustResp !== undefined,
+      null,
+      { timeout: 5000 }
+    )
     const response = await page.evaluate(() => {
       const w = window as unknown as Window & { __trustResp?: TrustResponse }
       return w.__trustResp
