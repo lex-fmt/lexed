@@ -38,6 +38,16 @@ export class LspClient {
   private baseRetryDelay = 1000
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private transportFactory: TransportFactory | null = null
+  /**
+   * Pending request handlers registered via `onRequest()` *before*
+   * the connection exists. Bound onto the new ProtocolConnection
+   * before `InitializeRequest` is sent — so server→client requests
+   * that arrive during init (e.g. `lex/trustRequest` if the server
+   * boots its extension registry early) reach the handler instead
+   * of returning "method not found".
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private pendingRequestHandlers = new Map<string, (params: any) => any>()
 
   constructor() {}
 
@@ -94,6 +104,18 @@ export class LspClient {
         log.error('[LspClient] Connection error:', error)
         this.handleConnectionLoss()
       })
+
+      // Bind any handlers registered via `onRequest()` before the
+      // connection existed. Critical for server→client requests that
+      // can fire during the workspace boot phase
+      // (`lex/trustRequest`): if no handler is registered when the
+      // request arrives, the connection responds with "method not
+      // found" and the lex-side gate denies the trust prompt as a
+      // "request failed" diagnostic. Binding before `listen()` and
+      // before `InitializeRequest` closes that race.
+      for (const [method, handler] of this.pendingRequestHandlers) {
+        this.connection.onRequest(method, handler)
+      }
 
       this.connection.listen()
 
@@ -521,6 +543,33 @@ export class LspClient {
       return
     }
     this.connection.onNotification(method, handler)
+  }
+
+  /**
+   * Register a handler for a server→client *request* (the server expects
+   * a response). The handler returns the response value or a Promise of
+   * it; protocol-level errors are surfaced through the LSP transport.
+   *
+   * Used for `lex/trustRequest` — the lex extension trust prompt fires
+   * during workspace boot when a subprocess handler hasn't been pinned.
+   *
+   * Synchronous (unlike `onNotification`): the handler is recorded
+   * immediately in the pending map and bound to the connection before
+   * `InitializeRequest` is sent. Handlers registered after the
+   * connection is alive are bound directly. This timing matters for
+   * server-initiated requests — if the server fires one before the
+   * handler is bound, the connection responds with "method not found"
+   * and the request fails.
+   */
+  public onRequest<P = unknown, R = unknown>(
+    method: string,
+    handler: (params: P) => R | Promise<R>
+  ): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    this.pendingRequestHandlers.set(method, handler as (params: any) => any)
+    if (this.connection) {
+      this.connection.onRequest(method, handler)
+    }
   }
 
   public async sendNotification<P = unknown>(method: string, params: P): Promise<void> {
