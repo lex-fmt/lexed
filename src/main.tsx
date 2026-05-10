@@ -20,7 +20,13 @@ import ReactDOM from 'react-dom/client'
 import { Toaster } from 'sonner'
 import App from './App.tsx'
 import './index.css'
-import { initializeMonaco, setLspTransportFactory, configureHost } from '@lex-fmt/lex-buffer'
+import {
+  initializeMonaco,
+  lspClient,
+  setLspTransportFactory,
+  configureHost,
+} from '@lex-fmt/lex-buffer'
+import { trustPromptCoordinator } from './lsp/trustPromptCoordinator'
 import { PlatformProvider } from './contexts/PlatformContext'
 import { electronAdapter } from './platform'
 import { getFormatterSettingsSnapshot, getSettingsSnapshot } from './settings/snapshot'
@@ -55,6 +61,18 @@ window.addEventListener('lexed:lsp-ready', () => {
 
 // Set up LSP transport from platform adapter before Monaco initialization
 setLspTransportFactory(() => electronAdapter.lsp.createTransport())
+
+// Register the `lex/trustRequest` handler. Forwards the request to
+// the trustPromptCoordinator, which surfaces it to the
+// <TrustPromptModal /> component in App.tsx. The Promise the handler
+// returns resolves when the user clicks Trust / Deny / dismisses
+// the modal — which becomes the LSP response.
+//
+// onRequest awaits the LSP client's start() before binding, so this
+// is safe to call here before initializeMonaco kicks off the LSP.
+void lspClient.onRequest('lex/trustRequest', (params) =>
+  trustPromptCoordinator.request(params as Parameters<typeof trustPromptCoordinator.request>[0])
+)
 
 initializeMonaco()
 

@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import type { EditorPaneHandle } from './components/EditorPane'
 import { Layout } from './components/Layout'
 import { Outline } from './components/Outline'
+import { TrustPromptModal } from './components/TrustPromptModal'
 import { ExportStatus } from './components/StatusBar'
 import type { Tab } from './components/TabBar'
 import { PaneWorkspace } from './components/PaneWorkspace'
@@ -1020,6 +1021,7 @@ function App() {
   return (
     <SettingsProvider>
       <AppContent />
+      <TrustPromptModal />
     </SettingsProvider>
   )
 }

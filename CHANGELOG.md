@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Extension trust prompt. When `lexd-lsp` boots a workspace with a
+  `[labels]` namespace whose subprocess handler hasn't been pinned in
+  `<workspace>/.lex/trust.json`, the server fires a `lex/trustRequest`
+  custom request and lexed renders a modal **Trust** / **Deny**
+  dialog showing the namespace name, schema source, command string,
+  and declared capability set. The user's reply is fed back to the
+  trust gate and pinned for subsequent sessions. Click-outside / Esc
+  treats the prompt as denied (fail-closed). Pairs with `lexd-lsp`
+  v0.11+ which adds the trust-request forwarding (lex-fmt/lex#549).
+  Part of the γ phase of the extension system (lex-fmt/lex#516).
+
+### Changed
+
+- `@lex-fmt/lex-buffer`: `LspClient` gains `onRequest(method, handler)`
+  for registering server→client custom request handlers (mirror of the
+  existing `onNotification`). Used by the trust-prompt wiring above.
+
 ## v0.8.2 (2026-05-07)
 
 ### Changed

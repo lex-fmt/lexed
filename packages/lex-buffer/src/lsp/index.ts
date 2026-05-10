@@ -23,3 +23,10 @@ export type {
 } from './types'
 export { navigateTableCell, formatTableAtCursor } from './table_commands'
 export { buildFormattingOptions } from './providers/formatting'
+export {
+  formatPromptHeadline,
+  describeSource,
+  describeCapability,
+  describeTransport,
+} from './trustPromptFormat'
+export type { TrustRequestSource, TrustRequestParams, TrustResponse } from './trustPromptFormat'

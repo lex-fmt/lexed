@@ -523,6 +523,29 @@ export class LspClient {
     this.connection.onNotification(method, handler)
   }
 
+  /**
+   * Register a handler for a server→client *request* (the server expects
+   * a response). The handler returns the response value or a Promise of
+   * it; protocol-level errors are surfaced through the LSP transport.
+   *
+   * Used for `lex/trustRequest` — the lex extension trust prompt fires
+   * during workspace boot when a subprocess handler hasn't been pinned.
+   */
+  public async onRequest<P = unknown, R = unknown>(
+    method: string,
+    handler: (params: P) => R | Promise<R>
+  ): Promise<void> {
+    if (!this.readyPromise) {
+      this.start()
+    }
+    await this.readyPromise
+    if (!this.connection) {
+      console.warn('LSP client not started, cannot register request handler')
+      return
+    }
+    this.connection.onRequest(method, handler)
+  }
+
   public async sendNotification<P = unknown>(method: string, params: P): Promise<void> {
     if (!this.readyPromise) {
       this.start()
