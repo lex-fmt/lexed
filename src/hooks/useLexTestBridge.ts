@@ -3,7 +3,8 @@ import * as monaco from 'monaco-editor'
 import type { EditorPaneHandle } from '@/components/EditorPane'
 import type { PaneState } from '@/panes/types'
 import { spellcheckService } from '@/spellcheck/service'
-import { lspClient } from '@lex-fmt/lex-buffer'
+import { lspClient, type TrustRequestParams } from '@lex-fmt/lex-buffer'
+import { trustPromptCoordinator } from '@/lsp/trustPromptCoordinator'
 
 type FormattingRequestPayload = {
   type: 'document' | 'range'
@@ -163,6 +164,27 @@ export function useLexTestBridge({
       openFolder: async (folderPath: string) => {
         setRootPath(folderPath)
         await window.ipcRenderer.setLastFolder(folderPath)
+      },
+
+      // Trust-prompt e2e helpers: inject a `lex/trustRequest` directly
+      // into the coordinator so e2e tests can render the modal,
+      // observe its content, and click Trust/Deny without setting up
+      // a real lexd-lsp + workspace fixture. The full LSP-fires-
+      // request path is exercised in lex-fmt/vscode#68 against a
+      // real lexd-lsp v0.11.0 binary.
+      //
+      // Exposure note: this method follows the same gating as the
+      // rest of the bridge (gated only on `loadTestFixture` being
+      // present in the preload, which is unconditional today). The
+      // bridge already exposes other test-only hooks
+      // (triggerMockDiagnostics, setActiveEditorValue, etc.) under
+      // the same gate, so adding env-flag gating just for this
+      // method would be inconsistent. Tightening the whole bridge
+      // behind an explicit E2E flag is a separate refactor; tracked
+      // implicitly with the rest of the test-bridge surface.
+      injectTrustRequest: async (params: TrustRequestParams) => {
+        const response = await trustPromptCoordinator.request(params)
+        return response
       },
 
       // Raw LSP request helpers — mainly for e2e tests that want to
