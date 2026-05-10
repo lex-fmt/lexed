@@ -20,6 +20,20 @@
 - `@lex-fmt/lex-buffer`: `LspClient` gains `onRequest(method, handler)`
   for registering server→client custom request handlers (mirror of the
   existing `onNotification`). Used by the trust-prompt wiring above.
+- Bumped `lexd-lsp` pin from v0.10.6 to v0.11.0. Picks up the
+  extension dispatch + trust-prompt forwarding + boot-serialization
+  wiring this app's trust-prompt handler depends on. See lex-fmt/lex
+  CHANGELOG `[0.11.0]` for the full surface.
+
+### Tests
+
+- New Playwright e2e spec (`tests/e2e/trust-prompt.spec.ts`) covering
+  the `lex/trustRequest` modal end-to-end via the e2e bridge:
+  injects a fake trust request through `window.__e2e.bridge.injectTrustRequest`,
+  asserts the modal renders with the namespace, command, and
+  capability labels visible, and verifies clicking Trust → trusted,
+  Deny → denied with a named reason, Esc → denied + dismissed
+  (fail-closed). The bridge helper is added to `useLexTestBridge`.
 
 ## v0.8.2 (2026-05-07)
 

@@ -3,7 +3,8 @@ import * as monaco from 'monaco-editor'
 import type { EditorPaneHandle } from '@/components/EditorPane'
 import type { PaneState } from '@/panes/types'
 import { spellcheckService } from '@/spellcheck/service'
-import { lspClient } from '@lex-fmt/lex-buffer'
+import { lspClient, type TrustRequestParams } from '@lex-fmt/lex-buffer'
+import { trustPromptCoordinator } from '@/lsp/trustPromptCoordinator'
 
 type FormattingRequestPayload = {
   type: 'document' | 'range'
@@ -163,6 +164,17 @@ export function useLexTestBridge({
       openFolder: async (folderPath: string) => {
         setRootPath(folderPath)
         await window.ipcRenderer.setLastFolder(folderPath)
+      },
+
+      // Trust-prompt e2e helpers: inject a `lex/trustRequest` directly
+      // into the coordinator so e2e tests can render the modal,
+      // observe its content, and click Trust/Deny without setting up
+      // a real lexd-lsp + workspace fixture. The full LSP-fires-
+      // request path is exercised in lex-fmt/vscode#68 against a
+      // real lexd-lsp v0.11.0 binary.
+      injectTrustRequest: async (params: TrustRequestParams) => {
+        const response = await trustPromptCoordinator.request(params)
+        return response
       },
 
       // Raw LSP request helpers — mainly for e2e tests that want to
