@@ -86,4 +86,13 @@ export const KEYBINDING_DEFINITIONS: KeybindingDefinition[] = [
     contexts: ['editor'],
     shortcut: 'cmd+shift+p',
   },
+  {
+    id: 'editor.extractToInclude',
+    title: 'Extract Selection to Include File',
+    description:
+      'Split the current selection into a new include file referenced via :: lex.include ::',
+    category: 'Editor',
+    contexts: ['editor'],
+    shortcut: 'cmd+shift+e',
+  },
 ]
