@@ -11,6 +11,7 @@ import { PaneWorkspace } from './components/PaneWorkspace'
 import { usePersistedPaneLayout } from '@/panes/usePersistedPaneLayout'
 import { usePaneManager } from '@/panes/usePaneManager'
 import {
+  extractToInclude,
   insertAsset,
   insertVerbatim,
   resolveAnnotation,
@@ -34,6 +35,7 @@ import { getVisualPaneOrder, getVisualTabOrder } from '@/panes/order'
 import { CommandPalette } from '@/components/CommandPalette'
 import { ShortcutsModal } from '@/components/ShortcutsModal'
 import { LspErrorModal } from '@/components/LspErrorModal'
+import { ExtractToIncludeModal } from '@/components/ExtractToIncludeModal'
 import log from 'electron-log/renderer'
 
 interface LspErrorInfo {
@@ -81,6 +83,7 @@ function AppContent() {
   const [isShortcutsOpen, setShortcutsOpen] = useState(false)
   const [lspError, setLspError] = useState<LspErrorInfo | null>(null)
   const [isLspModalOpen, setLspModalOpen] = useState(false)
+  const [isExtractModalOpen, setExtractModalOpen] = useState(false)
   const handleShortcutsClose = useCallback(() => {
     if (isShortcutsOpen) {
       log.info('[Keybindings] Close shortcuts modal')
@@ -573,6 +576,32 @@ function AppContent() {
     await toggleAnnotations(activeEditor)
   }, [activeEditor, ensureLspAvailable])
 
+  const handleExtractToInclude = useCallback(() => {
+    if (!ensureLspAvailable()) return
+    if (!activeEditor) return
+    const selection = activeEditor.getSelection()
+    if (!selection || selection.isEmpty()) {
+      toast.info('Select some text first to extract into a new include file')
+      return
+    }
+    setExtractModalOpen(true)
+  }, [activeEditor, ensureLspAvailable])
+
+  const handleExtractSubmit = useCallback(
+    async (src: string) => {
+      setExtractModalOpen(false)
+      if (!activeEditor) return
+      try {
+        await extractToInclude(activeEditor, src)
+        toast.success(`Extracted selection to ${src}`)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        toast.error(`Extract to include failed: ${message}`)
+      }
+    },
+    [activeEditor]
+  )
+
   const handleToggleHiddenFiles = useCallback(async () => {
     const current = settings.fileTree.showHiddenFiles
     await updateFileTreeSettings({ showHiddenFiles: !current })
@@ -737,6 +766,10 @@ function AppContent() {
         }
         return false
       }
+      if (actionId === 'editor.extractToInclude') {
+        handleExtractToInclude()
+        return true
+      }
       return false
     },
     [
@@ -744,6 +777,7 @@ function AppContent() {
       focusPaneByIndex,
       handleCopyPath,
       handleCopyRelativePath,
+      handleExtractToInclude,
       handleReplace,
       handleSplitHorizontal,
       handleSplitVertical,
@@ -1013,6 +1047,11 @@ function AppContent() {
           autoDismissMs={15000}
         />
       )}
+      <ExtractToIncludeModal
+        isOpen={isExtractModalOpen}
+        onSubmit={handleExtractSubmit}
+        onCancel={() => setExtractModalOpen(false)}
+      />
     </>
   )
 }
