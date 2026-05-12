@@ -130,12 +130,25 @@ interface LspWorkspaceEdit {
 }
 
 function fsPathFromUri(uri: string): string {
-  // file:///abs/path -> /abs/path. Stay defensive for non-file URIs.
+  // Convert `file://` URIs to platform-native paths. On Windows, a URI like
+  // `file:///C:/Users/foo` has `pathname == "/C:/Users/foo"` — passing that
+  // verbatim to `fs.writeFile` fails because of the leading slash before
+  // the drive letter. Strip it on win32.
   const url = new URL(uri)
   if (url.protocol !== 'file:') {
     throw new Error(`Cannot apply edit to non-file URI: ${uri}`)
   }
-  return decodeURIComponent(url.pathname)
+  let path = decodeURIComponent(url.pathname)
+  if (
+    typeof window !== 'undefined' &&
+    window.navigator &&
+    window.navigator.platform &&
+    window.navigator.platform.startsWith('Win') &&
+    /^\/[A-Za-z]:/.test(path)
+  ) {
+    path = path.slice(1)
+  }
+  return path
 }
 
 /**
@@ -182,7 +195,6 @@ async function applyExtractWorkspaceEdit(
     }
     if (!('textDocument' in op)) continue
     const { uri } = op.textDocument
-    const newText = op.edits.map((e) => e.newText).join('')
 
     if (uri === hostUri) {
       // Replace the selection in the active editor.
@@ -206,7 +218,28 @@ async function applyExtractWorkspaceEdit(
     if (!createTargets.has(uri)) {
       throw new Error(`Refusing to write a non-host URI without a CreateFile op: ${uri}`)
     }
-    await window.ipcRenderer.invoke('file-save', fsPathFromUri(uri), newText)
+    // The server contract for a newly-created file is exactly one edit
+    // inserting the full content at (0,0). Collapsing `op.edits` via
+    // `map(...).join('')` would lose ordering if that ever changed, so
+    // assert the shape up front rather than silently producing wrong
+    // content. If we need to support multi-edit creates later, this
+    // throw forces a deliberate update of the apply path (LSP TextEdit[]
+    // base semantics, base-then-apply ordering).
+    if (op.edits.length !== 1) {
+      throw new Error(`Expected a single content edit for new file ${uri}, got ${op.edits.length}`)
+    }
+    const contentEdit = op.edits[0]
+    if (
+      contentEdit.range.start.line !== 0 ||
+      contentEdit.range.start.character !== 0 ||
+      contentEdit.range.end.line !== 0 ||
+      contentEdit.range.end.character !== 0
+    ) {
+      throw new Error(
+        `Expected new-file edit range to be (0,0)-(0,0), got ${JSON.stringify(contentEdit.range)}`
+      )
+    }
+    await window.ipcRenderer.invoke('file-save', fsPathFromUri(uri), contentEdit.newText)
   }
 }
 
