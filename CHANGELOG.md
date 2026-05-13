@@ -1,5 +1,47 @@
 # Changelog
 
+## v0.10.0 (2026-05-13)
+
+### Added
+
+- **Extract Selection to Include File**
+  ([lex#498](https://github.com/lex-fmt/lex/issues/498)). Visually
+  select a section, hit `cmd+shift+e`, and a modal prompts for the
+  target include path; lexed splits the selection out into a new
+  file and replaces the host range with
+  `:: lex.include src="…" ::`. All path validation
+  (URL-scheme / root-escape / existing-target / missing-parent-dir)
+  + indent-shifting + parse pre-check happens server-side in
+  [lex v0.12.0](https://github.com/lex-fmt/lex/releases/tag/v0.12.0);
+  this PR adds the editor-side wiring: `extractToInclude` feature,
+  `ExtractToIncludeModal` component, `editor.extractToInclude`
+  keybinding action. Validation errors surface in the existing toast
+  notification surface carrying the typed `ExtractError` message
+  verbatim.
+
+### Changed
+
+- Bumps `lexd-lsp` pin v0.11.0 → v0.12.0.
+- The WorkspaceEdit applier walks `documentChanges` by hand instead
+  of delegating to a generic LSP apply path: each `CreateFile`
+  target's content is written via the `file-save` IPC, and the
+  host-side `TextDocumentEdit` lands as a Monaco
+  `editor.executeEdits` call. The split is needed because both
+  vscode's `applyEdit` and the equivalent paths in other editors
+  silently no-op a `TextDocumentEdit` targeted at a freshly-
+  `CreateFile`'d URI (the buffer isn't loaded as a document).
+
+### Fixed
+
+- `fsPathFromUri` correctly handles Windows file URIs
+  (`file:///C:/Users/foo` → `C:/Users/foo`) by stripping the leading
+  slash before a drive-letter prefix; previously this path was
+  passed to `fs.writeFile` with the leading slash and would fail.
+- Defensive shape check on new-file content edits: the applier
+  asserts a single edit at `(0,0)-(0,0)` and throws clearly if the
+  server ever changes the contract. The old `op.edits.map(...).join('')`
+  silently dropped range / ordering information.
+
 ## v0.9.0 (2026-05-10)
 
 ### Added
