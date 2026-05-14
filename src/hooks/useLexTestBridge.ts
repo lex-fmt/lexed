@@ -216,6 +216,109 @@ export function useLexTestBridge({
           context: { includeDeclaration: true },
         })
       },
+      requestHover: async (line: number, column: number) => {
+        const editorInstance = getActiveEditorInstance()
+        const model = editorInstance?.getModel?.()
+        if (!model) return null
+        return lspClient.sendRequest('textDocument/hover', {
+          textDocument: { uri: model.uri.toString() },
+          position: { line: line - 1, character: column - 1 },
+        })
+      },
+      requestCodeActions: async (
+        line: number,
+        column: number,
+        diagnostic?: {
+          range: {
+            start: { line: number; character: number }
+            end: { line: number; character: number }
+          }
+          severity?: number
+          code?: string | number
+          source?: string
+          message?: string
+        }
+      ) => {
+        const editorInstance = getActiveEditorInstance()
+        const model = editorInstance?.getModel?.()
+        if (!model) return null
+        const range = diagnostic?.range ?? {
+          start: { line: line - 1, character: column - 1 },
+          end: { line: line - 1, character: column - 1 },
+        }
+        return lspClient.sendRequest('textDocument/codeAction', {
+          textDocument: { uri: model.uri.toString() },
+          range,
+          context: {
+            diagnostics: diagnostic ? [diagnostic] : [],
+            only: ['quickfix'],
+          },
+        })
+      },
+      // Append text to the active model via `executeEdits`, mirroring
+      // what user typing does (LSP picks up the didChange via its
+      // normal listener). Returns the 1-based line number of the
+      // first inserted line, so tests can position the cursor there.
+      appendToEditor: (text: string): number | null => {
+        const editorInstance = getActiveEditorInstance()
+        const model = editorInstance?.getModel?.()
+        if (!editorInstance || !model) return null
+        const lastLine = model.getLineCount()
+        const lastColumn = model.getLineLength(lastLine) + 1
+        const insertedFirstLine = lastLine
+        editorInstance.executeEdits('lex-test-append', [
+          {
+            range: new monaco.Range(lastLine, lastColumn, lastLine, lastColumn),
+            text,
+            forceMoveMarkers: true,
+          },
+        ])
+        return insertedFirstLine
+      },
+      applyWorkspaceEdit: (edit: {
+        changes?: Record<
+          string,
+          Array<{
+            range: {
+              start: { line: number; character: number }
+              end: { line: number; character: number }
+            }
+            newText: string
+          }>
+        >
+      }) => {
+        // Minimal applier for the LSP WorkspaceEdit `changes` form
+        // (which is what lex-lsp emits for label-policy quickfixes).
+        // LSP ranges are 0-indexed line/char; Monaco wants 1-indexed
+        // line/column — converting both ends. Edits are applied in
+        // descending order so an earlier edit doesn't shift later
+        // ranges.
+        if (!edit.changes) return false
+        for (const [uri, edits] of Object.entries(edit.changes)) {
+          const model = monaco.editor.getModel(monaco.Uri.parse(uri))
+          if (!model) continue
+          const sorted = [...edits].sort((a, b) => {
+            if (a.range.start.line !== b.range.start.line) {
+              return b.range.start.line - a.range.start.line
+            }
+            return b.range.start.character - a.range.start.character
+          })
+          for (const e of sorted) {
+            model.applyEdits([
+              {
+                range: new monaco.Range(
+                  e.range.start.line + 1,
+                  e.range.start.character + 1,
+                  e.range.end.line + 1,
+                  e.range.end.character + 1
+                ),
+                text: e.newText,
+              },
+            ])
+          }
+        }
+        return true
+      },
       triggerFormatTable: async () => {
         const editorInstance = getActiveEditorInstance()
         if (!editorInstance) return false
