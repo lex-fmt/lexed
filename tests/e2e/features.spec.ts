@@ -31,9 +31,9 @@ test.describe('LexEd Features', () => {
       win.webContents.send('menu-insert-asset')
     })
 
-    await waitForEditorContent(page, 'doc.image')
+    await waitForEditorContent(page, ':: image src=')
 
-    await expectEditorValue(page, 'doc.image')
+    await expectEditorValue(page, ':: image src=')
     await expectEditorValue(page, 'test-asset.png')
   })
 
