@@ -39,6 +39,7 @@ lerna-debug.log*
 
 # Test artifacts
 test-results/
+tests/__screenshots__/
 .padz/
 .padz
 test.lex
