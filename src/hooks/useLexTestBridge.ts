@@ -258,14 +258,16 @@ export function useLexTestBridge({
       // Append text to the active model via `executeEdits`, mirroring
       // what user typing does (LSP picks up the didChange via its
       // normal listener). Returns the 1-based line number of the
-      // first inserted line, so tests can position the cursor there.
+      // *last* line in the buffer after the insertion — i.e. the line
+      // containing the final character of the inserted text. This is
+      // the line tests usually want to position the cursor on,
+      // regardless of how many newlines the caller prefixed.
       appendToEditor: (text: string): number | null => {
         const editorInstance = getActiveEditorInstance()
         const model = editorInstance?.getModel?.()
         if (!editorInstance || !model) return null
         const lastLine = model.getLineCount()
         const lastColumn = model.getLineLength(lastLine) + 1
-        const insertedFirstLine = lastLine
         editorInstance.executeEdits('lex-test-append', [
           {
             range: new monaco.Range(lastLine, lastColumn, lastLine, lastColumn),
@@ -273,7 +275,7 @@ export function useLexTestBridge({
             forceMoveMarkers: true,
           },
         ])
-        return insertedFirstLine
+        return model.getLineCount()
       },
       applyWorkspaceEdit: (edit: {
         changes?: Record<
@@ -303,19 +305,21 @@ export function useLexTestBridge({
             }
             return b.range.start.character - a.range.start.character
           })
-          for (const e of sorted) {
-            model.applyEdits([
-              {
-                range: new monaco.Range(
-                  e.range.start.line + 1,
-                  e.range.start.character + 1,
-                  e.range.end.line + 1,
-                  e.range.end.character + 1
-                ),
-                text: e.newText,
-              },
-            ])
-          }
+          // Apply all edits in a single `applyEdits` call so they
+          // share one change event (cleaner undo grouping, fewer
+          // didChange notifications). Already sorted descending so
+          // ranges don't shift across the batch.
+          model.applyEdits(
+            sorted.map((e) => ({
+              range: new monaco.Range(
+                e.range.start.line + 1,
+                e.range.start.character + 1,
+                e.range.end.line + 1,
+                e.range.end.character + 1
+              ),
+              text: e.newText,
+            }))
+          )
         }
         return true
       },

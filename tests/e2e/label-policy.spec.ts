@@ -86,43 +86,83 @@ test.describe('Label policy', () => {
     await openFixture(page, 'label-policy.lex')
     await waitForLsp(page)
 
-    // Pick the forbidden-label-prefix marker on the doc.table line so the
-    // code-action request carries the same diagnostic the LSP attached to.
-    const diagnostic = await page.evaluate((line) => {
-      const markers = window.__e2e.bridge?.getMarkers?.() ?? []
-      // Monaco markers are 1-indexed; LSP positions are 0-indexed. We send
-      // the marker back as an LSP-shaped diagnostic for the code-action
-      // context, so the request looks indistinguishable from the one the
-      // editor would send when the user opens the lightbulb menu.
-      const marker = markers.find(
-        (m: { startLineNumber: number; message: string; source: string }) =>
-          m.startLineNumber === line && m.message.includes('doc.table') && m.source === 'lex'
-      ) as
-        | {
-            startLineNumber: number
-            startColumn: number
-            endLineNumber: number
-            endColumn: number
-            severity: number
-            code?: string | number
-            source: string
-            message: string
-          }
-        | undefined
-      if (!marker) return null
-      return {
-        range: {
-          start: { line: marker.startLineNumber - 1, character: marker.startColumn - 1 },
-          end: { line: marker.endLineNumber - 1, character: marker.endColumn - 1 },
-        },
-        severity: marker.severity,
-        code: marker.code,
-        source: marker.source,
-        message: marker.message,
-      }
-    }, DOC_TABLE_LINE)
+    // `publishDiagnostics` arrives async after `didOpen`, so reading
+    // markers immediately can race the server. Poll until the marker
+    // we need is present, then build the code-action request from it.
+    // Monaco's `MarkerSeverity.Error === 8` doesn't match LSP's
+    // `DiagnosticSeverity.Error === 1`; map back so the diagnostic we
+    // send to the server matches a real client-emitted one.
+    const MONACO_TO_LSP_SEVERITY: Record<number, number> = { 8: 1, 4: 2, 2: 3, 1: 4 }
+    const diagnostic = await expect
+      .poll(
+        () =>
+          page.evaluate((line) => {
+            const markers = window.__e2e.bridge?.getMarkers?.() ?? []
+            const marker = markers.find(
+              (m: { startLineNumber: number; message: string; source: string }) =>
+                m.startLineNumber === line && m.message.includes('doc.table') && m.source === 'lex'
+            ) as
+              | {
+                  startLineNumber: number
+                  startColumn: number
+                  endLineNumber: number
+                  endColumn: number
+                  severity: number
+                  code?: string | number
+                  source: string
+                  message: string
+                }
+              | undefined
+            if (!marker) return null
+            return {
+              range: {
+                start: { line: marker.startLineNumber - 1, character: marker.startColumn - 1 },
+                end: { line: marker.endLineNumber - 1, character: marker.endColumn - 1 },
+              },
+              monacoSeverity: marker.severity,
+              code: marker.code,
+              source: marker.source,
+              message: marker.message,
+            }
+          }, DOC_TABLE_LINE),
+        { timeout: 5000, message: 'waiting for doc.table marker to be published' }
+      )
+      .not.toBeNull()
+    void diagnostic // expect.poll returns undefined; re-read the value to use it.
 
-    expect(diagnostic, 'doc.table forbidden-label-prefix marker should be present').not.toBeNull()
+    const lspDiagnostic = (await page.evaluate(
+      ({ line, monacoToLspSeverity }) => {
+        const markers = window.__e2e.bridge?.getMarkers?.() ?? []
+        const marker = markers.find(
+          (m: { startLineNumber: number; message: string; source: string }) =>
+            m.startLineNumber === line && m.message.includes('doc.table') && m.source === 'lex'
+        ) as
+          | {
+              startLineNumber: number
+              startColumn: number
+              endLineNumber: number
+              endColumn: number
+              severity: number
+              code?: string | number
+              source: string
+              message: string
+            }
+          | undefined
+        if (!marker) return null
+        return {
+          range: {
+            start: { line: marker.startLineNumber - 1, character: marker.startColumn - 1 },
+            end: { line: marker.endLineNumber - 1, character: marker.endColumn - 1 },
+          },
+          severity: monacoToLspSeverity[marker.severity] ?? 1,
+          code: marker.code,
+          source: marker.source,
+          message: marker.message,
+        }
+      },
+      { line: DOC_TABLE_LINE, monacoToLspSeverity: MONACO_TO_LSP_SEVERITY }
+    )) as LspDiagnostic | null
+    expect(lspDiagnostic, 'doc.table marker should still be present after poll').not.toBeNull()
 
     const actions = await page.evaluate(
       async ({ line, diag }) => {
@@ -130,7 +170,7 @@ test.describe('Label policy', () => {
           | LspCodeAction[]
           | null
       },
-      { line: DOC_TABLE_LINE, diag: diagnostic as LspDiagnostic }
+      { line: DOC_TABLE_LINE, diag: lspDiagnostic as LspDiagnostic }
     )
 
     expect(actions, 'code-action request should return a result').not.toBeNull()
@@ -201,21 +241,42 @@ test.describe('Label policy', () => {
     })) as number | null
     expect(triggerLine, 'appendToEditor should return the trigger line').not.toBeNull()
 
+    // `appendToEditor` returns the post-insertion last-line number,
+    // which is exactly the line containing the trailing `:: `.
     await page.evaluate(
       ({ line }) => {
         // Cursor at column 4 = just past the trailing space after `:: `.
-        window.__e2e.bridge.setCursor?.(line + 2, 4)
+        window.__e2e.bridge.setCursor?.(line, 4)
         window.__e2e.bridge.focusEditor?.()
       },
       { line: triggerLine as number }
     )
 
-    // Let the LSP ingest the didChange before requesting completion.
-    await page.waitForTimeout(500)
+    // Wait for the editor side to show the appended line first.
+    await expect
+      .poll(
+        () =>
+          page.evaluate(({ line }) => window.__e2e.bridge.getLineContent?.(line), {
+            line: triggerLine as number,
+          }),
+        { timeout: 5000, message: 'waiting for editor to show appended `:: ` line' }
+      )
+      .toMatch(/^::\s/)
+
+    // The lex-buffer completion provider debounces `textDocument/didChange`
+    // before sending it to the LSP (~250ms by default). Without a settle
+    // window here, `triggerSuggest()` fires a completion request before
+    // the new `:: ` line reaches the server, which then returns the
+    // reference-completions list (annotations from elsewhere in the doc)
+    // rather than the verbatim-opener list. The 600ms wait covers the
+    // debounce plus a round-trip to the server. We deliberately do NOT
+    // re-trigger inside the poll below — Monaco's suggest controller
+    // cancels overlapping requests, so a retrigger would race against
+    // the first response landing in `__lexCompletionSample`.
+    await page.waitForTimeout(600)
+
     await page.evaluate(() => window.__e2e.bridge.triggerSuggest?.())
 
-    // Poll the completion sample (populated by the buffer's completion
-    // provider; see packages/lex-buffer/src/lsp/providers/completion.ts).
     await expect
       .poll(
         async () => {
