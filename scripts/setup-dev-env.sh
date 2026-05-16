@@ -47,6 +47,36 @@ if [ -f Gemfile ] && command -v bundle >/dev/null 2>&1; then
   bundle install --quiet || true
 fi
 
+# Git submodules. Required for build when canonical assets live in a
+# submodule — e.g. lexed's `comms` submodule ships the canonical theme
+# JSON, and `npm run theme:check` (a prebuild step) fails without it.
+if [ -f .gitmodules ]; then
+  git submodule update --init --recursive 2>/dev/null || \
+    echo "warning: git submodule update failed — build may fail on submodule-backed assets" >&2
+fi
+
+# Headless display (Xvfb) for Electron / GUI e2e tests.
+# The pre-commit hook here runs `npm run test:e2e:built`, which launches
+# Electron — without DISPLAY, Chromium aborts with "Missing X server or
+# $DISPLAY" and SIGSEGVs. We start an Xvfb daemon on :99 once per
+# session (idempotent — `pgrep` filters out the matcher's own argv via
+# the $$ guard) and export DISPLAY for the current shell. Future
+# interactive shells pick it up from ~/.bashrc / ~/.profile; the
+# pre-commit hook should be run with DISPLAY=:99 in its env (the Bash
+# tool's non-interactive shells don't source profile files).
+if [ "$(uname -s)" = "Linux" ] && command -v Xvfb >/dev/null 2>&1; then
+  if ! pgrep -fa 'Xvfb :99' 2>/dev/null | awk -v me=$$ '$1 != me {found=1} END {exit !found}'; then
+    nohup Xvfb :99 -screen 0 1280x1024x24 >/dev/null 2>&1 &
+    disown 2>/dev/null || true
+  fi
+  export DISPLAY=:99
+  for f in "${HOME}/.bashrc" "${HOME}/.profile"; do
+    [ -f "$f" ] || continue
+    grep -q '^export DISPLAY=:99' "$f" 2>/dev/null || echo 'export DISPLAY=:99' >> "$f"
+  done
+  echo "Xvfb running on :99 — pass DISPLAY=:99 (or run \`xvfb-run -a …\`) when invoking Electron from a non-interactive shell."
+fi
+
 # 2. Pre-commit hook wiring (lefthook).
 # Binary is installed at env-setup time (arthur-debert/release env/setup.sh);
 # this just wires .git/hooks/pre-commit to call it. Errors are surfaced
