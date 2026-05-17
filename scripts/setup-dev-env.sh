@@ -145,10 +145,10 @@ fi
 # nickname is a no-op once present.
 if [ "$(uname -s)" = "Linux" ] && [ -f /etc/ssl/certs/ca-certificates.crt ]; then
   if ! command -v certutil >/dev/null 2>&1; then
+    # Cloud envs run this script as root (gated above on
+    # CLAUDE_CODE_REMOTE=true), so apt-get works without sudo.
     if command -v apt-get >/dev/null 2>&1; then
-      (DEBIAN_FRONTEND=noninteractive sudo apt-get install -y libnss3-tools >/dev/null 2>&1) \
-        || (DEBIAN_FRONTEND=noninteractive apt-get install -y libnss3-tools >/dev/null 2>&1) \
-        || true
+      DEBIAN_FRONTEND=noninteractive apt-get install -y libnss3-tools >/dev/null 2>&1 || true
     fi
   fi
   if command -v certutil >/dev/null 2>&1; then
@@ -169,8 +169,11 @@ if [ "$(uname -s)" = "Linux" ] && [ -f /etc/ssl/certs/ca-certificates.crt ]; the
       case "${subject}" in
         *Anthropic*sandbox-egress*)
           # OpenSSL prints `subject=` then RDNs; the CN separator is
-          # `CN = ` on 1.1+ and `CN=` with -nameopt compat — match both.
-          nick="$(printf '%s' "${subject}" | sed -E 's/.*CN *= *//; s/,.*//')"
+          # `CN = ` on 1.1+ and `CN=` with -nameopt compat — match both,
+          # and emit only if the substitution matched so a subject with
+          # no CN (shouldn't happen for these CAs but defensively) gives
+          # an empty nick instead of the full subject line.
+          nick="$(printf '%s' "${subject}" | sed -nE 's/.*CN *= *([^,]+).*/\1/p')"
           [ -n "${nick}" ] || continue
           if ! certutil -d "sql:${nssdb}" -L -n "${nick}" >/dev/null 2>&1; then
             certutil -d "sql:${nssdb}" -A -t "C,," -n "${nick}" -i "${pem}" >/dev/null 2>&1 || true
