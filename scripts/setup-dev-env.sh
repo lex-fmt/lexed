@@ -113,6 +113,71 @@ if [ "$(uname -s)" = "Linux" ] && command -v Xvfb >/dev/null 2>&1; then
     [ -f "$f" ] || continue
     grep -q '^export DISPLAY=:99' "$f" 2>/dev/null || echo 'export DISPLAY=:99' >> "$f"
   done
+  # The pre-commit hook runs from `git commit`'s non-interactive,
+  # non-login shell, which sources neither ~/.bashrc nor ~/.profile.
+  # Husky v9 (.husky/_/h) DOES source ${XDG_CONFIG_HOME:-~/.config}/husky/init.sh
+  # before every hook, so wire DISPLAY in there too — without this,
+  # Electron in test:e2e:built aborts every spec with "Missing X server
+  # or $DISPLAY" and the whole pre-commit suite is red.
+  husky_init_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/husky"
+  husky_init="${husky_init_dir}/init.sh"
+  mkdir -p "${husky_init_dir}"
+  if [ ! -f "${husky_init}" ] || ! grep -q '^export DISPLAY=:99' "${husky_init}" 2>/dev/null; then
+    echo 'export DISPLAY=:99' >> "${husky_init}"
+  fi
+fi
+
+# Chromium trust store for the sandbox-egress TLS-inspection CA.
+# The cloud env's egress proxy MITMs HTTPS and re-signs every cert with an
+# "Anthropic sandbox-egress…CA" issuer. That CA ships in the system bundle
+# (/etc/ssl/certs/ca-certificates.crt), which is why curl/Node succeed —
+# but Chromium on Linux ignores the OpenSSL bundle and reads its own
+# NSS DB at ~/.pki/nssdb. Without the CA imported there, Electron's
+# Chromium renderer rejects every HTTPS resource the preview iframe loads
+# (Google Fonts, the lex-lsp HTML template's CDN assets) with
+# ERR_CERT_AUTHORITY_INVALID, surfaces it as a console.error, and the
+# e2e harness' runtime-error fixture (tests/e2e/lib/app.ts) auto-fails
+# the test. preview.spec.ts is the canonical victim.
+#
+# Fix: install certutil (libnss3-tools) if missing, init an empty NSS DB
+# at ~/.pki/nssdb, then import every Anthropic sandbox CA found in the
+# system bundle as a trusted SSL root. Idempotent — re-imports a-CA-by-
+# nickname is a no-op once present.
+if [ "$(uname -s)" = "Linux" ] && [ -f /etc/ssl/certs/ca-certificates.crt ]; then
+  if ! command -v certutil >/dev/null 2>&1; then
+    if command -v apt-get >/dev/null 2>&1; then
+      (DEBIAN_FRONTEND=noninteractive sudo apt-get install -y libnss3-tools >/dev/null 2>&1) \
+        || (DEBIAN_FRONTEND=noninteractive apt-get install -y libnss3-tools >/dev/null 2>&1) \
+        || true
+    fi
+  fi
+  if command -v certutil >/dev/null 2>&1; then
+    nssdb="${HOME}/.pki/nssdb"
+    mkdir -p "${nssdb}"
+    if [ ! -f "${nssdb}/cert9.db" ]; then
+      certutil -d "sql:${nssdb}" -N --empty-password >/dev/null 2>&1 || true
+    fi
+    sandbox_ca_tmp="$(mktemp -d)"
+    trap 'rm -rf "${sandbox_ca_tmp}"' EXIT
+    awk '
+      /-----BEGIN CERTIFICATE-----/ { n++; fn = sandbox_dir "/cert_" n ".pem"; in_cert = 1 }
+      in_cert                       { print > fn }
+      /-----END CERTIFICATE-----/   { in_cert = 0; close(fn) }
+    ' sandbox_dir="${sandbox_ca_tmp}" /etc/ssl/certs/ca-certificates.crt
+    for pem in "${sandbox_ca_tmp}"/cert_*.pem; do
+      [ -f "${pem}" ] || continue
+      subject="$(openssl x509 -in "${pem}" -noout -subject 2>/dev/null || true)"
+      case "${subject}" in
+        *Anthropic*sandbox-egress*)
+          nick="$(printf '%s' "${subject}" | sed 's/.*CN = //; s/,.*//')"
+          [ -n "${nick}" ] || continue
+          if ! certutil -d "sql:${nssdb}" -L -n "${nick}" >/dev/null 2>&1; then
+            certutil -d "sql:${nssdb}" -A -t "C,," -n "${nick}" -i "${pem}" >/dev/null 2>&1 || true
+          fi
+          ;;
+      esac
+    done
+  fi
 fi
 
 exit 0
