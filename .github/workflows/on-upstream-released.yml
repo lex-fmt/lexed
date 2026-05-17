@@ -1,0 +1,158 @@
+# Layer 2 handler: react to an upstream's release.
+#
+# Cross-repo release automation (lex-fmt/lex#640). When an upstream this
+# repo depends on (`comms`, `lex` for the `lexd-lsp` binary, or
+# `tree-sitter-lex` for the grammar tarball) fires a `repository_dispatch`
+# of type `upstream-released`, this workflow runs the same Layer 0
+# primitive chain the local orchestrator runs:
+#
+#   should-release  → exits 0 if a release is needed
+#   get-current-version + bump-kind (patch) → new version
+#   update-release <new-version>             → bumps manifest + deps + CHANGELOG
+#   commit + PR + admin-merge                → land the bump
+#   trigger-release <new-version>            → fire this repo's own release CI
+#
+# lexed pins its dependencies in `shared/lex-deps.json` using the NESTED
+# `.deps.<name>.{version,repo}` schema (distinct from vscode/nvim's flat
+# schema). `update-release` is responsible for rewriting those entries
+# in place when an upstream-released dispatch lands.
+#
+# Release model: tag-push. The `trigger-release` primitive cuts and
+# pushes `vX.Y.Z`; release.yml builds the Electron app via
+# electron-builder and uploads the platform installers.
+#
+# The dispatch flow is asymmetric: this repo (downstream) only listens;
+# the upstream's release.yml does the emit at the end of a successful
+# release run.
+#
+# Note on husky: lexed has a husky pre-commit hook that runs the full
+# electron-builder pipeline locally. The handler does not encounter
+# this — GitHub Actions runners don't install husky hooks (no
+# `npm install` step in this workflow, and `.husky/` is gated behind
+# `core.hookspath` which the CI checkout does not set), so the
+# in-handler `git commit` step works cleanly.
+#
+# Manual trigger (for testing / recovery):
+#   gh api repos/lex-fmt/lexed/dispatches \
+#     --method POST \
+#     -f event_type=upstream-released \
+#     -F client_payload[source]=lex \
+#     -F client_payload[version]=v0.12.1
+name: On upstream released
+
+on:
+  repository_dispatch:
+    types: [upstream-released]
+
+# Avoid concurrent handler runs racing on the same release branch.
+concurrency:
+  group: layer2-handler
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  cascade:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Announce trigger
+        run: |
+          echo "Triggered by upstream release: ${{ github.event.client_payload.source }}@${{ github.event.client_payload.version }}"
+          echo "Source run: ${{ github.event.client_payload.run_url }}"
+
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          submodules: recursive
+          # RELEASE_TOKEN so subsequent `git push` of branch + tag works
+          # and so we have admin scope for `gh pr merge --admin`.
+          token: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Configure git identity
+        run: |
+          git config user.email "release-bot@lex-fmt.local"
+          git config user.name "lex-fmt release-bot"
+
+      - name: Decide whether to release
+        id: decide
+        run: |
+          set +e
+          ./scripts/release/should-release
+          rc=$?
+          set -e
+          if [ "$rc" = 0 ]; then
+            echo "release=yes" >> "$GITHUB_OUTPUT"
+          elif [ "$rc" = 1 ]; then
+            echo "release=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::should-release exited $rc — bailing out"
+            exit "$rc"
+          fi
+
+      - name: Skip if not needed
+        if: steps.decide.outputs.release == 'no'
+        run: |
+          echo "No release needed; nothing to do."
+
+      - name: Compute new version (patch bump)
+        if: steps.decide.outputs.release == 'yes'
+        id: ver
+        run: |
+          set -e
+          current=$(./scripts/release/get-current-version)
+          IFS='.' read -r major minor patch <<< "$current"
+          new="$major.$minor.$((patch + 1))"
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+          echo "new=$new"          >> "$GITHUB_OUTPUT"
+          echo "Version: $current → $new"
+
+      - name: Branch + bump + commit
+        if: steps.decide.outputs.release == 'yes'
+        env:
+          NEW: ${{ steps.ver.outputs.new }}
+        run: |
+          set -e
+          branch="release/v$NEW"
+          git checkout -b "$branch"
+          ./scripts/release/update-release "$NEW"
+          git commit -m "chore: release v$NEW"
+          git push -u origin "$branch"
+
+      - name: PR + admin-merge
+        if: steps.decide.outputs.release == 'yes'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          NEW: ${{ steps.ver.outputs.new }}
+          UPSTREAM: ${{ github.event.client_payload.source }}
+          UP_VER: ${{ github.event.client_payload.version }}
+        run: |
+          set -e
+          body="Cascade-triggered release. Upstream: $UPSTREAM@$UP_VER.
+
+          Cut by the on-upstream-released handler (Layer 2 of lex-fmt/lex#640).
+          See $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID for the handler run."
+          pr=$(gh pr create --title "chore: release v$NEW" --body "$body" \
+               | grep -oE 'pull/[0-9]+' | grep -oE '[0-9]+$')
+          echo "Opened PR #$pr"
+          gh pr merge "$pr" --squash --delete-branch --admin
+          echo "Admin-merged PR #$pr"
+
+      - name: Trigger release CI
+        if: steps.decide.outputs.release == 'yes'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          NEW: ${{ steps.ver.outputs.new }}
+        run: |
+          set -e
+          git fetch origin
+          git checkout main
+          git reset --hard origin/main
+          if [ -f .gitmodules ]; then
+            git submodule update --init --recursive
+          fi
+          ./scripts/release/trigger-release "$NEW"
+          echo "Triggered release for v$NEW; tag-push will fan into release.yml."
