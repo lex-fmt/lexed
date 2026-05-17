@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+# should-release — Layer 0 primitive (lex-fmt/lex#640)
+#
+# Decides whether this repo (lex-fmt/lexed) needs a new release.
+#
+# Contract:
+#   - No args.
+#   - Exit 0 + "yes: <reason>" if a release is needed.
+#   - Exit 1 + "no: <reason>"  if not.
+#   - Exit 2 + "error: <reason>" (to stderr) on any infrastructure failure
+#     (missing tool, helper script failure, malformed pin file, gh/api failure).
+#
+# lexed pins three upstream sources. NOTE: unlike vscode/nvim which use a flat
+# shared/lex-deps.json schema, lexed uses a NESTED schema:
+#
+#   {
+#     "deps": {
+#       "lexd-lsp":    { "version": "vX.Y.Z", "repo": "lex-fmt/lex" },
+#       "tree-sitter": { "version": "vA.B.C", "repo": "lex-fmt/tree-sitter-lex" }
+#     }
+#   }
+#
+# Plus a comms/ git submodule (lex-fmt/comms).
+#
+# We say "yes" if ANY of these is true:
+#   1. Own commits in this repo since the latest release tag.
+#   2. comms submodule SHA != commit SHA of comms's latest release tag.
+#   3. lexd-lsp pin (.deps."lexd-lsp".version) != latest tag of lex-fmt/lex.
+#   4. tree-sitter pin (.deps."tree-sitter".version) != latest tag of
+#      lex-fmt/tree-sitter-lex.
+#
+# First match wins, in the order above.
+
+set -euo pipefail
+
+die() {
+  echo "error: $*" >&2
+  exit 2
+}
+
+# Dependency check — every external tool the script needs.
+for tool in gh jq git awk grep; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    die "$tool is required but not installed"
+  fi
+done
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+cd "$REPO_ROOT"
+
+# ---------------------------------------------------------------------------
+# 1. Own commits since latest release tag.
+#    Propagate failure from the helper script as a hard error (exit 2) — we
+#    can't make a decision if we can't read our own history.
+# ---------------------------------------------------------------------------
+if ! commits=$("$SCRIPT_DIR/get-commits-since-release"); then
+  die "get-commits-since-release failed"
+fi
+if [ -n "$commits" ]; then
+  count=$(printf '%s\n' "$commits" | grep -c .)
+  echo "yes: $count commit(s) in this repo since latest release"
+  exit 0
+fi
+
+# ---------------------------------------------------------------------------
+# 2. comms submodule freshness.
+#    Compare the SHA recorded in the superproject (git ls-tree HEAD comms)
+#    against the commit SHA of the latest comms release tag. Gate on the
+#    git index (ls-tree returning a `commit` entry) rather than on the
+#    filesystem, so an uninitialized submodule still gets checked.
+# ---------------------------------------------------------------------------
+sub_entry=$(git ls-tree HEAD comms 2>/dev/null || true)
+sub_mode=$(printf '%s' "$sub_entry" | awk '{print $2}')
+if [ "$sub_mode" = "commit" ]; then
+  current_sub=$(printf '%s' "$sub_entry" | awk '{print $3}')
+  if ! latest_comms_tag=$(gh release view --repo lex-fmt/comms --json tagName --jq .tagName 2>/dev/null); then
+    die "could not fetch latest comms release tag"
+  fi
+  if ! latest_sha=$(gh api "repos/lex-fmt/comms/commits/$latest_comms_tag" --jq .sha 2>/dev/null); then
+    die "could not resolve comms tag $latest_comms_tag to a commit SHA"
+  fi
+  if [ "$current_sub" != "$latest_sha" ]; then
+    echo "yes: comms submodule outdated (${current_sub:0:7} -> ${latest_sha:0:7} = $latest_comms_tag)"
+    exit 0
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# 3 & 4. lexd-lsp + tree-sitter pin freshness.
+#    Both keys live in the same NESTED shared/lex-deps.json under
+#    .deps.<name>.version. We use `jq -e` so a missing key (or a JSON `null`
+#    value) becomes a hard error rather than being silently compared as the
+#    literal string "null".
+# ---------------------------------------------------------------------------
+if [ -f shared/lex-deps.json ]; then
+  # 3. lexd-lsp pin.
+  if ! current_lex=$(jq -er '.deps."lexd-lsp".version' shared/lex-deps.json 2>/dev/null); then
+    die "shared/lex-deps.json is missing .deps.\"lexd-lsp\".version (or it is null)"
+  fi
+  if ! latest_lex=$(gh release view --repo lex-fmt/lex --json tagName --jq .tagName 2>/dev/null); then
+    die "could not fetch latest lex-fmt/lex release tag"
+  fi
+  if [ "$current_lex" != "$latest_lex" ]; then
+    echo "yes: lexd-lsp pin outdated ($current_lex -> $latest_lex)"
+    exit 0
+  fi
+
+  # 4. tree-sitter pin.
+  if ! current_ts=$(jq -er '.deps."tree-sitter".version' shared/lex-deps.json 2>/dev/null); then
+    die "shared/lex-deps.json is missing .deps.\"tree-sitter\".version (or it is null)"
+  fi
+  if ! latest_ts=$(gh release view --repo lex-fmt/tree-sitter-lex --json tagName --jq .tagName 2>/dev/null); then
+    die "could not fetch latest lex-fmt/tree-sitter-lex release tag"
+  fi
+  if [ "$current_ts" != "$latest_ts" ]; then
+    echo "yes: tree-sitter pin outdated ($current_ts -> $latest_ts)"
+    exit 0
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# All checks clean.
+# ---------------------------------------------------------------------------
+echo "no: own repo, comms submodule, lexd-lsp pin, and tree-sitter pin all up-to-date"
+exit 1
