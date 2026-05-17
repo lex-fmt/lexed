@@ -54,6 +54,19 @@ jq --arg v "$NEW_VERSION" '.version = $v' "$PKG" > "$TMP"
 mv "$TMP" "$PKG"
 git add "$PKG"
 
+# --- package-lock.json ---------------------------------------------------
+# npm's lockfile carries the root version in two places: `.version` (top-level)
+# and `.packages[""].version` (the root package entry). Bump both directly with
+# jq so the lockfile stays in lockstep with package.json without paying for a
+# full `npm install --package-lock-only`.
+LOCK="$REPO_ROOT/package-lock.json"
+if [[ -f "$LOCK" ]]; then
+  TMP="$(mktemp)"
+  jq --arg v "$NEW_VERSION" '.version = $v | .packages[""].version = $v' "$LOCK" > "$TMP"
+  mv "$TMP" "$LOCK"
+  git add "$LOCK"
+fi
+
 # --- shared/lex-deps.json ------------------------------------------------
 # Pin lexd-lsp and tree-sitter to whatever is currently the "latest" GitHub
 # release of each upstream repo. We use `gh release view` (no --pre-releases)
@@ -111,14 +124,17 @@ fi
 # Fast-forward the comms submodule to origin/main and stage the gitlink. This
 # matches the rest of the lex-fmt portfolio (lex, vscode, nvim, tree-sitter-lex
 # all do the same dance at release time so the bundled specs match the
-# published release).
-if [[ -d "$REPO_ROOT/comms/.git" ]] || [[ -f "$REPO_ROOT/comms/.git" ]]; then
-  (
-    cd "$REPO_ROOT/comms"
-    git fetch origin
-    git checkout origin/main
-  )
-  git add comms
+# published release). Fail loudly if the submodule isn't initialized — a
+# silent skip would ship a release with stale comms.
+if [[ ! -e "$REPO_ROOT/comms/.git" ]]; then
+  echo "error: comms submodule not initialized. Run: git submodule update --init --recursive" >&2
+  exit 1
 fi
+(
+  cd "$REPO_ROOT/comms"
+  git fetch origin
+  git checkout origin/main
+)
+git add comms
 
 echo "Staged version bump to ${NEW_VERSION}. Review with: git diff --cached" >&2

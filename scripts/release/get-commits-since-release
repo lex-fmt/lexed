@@ -2,7 +2,9 @@
 # get-commits-since-release — print commits since the most recent vX.Y.Z tag.
 #
 # Output: one line per commit, `<short-sha> <subject>`. Empty stdout means no
-# commits since the latest release tag (or no tags exist yet).
+# commits since the latest release tag. If no `vX.Y.Z` tag exists in the repo,
+# lists all commits on HEAD (the orchestrator decides what "all commits ever"
+# means at the upper layer).
 #
 # Layer 0 release primitive — see lex-fmt/lex#640. Sister scripts:
 #   - get-current-version
