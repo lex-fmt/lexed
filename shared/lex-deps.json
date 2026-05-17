@@ -1,11 +1,11 @@
 {
   "deps": {
     "lexd-lsp": {
-      "version": "v0.13.0",
+      "version": "v0.14.1",
       "repo": "lex-fmt/lex"
     },
     "tree-sitter": {
-      "version": "v0.10.1",
+      "version": "v0.10.2",
       "repo": "lex-fmt/tree-sitter-lex"
     }
   }
