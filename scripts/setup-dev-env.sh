@@ -114,39 +114,73 @@ fi
 # each subject; both binaries are env-level state on cloud sessions but
 # may be absent locally).
 #
-# Fast-path: grep the bundle once for the Anthropic marker before doing
-# any per-cert work. On a non-cloud Linux box the bundle has no such
-# certs and the loop is gratuitous (forks openssl ~130×); skip it
-# entirely in that case.
+# Cert layouts seen in the cloud env (probe both):
+#   (A) Historical (pre-2026-05): the sandbox-egress CA was concatenated
+#       into the system bundle /etc/ssl/certs/ca-certificates.crt.
+#   (B) Current (2026-05+): the CA ships as standalone PEMs at
+#       /etc/ssl/certs/swp-ca-{production,staging}.pem; it is NOT
+#       written into the system bundle, so the old layout-A grep gate
+#       silently misses it and the NSS DB is never populated — every
+#       HTTPS resource an Electron / Playwright test loads then fails
+#       with ERR_CERT_AUTHORITY_INVALID, even though `curl` and Node
+#       (which read the OpenSSL bundle directly, not the NSS DB)
+#       succeed. lexed's `preview.spec.ts` is the canonical surface:
+#       the LSP-generated HTML it renders pulls in a Cloudflare CDN
+#       stylesheet and a Google Fonts @import, both of which traverse
+#       the proxy.
+#
+# Strategy: collect candidate PEMs from both layouts into a scratch
+# dir, then run the existing subject-match-and-import loop over the
+# union. Fast-path: skip everything if neither layout has any
+# matching cert (non-cloud Linux box).
 if [ "$(uname -s)" = "Linux" ] \
    && command -v certutil >/dev/null 2>&1 \
-   && command -v openssl >/dev/null 2>&1 \
-   && [ -f /etc/ssl/certs/ca-certificates.crt ] \
-   && grep -q 'Anthropic' /etc/ssl/certs/ca-certificates.crt 2>/dev/null; then
-  _nssdb="${HOME}/.pki/nssdb"
-  mkdir -p "${_nssdb}"
-  if [ ! -f "${_nssdb}/cert9.db" ]; then
-    certutil -d "sql:${_nssdb}" -N --empty-password >/dev/null 2>&1 || true
-  fi
+   && command -v openssl >/dev/null 2>&1; then
   _ca_tmp="$(mktemp -d)"
-  awk '
-    /-----BEGIN CERTIFICATE-----/ { n++; fn = sandbox_dir "/cert_" n ".pem"; in_cert = 1 }
-    in_cert                       { print > fn }
-    /-----END CERTIFICATE-----/   { in_cert = 0; close(fn) }
-  ' sandbox_dir="${_ca_tmp}" /etc/ssl/certs/ca-certificates.crt
-  for _pem in "${_ca_tmp}"/cert_*.pem; do
+  _found=0
+
+  # Layout A: split the bundle into per-cert PEMs if it contains
+  # any Anthropic CA. Cheap grep gate avoids the awk fork when the
+  # bundle has no matches (the common non-cloud case).
+  if [ -f /etc/ssl/certs/ca-certificates.crt ] \
+     && grep -q 'Anthropic' /etc/ssl/certs/ca-certificates.crt 2>/dev/null; then
+    awk '
+      /-----BEGIN CERTIFICATE-----/ { n++; fn = sandbox_dir "/bundle_" n ".pem"; in_cert = 1 }
+      in_cert                       { print > fn }
+      /-----END CERTIFICATE-----/   { in_cert = 0; close(fn) }
+    ' sandbox_dir="${_ca_tmp}" /etc/ssl/certs/ca-certificates.crt
+    _found=1
+  fi
+
+  # Layout B: copy standalone swp-ca-*.pem into the scratch dir.
+  # The glob can be unexpanded if no file matches; guard with -f.
+  for _pem in /etc/ssl/certs/swp-ca-*.pem; do
     [ -f "${_pem}" ] || continue
-    _subject="$(openssl x509 -in "${_pem}" -noout -subject 2>/dev/null || true)"
-    case "${_subject}" in
-      *Anthropic*sandbox-egress*)
-        _nick="$(printf '%s' "${_subject}" | sed -nE 's/.*CN *= *([^,]+).*/\1/p')"
-        [ -n "${_nick}" ] || continue
-        if ! certutil -d "sql:${_nssdb}" -L -n "${_nick}" >/dev/null 2>&1; then
-          certutil -d "sql:${_nssdb}" -A -t "C,," -n "${_nick}" -i "${_pem}" >/dev/null 2>&1 || true
-        fi
-        ;;
-    esac
+    cp "${_pem}" "${_ca_tmp}/$(basename "${_pem}")"
+    _found=1
   done
+
+  if [ "${_found}" = "1" ]; then
+    _nssdb="${HOME}/.pki/nssdb"
+    mkdir -p "${_nssdb}"
+    if [ ! -f "${_nssdb}/cert9.db" ]; then
+      certutil -d "sql:${_nssdb}" -N --empty-password >/dev/null 2>&1 || true
+    fi
+    for _pem in "${_ca_tmp}"/*.pem; do
+      [ -f "${_pem}" ] || continue
+      _subject="$(openssl x509 -in "${_pem}" -noout -subject 2>/dev/null || true)"
+      case "${_subject}" in
+        *Anthropic*sandbox-egress*)
+          _nick="$(printf '%s' "${_subject}" | sed -nE 's/.*CN *= *([^,]+).*/\1/p')"
+          [ -n "${_nick}" ] || continue
+          if ! certutil -d "sql:${_nssdb}" -L -n "${_nick}" >/dev/null 2>&1; then
+            certutil -d "sql:${_nssdb}" -A -t "C,," -n "${_nick}" -i "${_pem}" >/dev/null 2>&1 || true
+          fi
+          ;;
+      esac
+    done
+  fi
+
   rm -rf "${_ca_tmp}"
 fi
 
