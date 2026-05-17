@@ -3,7 +3,10 @@
 # the SessionStart hook in .claude/settings.json.
 #
 # Source of truth: arthur-debert/release templates/setup-dev-env.sh.
-# Re-sync via the gh-repo-setup skill (or by copying this file verbatim).
+# To re-sync, copy this file verbatim over the consumer's
+# scripts/setup-dev-env.sh. (The gh-repo-setup skill does not currently
+# route this top-level template; it only handles per-stack trees under
+# templates/<stack>/.)
 # Repos that need project-specific extras (Xvfb daemon, pinned-binary
 # fetch, extra rustup targets, etc.) append them below the marker at the
 # bottom — anything above it is rsync'd from the template.
@@ -54,6 +57,18 @@ if [ -f package.json ]; then
     yarn install --frozen-lockfile 2>/dev/null || yarn install
   elif [ -f pnpm-lock.yaml ] && command -v pnpm >/dev/null 2>&1; then
     pnpm install --frozen-lockfile 2>/dev/null || pnpm install
+  elif command -v npm >/dev/null 2>&1; then
+    # No lockfile committed — repos like tree-sitter-lex deliberately
+    # gitignore package-lock.json because the npm deps are dev-only
+    # tooling (tree-sitter-cli, bats) and a committed lockfile would be
+    # noise to bump. Without this branch, node_modules never gets
+    # populated and any `npx <tool>` invocation fails.
+    #
+    # --no-package-lock matches the consumer's intent: they chose not
+    # to commit a lockfile, so we shouldn't generate one in their
+    # working tree just because we ran install.
+    npm install --no-audit --no-fund --no-package-lock 2>/dev/null \
+      || npm install --no-package-lock
   fi
 fi
 
@@ -62,14 +77,77 @@ if [ -f Gemfile ] && command -v bundle >/dev/null 2>&1; then
   bundle install --quiet || true
 fi
 
-# Python / pip + venv. Only initialise if .venv missing — pip install is
-# slower than node/cargo and the guard wins more than it costs.
-if [ -f pyproject.toml ] && [ ! -d .venv ] && command -v python3 >/dev/null 2>&1; then
+# Python / pip + venv. Triggered by any of the conventional manifests
+# (pyproject.toml, requirements.txt, setup.py) so legacy projects are
+# covered too. Only initialises if .venv missing — pip install is slower
+# than node/cargo and the guard wins more than it costs.
+if { [ -f pyproject.toml ] || [ -f requirements.txt ] || [ -f setup.py ]; } \
+   && [ ! -d .venv ] && command -v python3 >/dev/null 2>&1; then
   python3 -m venv .venv
   .venv/bin/pip install --upgrade pip --quiet || true
-  .venv/bin/pip install -e '.[dev]' --quiet 2>/dev/null \
-    || .venv/bin/pip install -e . --quiet 2>/dev/null \
-    || true
+  if [ -f pyproject.toml ]; then
+    .venv/bin/pip install -e '.[dev]' --quiet 2>/dev/null \
+      || .venv/bin/pip install -e . --quiet 2>/dev/null \
+      || true
+  elif [ -f requirements.txt ]; then
+    .venv/bin/pip install -r requirements.txt --quiet || true
+  elif [ -f setup.py ]; then
+    .venv/bin/pip install -e . --quiet || true
+  fi
+fi
+
+# --- 2.5. Chromium NSS DB cert import ------------------------------------
+# Cloud sessions route HTTPS through an "Anthropic sandbox-egress…CA"
+# proxy that re-signs every leaf cert. That CA ships in the system
+# OpenSSL bundle (/etc/ssl/certs/ca-certificates.crt), which is why
+# curl and Node succeed. But Chromium on Linux ignores the OpenSSL
+# bundle and reads its own NSS DB at ~/.pki/nssdb — without the CA
+# imported there, every HTTPS resource an Electron / Playwright test
+# loads is rejected with ERR_CERT_AUTHORITY_INVALID. The e2e harness's
+# runtime-error fixture surfaces that as a `console.error` and the test
+# auto-fails.
+#
+# Fix: scan the system bundle for any cert whose subject matches
+# "Anthropic*sandbox-egress*" and import each as a trusted SSL root.
+# Idempotent — re-imports by nickname are no-ops once present. Gated on
+# `certutil` AND `openssl` existing (the loop forks openssl to extract
+# each subject; both binaries are env-level state on cloud sessions but
+# may be absent locally).
+#
+# Fast-path: grep the bundle once for the Anthropic marker before doing
+# any per-cert work. On a non-cloud Linux box the bundle has no such
+# certs and the loop is gratuitous (forks openssl ~130×); skip it
+# entirely in that case.
+if [ "$(uname -s)" = "Linux" ] \
+   && command -v certutil >/dev/null 2>&1 \
+   && command -v openssl >/dev/null 2>&1 \
+   && [ -f /etc/ssl/certs/ca-certificates.crt ] \
+   && grep -q 'Anthropic' /etc/ssl/certs/ca-certificates.crt 2>/dev/null; then
+  _nssdb="${HOME}/.pki/nssdb"
+  mkdir -p "${_nssdb}"
+  if [ ! -f "${_nssdb}/cert9.db" ]; then
+    certutil -d "sql:${_nssdb}" -N --empty-password >/dev/null 2>&1 || true
+  fi
+  _ca_tmp="$(mktemp -d)"
+  awk '
+    /-----BEGIN CERTIFICATE-----/ { n++; fn = sandbox_dir "/cert_" n ".pem"; in_cert = 1 }
+    in_cert                       { print > fn }
+    /-----END CERTIFICATE-----/   { in_cert = 0; close(fn) }
+  ' sandbox_dir="${_ca_tmp}" /etc/ssl/certs/ca-certificates.crt
+  for _pem in "${_ca_tmp}"/cert_*.pem; do
+    [ -f "${_pem}" ] || continue
+    _subject="$(openssl x509 -in "${_pem}" -noout -subject 2>/dev/null || true)"
+    case "${_subject}" in
+      *Anthropic*sandbox-egress*)
+        _nick="$(printf '%s' "${_subject}" | sed -nE 's/.*CN *= *([^,]+).*/\1/p')"
+        [ -n "${_nick}" ] || continue
+        if ! certutil -d "sql:${_nssdb}" -L -n "${_nick}" >/dev/null 2>&1; then
+          certutil -d "sql:${_nssdb}" -A -t "C,," -n "${_nick}" -i "${_pem}" >/dev/null 2>&1 || true
+        fi
+        ;;
+    esac
+  done
+  rm -rf "${_ca_tmp}"
 fi
 
 # --- 3. Pre-commit hook wiring -------------------------------------------
@@ -92,7 +170,9 @@ fi
 # in-place; consumers append project-specific steps BELOW this marker.
 # (See e.g. lex-fmt/lexed for an Xvfb start, lex-fmt/nvim for pinned-bin
 # fetches.)
-
+#
+# No trailing `exit 0` — bash exits 0 on EOF when `set -euo pipefail`
+# succeeded. Adding one here would make appended extras unreachable.
 
 # Headless display (Xvfb) for Electron / GUI e2e tests.
 # The pre-commit hook here runs `npm run test:e2e:built`, which launches
@@ -100,9 +180,18 @@ fi
 # $DISPLAY" and SIGSEGVs. We start an Xvfb daemon on :99 once per
 # session (idempotent — `pgrep` filters out the matcher's own argv via
 # the $$ guard) and export DISPLAY for the current shell. Future
-# interactive shells pick it up from ~/.bashrc / ~/.profile; the
-# pre-commit hook should be run with DISPLAY=:99 in its env (the Bash
-# tool's non-interactive shells don't source profile files).
+# interactive shells pick it up from ~/.bashrc / ~/.profile.
+#
+# Husky v9 sources ${XDG_CONFIG_HOME:-~/.config}/husky/init.sh before
+# every hook, so wire DISPLAY there too — `git commit`'s pre-commit
+# subprocess is a non-interactive non-login shell that sources neither
+# ~/.bashrc nor ~/.profile, and without DISPLAY Electron in
+# test:e2e:built aborts every spec with "Missing X server or $DISPLAY".
+#
+# The NSS cert import for the sandbox-egress CA (which Electron's
+# Chromium renderer also needs to load HTTPS resources without
+# ERR_CERT_AUTHORITY_INVALID) now lives in the canonical template
+# above, so nothing more to do here for that.
 if [ "$(uname -s)" = "Linux" ] && command -v Xvfb >/dev/null 2>&1; then
   if ! pgrep -fa 'Xvfb :99' 2>/dev/null | awk -v me=$$ '$1 != me {found=1} END {exit !found}'; then
     nohup Xvfb :99 -screen 0 1280x1024x24 >/dev/null 2>&1 &
@@ -113,6 +202,10 @@ if [ "$(uname -s)" = "Linux" ] && command -v Xvfb >/dev/null 2>&1; then
     [ -f "$f" ] || continue
     grep -q '^export DISPLAY=:99' "$f" 2>/dev/null || echo 'export DISPLAY=:99' >> "$f"
   done
+  husky_init_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/husky"
+  husky_init="${husky_init_dir}/init.sh"
+  mkdir -p "${husky_init_dir}"
+  if [ ! -f "${husky_init}" ] || ! grep -q '^export DISPLAY=:99' "${husky_init}" 2>/dev/null; then
+    echo 'export DISPLAY=:99' >> "${husky_init}"
+  fi
 fi
-
-exit 0
