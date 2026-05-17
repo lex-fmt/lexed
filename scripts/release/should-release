@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# should-release — Layer 0 primitive (lex-fmt/lex#640)
+#
+# Decides whether this repo (lex-fmt/lexed) needs a new release.
+#
+# Contract:
+#   - No args.
+#   - Exit 0 + "yes: <reason>" if a release is needed.
+#   - Exit 1 + "no: <reason>"  if not.
+#   - Exit 2 on error.
+#
+# lexed pins three upstream sources. NOTE: unlike vscode/nvim which use a flat
+# shared/lex-deps.json schema, lexed uses a NESTED schema:
+#
+#   {
+#     "deps": {
+#       "lexd-lsp":    { "version": "vX.Y.Z", "repo": "lex-fmt/lex" },
+#       "tree-sitter": { "version": "vA.B.C", "repo": "lex-fmt/tree-sitter-lex" }
+#     }
+#   }
+#
+# Plus a comms/ git submodule (lex-fmt/comms).
+#
+# We say "yes" if ANY of these is true:
+#   1. Own commits in this repo since the latest release tag.
+#   2. comms submodule SHA != commit SHA of comms's latest release tag.
+#   3. lexd-lsp pin (.deps."lexd-lsp".version) != latest tag of lex-fmt/lex.
+#   4. tree-sitter pin (.deps."tree-sitter".version) != latest tag of
+#      lex-fmt/tree-sitter-lex.
+#
+# First match wins, in the order above.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+cd "$REPO_ROOT"
+
+# ---------------------------------------------------------------------------
+# 1. Own commits since latest release tag.
+# ---------------------------------------------------------------------------
+commits=$("$SCRIPT_DIR/get-commits-since-release" || true)
+if [ -n "$commits" ]; then
+  count=$(printf '%s\n' "$commits" | grep -c .)
+  echo "yes: $count commit(s) in this repo since latest release"
+  exit 0
+fi
+
+# ---------------------------------------------------------------------------
+# 2. comms submodule freshness.
+#    Compare the SHA recorded in the superproject (git ls-tree HEAD comms)
+#    against the commit SHA of the latest comms release tag.
+# ---------------------------------------------------------------------------
+if [ -d comms ]; then
+  current_sub=$(git ls-tree HEAD comms 2>/dev/null | awk '{print $3}')
+  latest_comms_tag=$(gh release view --repo lex-fmt/comms --json tagName --jq .tagName 2>/dev/null || echo "")
+  if [ -n "$current_sub" ] && [ -n "$latest_comms_tag" ]; then
+    latest_sha=$(gh api "repos/lex-fmt/comms/commits/$latest_comms_tag" --jq .sha 2>/dev/null || echo "")
+    if [ -n "$latest_sha" ] && [ "$current_sub" != "$latest_sha" ]; then
+      echo "yes: comms submodule outdated (${current_sub:0:7} -> ${latest_sha:0:7} = $latest_comms_tag)"
+      exit 0
+    fi
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# 3. lexd-lsp pin freshness.
+#    Nested path: .deps."lexd-lsp".version
+# ---------------------------------------------------------------------------
+if [ -f shared/lex-deps.json ]; then
+  current_lex=$(jq -r '.deps."lexd-lsp".version' shared/lex-deps.json 2>/dev/null || echo "")
+  latest_lex=$(gh release view --repo lex-fmt/lex --json tagName --jq .tagName 2>/dev/null || echo "")
+  if [ -n "$current_lex" ] && [ -n "$latest_lex" ] && [ "$current_lex" != "$latest_lex" ]; then
+    echo "yes: lexd-lsp pin outdated ($current_lex -> $latest_lex)"
+    exit 0
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# 4. tree-sitter pin freshness.
+#    Nested path: .deps."tree-sitter".version
+# ---------------------------------------------------------------------------
+if [ -f shared/lex-deps.json ]; then
+  current_ts=$(jq -r '.deps."tree-sitter".version' shared/lex-deps.json 2>/dev/null || echo "")
+  latest_ts=$(gh release view --repo lex-fmt/tree-sitter-lex --json tagName --jq .tagName 2>/dev/null || echo "")
+  if [ -n "$current_ts" ] && [ -n "$latest_ts" ] && [ "$current_ts" != "$latest_ts" ]; then
+    echo "yes: tree-sitter pin outdated ($current_ts -> $latest_ts)"
+    exit 0
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# All checks clean.
+# ---------------------------------------------------------------------------
+echo "no: own repo, comms submodule, lexd-lsp pin, and tree-sitter pin all up-to-date"
+exit 1
