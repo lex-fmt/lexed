@@ -137,6 +137,11 @@ if [ "$(uname -s)" = "Linux" ] \
    && command -v certutil >/dev/null 2>&1 \
    && command -v openssl >/dev/null 2>&1; then
   _ca_tmp="$(mktemp -d)"
+  # `set -e` means an unexpected failure in awk/cp/mkdir below would
+  # abort the script before the explicit cleanup at the end of the
+  # block, leaking a scratch dir each session. Trap EXIT (and INT/TERM
+  # so Ctrl-C during a local re-run still cleans up).
+  trap 'rm -rf "${_ca_tmp}"' EXIT INT TERM
   _found=0
 
   # Layout A: split the bundle into per-cert PEMs if it contains
@@ -182,6 +187,7 @@ if [ "$(uname -s)" = "Linux" ] \
   fi
 
   rm -rf "${_ca_tmp}"
+  trap - EXIT INT TERM
 fi
 
 # --- 3. Pre-commit hook wiring -------------------------------------------
