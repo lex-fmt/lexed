@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# trigger-release <new-version> — kick off a release by creating and pushing
+# the `v<new-version>` git tag.
+#
+# Layer 0 release primitive — see lex-fmt/lex#640. Sister scripts:
+#   - get-current-version
+#   - get-commits-since-release
+#   - update-release
+#
+# Release strategy: **tag-push**. This repo's release CI workflow is gated on
+# `on: push: tags: [v*]`, so pushing the tag is the trigger. (Contrast with
+# `workflow-dispatch` repos where the orchestrator instead calls
+# `gh workflow run release.yml`.)
+#
+# Called by the higher-layer release orchestrator after the version-bump PR
+# has been merged to `main` and `main` has been fast-forwarded locally. The
+# tag is placed on whatever commit `HEAD` currently points at — the caller is
+# responsible for ensuring `HEAD` is the merged bump commit.
+#
+# Usage:
+#   trigger-release 0.10.1
+#
+# Exit codes:
+#   0  tag created and pushed
+#   1  tag already exists (locally or on origin) — caller must resolve
+#   2  bad usage / malformed version
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+cd "$REPO_ROOT"
+
+usage() {
+  echo "Usage: $(basename "$0") <new-version>" >&2
+  echo "  new-version   Bare semver string, e.g. 0.10.1 (no leading v)" >&2
+}
+
+if [[ $# -ne 1 ]]; then
+  usage
+  exit 2
+fi
+
+NEW_VERSION="$1"
+if [[ ! "$NEW_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "error: version must be X.Y.Z (got: $NEW_VERSION)" >&2
+  exit 2
+fi
+
+TAG="v$NEW_VERSION"
+
+# Refuse to create a tag that already exists locally. If a previous run left
+# the tag behind, the caller can `git tag -d $TAG && git push --delete
+# origin $TAG` or re-use the existing one explicitly — we don't guess.
+if git rev-parse "$TAG" >/dev/null 2>&1; then
+  echo "error: tag $TAG already exists locally — delete it or pick a new version" >&2
+  exit 1
+fi
+
+# Also check origin so we fail with a clear message instead of a generic
+# `git push` rejection if the tag exists remotely but not locally.
+if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+  echo "error: tag $TAG already exists on origin — pick a new version" >&2
+  exit 1
+fi
+
+# Extract release notes for $NEW_VERSION from CHANGELOG.md (everything
+# between this version's `## v$NEW_VERSION` header and the next `## ` header).
+# The release workflow reads the tag annotation via `git tag -l
+# --format='%(contents)'` and uses it verbatim as the GitHub release body,
+# so the tag MUST be annotated (-a). If no section is found we fall back
+# to a bare "Release $TAG" message rather than failing — the orchestrator
+# may have its own reasons for tagging without a changelog entry, and a
+# release with a thin body beats no release at all.
+CHANGELOG="$REPO_ROOT/CHANGELOG.md"
+NOTES=""
+if [[ -f "$CHANGELOG" ]]; then
+  NOTES=$(awk -v ver="v$NEW_VERSION" '
+    $0 ~ "^## " ver "([^0-9A-Za-z.]|$)" { in_section = 1; next }
+    in_section && /^## / { exit }
+    in_section { print }
+  ' "$CHANGELOG")
+fi
+if [[ -z "${NOTES//[[:space:]]/}" ]]; then
+  NOTES="Release $TAG"
+fi
+
+echo "Tagging $TAG on $(git rev-parse --short HEAD)..."
+# Annotated tag (not lightweight): release.yml reads `%(contents)` from the
+# tag object to populate the GitHub Release body. Lightweight tags would
+# fall through to the commit message.
+git tag -a "$TAG" -m "$NOTES"
+echo "Pushing $TAG to origin..."
+git push origin "$TAG"
+echo "Done. CI should pick it up shortly."
