@@ -158,7 +158,6 @@ if [ "$(uname -s)" = "Linux" ] && [ -f /etc/ssl/certs/ca-certificates.crt ]; the
       certutil -d "sql:${nssdb}" -N --empty-password >/dev/null 2>&1 || true
     fi
     sandbox_ca_tmp="$(mktemp -d)"
-    trap 'rm -rf "${sandbox_ca_tmp}"' EXIT
     awk '
       /-----BEGIN CERTIFICATE-----/ { n++; fn = sandbox_dir "/cert_" n ".pem"; in_cert = 1 }
       in_cert                       { print > fn }
@@ -169,7 +168,9 @@ if [ "$(uname -s)" = "Linux" ] && [ -f /etc/ssl/certs/ca-certificates.crt ]; the
       subject="$(openssl x509 -in "${pem}" -noout -subject 2>/dev/null || true)"
       case "${subject}" in
         *Anthropic*sandbox-egress*)
-          nick="$(printf '%s' "${subject}" | sed 's/.*CN = //; s/,.*//')"
+          # OpenSSL prints `subject=` then RDNs; the CN separator is
+          # `CN = ` on 1.1+ and `CN=` with -nameopt compat — match both.
+          nick="$(printf '%s' "${subject}" | sed -E 's/.*CN *= *//; s/,.*//')"
           [ -n "${nick}" ] || continue
           if ! certutil -d "sql:${nssdb}" -L -n "${nick}" >/dev/null 2>&1; then
             certutil -d "sql:${nssdb}" -A -t "C,," -n "${nick}" -i "${pem}" >/dev/null 2>&1 || true
@@ -177,6 +178,7 @@ if [ "$(uname -s)" = "Linux" ] && [ -f /etc/ssl/certs/ca-certificates.crt ]; the
           ;;
       esac
     done
+    rm -rf "${sandbox_ca_tmp}"
   fi
 fi
 
