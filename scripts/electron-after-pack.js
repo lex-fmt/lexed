@@ -1,4 +1,5 @@
 'use strict';
+/* eslint-env node */
 /**
  * electron-builder afterPack hook — sign embedded helper bundles that
  * electron-builder's own signing pass doesn't recurse into.
@@ -97,7 +98,7 @@ exports.default = async function afterPack(context) {
   // same runner (rare on ephemeral runners, defensive otherwise).
   try {
     execSync(`security delete-keychain "${keychainPath}"`, { stdio: 'ignore' });
-  } catch (_) { /* ignore */ }
+  } catch { /* ignore — keychain may not exist on first run */ }
 
   execSync(`security create-keychain -p "${keychainPassword}" "${keychainPath}"`);
   execSync(`security set-keychain-settings -lut 3600 "${keychainPath}"`);
