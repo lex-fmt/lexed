@@ -48,7 +48,9 @@ jobs:
       windows-archs: x64
       submodules: true
       changelog-path: CHANGELOG.md
-      node-version: '22'
+      # Pin to match .github/workflows/test.yml — release artifacts
+      # should build under the same Node patch CI validated.
+      node-version: '22.18.0'
       # electron-builder directories.output → "release" per
       # package.json. The canonical workflow defaults to "dist".
       output-dir: release
