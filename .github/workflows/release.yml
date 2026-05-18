@@ -7,23 +7,21 @@
 # `gh workflow run release.yml -f version=<X>` — the reusable workflow's
 # prepare-release-npm action then bumps package.json, commits, tags,
 # pushes, and drives the rest (build per arch, sign via electron-
-# builder's CSC_LINK path, GH release with .dmg + .AppImage assets).
+# builder's CSC_LINK path, notarize, GH release).
 #
 # Migration history: replaces the previous in-tree per-platform matrix
-# build (with custom smoke tests). See arthur-debert/release#65 for the
-# canonical electron-app workflow + #43 for the per-stack rollout
-# tracking issue.
+# build. See arthur-debert/release#65 (slice 1) + #66 (slice 1.5:
+# notarize override + smoke convention) for the canonical workflow.
 #
-# Slice-1 caveats (carried from the canonical workflow):
-# - Windows builds produce unsigned binaries (code-signing slice 3).
-# - macOS notarization is gated by `build.mac.notarize` in package.json
-#   (currently false → signing happens but notarization is skipped).
-#   Flip to `true` to enable notarization once the ASC_API_KEY_*
-#   secrets are in place.
-# - Per-platform smoke tests (linux xvfb-run launch, macOS .app spawn,
-#   etc.) ARE dropped in this slice. Slice 2 of electron-app folds an
-#   `e2e` job into the canonical workflow; until then, smoke is
-#   covered by the pre-commit / test.yml flow locally.
+# Slice-1.5 caveats this caller carries forward:
+# - Windows builds produce unsigned binaries (code-signing → slice 3).
+# - QuickLook plugin (`Contents/PlugIns/LexQuickLook.appex`) is not
+#   yet re-signed via electron-builder's `afterPack` hook. The released
+#   `.app` bundle signs and notarizes correctly, but the embedded
+#   QuickLook extension is unsigned, so macOS Quick Look integration
+#   won't load on user machines. Tracking: TBD follow-up issue —
+#   port the previous in-tree re-sign step to an afterPack JS hook
+#   in package.json.
 
 name: Release LexEd
 
@@ -51,6 +49,15 @@ jobs:
       submodules: true
       changelog-path: CHANGELOG.md
       node-version: '22'
+      # electron-builder directories.output → "release" per
+      # package.json. The canonical workflow defaults to "dist".
+      output-dir: release
+      # Force-enable macOS notarization in CI, overriding
+      # `build.mac.notarize: false` in package.json (which is kept
+      # `false` for local-dev where ASC keys aren't configured).
+      # Requires ASC_API_KEY_BASE64 / _ID / _ISSUER_ID secrets to
+      # be set on this repo; the workflow fails fast if they aren't.
+      notarize: 'true'
     secrets:
       RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
       APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
@@ -58,9 +65,3 @@ jobs:
       ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_BASE64 }}
       ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
       ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
-
-  # Downstream cascade: lexed is a leaf (no consumers depend on it),
-  # so no notify-downstreams step. If a future consumer pins lexed
-  # artifacts, add a notify-downstreams job here that fires
-  # repository_dispatch upstream-released to those repos (see
-  # arthur-debert/release/docs/lex-release-cascade.md §Layer 2).
