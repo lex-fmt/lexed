@@ -1,5 +1,3 @@
-'use strict';
-/* eslint-env node */
 /**
  * electron-builder afterPack hook — sign embedded helper bundles that
  * electron-builder's own signing pass doesn't recurse into.
@@ -32,6 +30,13 @@
  * the parent .app — that's fine, the appex signature is already
  * embedded in the file by then.
  *
+ * Why .mjs
+ * --------
+ * lexed's eslint.config.js has a `scripts/**/*.mjs` block that
+ * provides Node globals + ESM sourceType. Naming the file `.mjs`
+ * picks up that block automatically and avoids an eslint-config
+ * edit. electron-builder 22+ supports ESM afterPack hooks natively.
+ *
  * Env contract (set by arthur-debert/release/.github/workflows/
  * electron-app.yml's slice-1.5 credentials decode step):
  *   CSC_LINK            path to a .p12 file (set by the workflow)
@@ -41,70 +46,72 @@
  * local-dev builds without signing credentials still work.
  *
  * Refs:
- *   arthur-debert/release#67 — issue
+ *   arthur-debert/release#67 — issue (resolved by this hook)
  *   arthur-debert/release#66 — slice 1.5 (where post-build was
  *     correctly rejected in favor of afterPack)
  *   electron-builder docs — https://www.electron.build/configuration/configuration#afterpack
  */
 
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
-const { execSync, execFileSync } = require('child_process');
+import fs from 'node:fs'
+import path from 'node:path'
+import crypto from 'node:crypto'
+import { execSync, execFileSync } from 'node:child_process'
 
-exports.default = async function afterPack(context) {
-  if (context.electronPlatformName !== 'darwin') return;
+export default async function afterPack(context) {
+  if (context.electronPlatformName !== 'darwin') return
 
-  const cscLink = process.env.CSC_LINK;
-  const cscPassword = process.env.CSC_KEY_PASSWORD || '';
+  const cscLink = process.env.CSC_LINK
+  const cscPassword = process.env.CSC_KEY_PASSWORD || ''
   if (!cscLink) {
-    console.log('[afterPack] CSC_LINK not set — skipping QuickLook appex signing (local-dev build).');
-    return;
+    console.log('[afterPack] CSC_LINK not set — skipping QuickLook appex signing (local-dev build).')
+    return
   }
 
-  const tempDir = process.env.RUNNER_TEMP || '/tmp';
+  const tempDir = process.env.RUNNER_TEMP || '/tmp'
 
   // CSC_LINK can be a file path (workflow's decode step writes one),
   // a `data:application/x-pkcs12;base64,...` URI, or a bare base64
   // string. Normalize to a file path on disk.
-  let certPath;
+  let certPath
   if (fs.existsSync(cscLink)) {
-    certPath = cscLink;
+    certPath = cscLink
   } else if (cscLink.startsWith('data:')) {
-    const b64 = cscLink.split(',')[1] || '';
-    certPath = path.join(tempDir, 'after-pack-cert.p12');
-    fs.writeFileSync(certPath, Buffer.from(b64, 'base64'));
+    const b64 = cscLink.split(',')[1] || ''
+    certPath = path.join(tempDir, 'after-pack-cert.p12')
+    fs.writeFileSync(certPath, Buffer.from(b64, 'base64'))
   } else {
-    certPath = path.join(tempDir, 'after-pack-cert.p12');
-    fs.writeFileSync(certPath, Buffer.from(cscLink, 'base64'));
+    certPath = path.join(tempDir, 'after-pack-cert.p12')
+    fs.writeFileSync(certPath, Buffer.from(cscLink, 'base64'))
   }
 
-  const appName = context.packager.appInfo.productFilename;
-  const appPath = path.join(context.appOutDir, `${appName}.app`);
-  const appexPath = path.join(appPath, 'Contents', 'PlugIns', 'LexQuickLook.appex');
+  const appName = context.packager.appInfo.productFilename
+  const appPath = path.join(context.appOutDir, `${appName}.app`)
+  const appexPath = path.join(appPath, 'Contents', 'PlugIns', 'LexQuickLook.appex')
 
   if (!fs.existsSync(appexPath)) {
-    console.log(`[afterPack] ${appexPath} not present — skipping`);
-    return;
+    console.log(`[afterPack] ${appexPath} not present — skipping`)
+    return
   }
 
   // Dedicated temp keychain for this hook. electron-builder's own
   // keychain is set up at sign time (after this hook), so it isn't
   // available to us.
-  const keychainPath = path.join(tempDir, 'after-pack.keychain-db');
-  const keychainPassword = crypto.randomBytes(16).toString('hex');
+  const keychainPath = path.join(tempDir, 'after-pack.keychain-db')
+  const keychainPassword = crypto.randomBytes(16).toString('hex')
 
   // Idempotent: remove a stale keychain from a previous run on the
   // same runner (rare on ephemeral runners, defensive otherwise).
   try {
-    execSync(`security delete-keychain "${keychainPath}"`, { stdio: 'ignore' });
-  } catch { /* ignore — keychain may not exist on first run */ }
+    execSync(`security delete-keychain "${keychainPath}"`, { stdio: 'ignore' })
+  } catch {
+    // ignore — keychain may not exist on first run
+  }
 
-  execSync(`security create-keychain -p "${keychainPassword}" "${keychainPath}"`);
-  execSync(`security set-keychain-settings -lut 3600 "${keychainPath}"`);
-  execSync(`security unlock-keychain -p "${keychainPassword}" "${keychainPath}"`);
-  execSync(`security import "${certPath}" -k "${keychainPath}" -P "${cscPassword}" -T /usr/bin/codesign`);
-  execSync(`security set-key-partition-list -S apple-tool:,apple: -s -k "${keychainPassword}" "${keychainPath}"`);
+  execSync(`security create-keychain -p "${keychainPassword}" "${keychainPath}"`)
+  execSync(`security set-keychain-settings -lut 3600 "${keychainPath}"`)
+  execSync(`security unlock-keychain -p "${keychainPassword}" "${keychainPath}"`)
+  execSync(`security import "${certPath}" -k "${keychainPath}" -P "${cscPassword}" -T /usr/bin/codesign`)
+  execSync(`security set-key-partition-list -S apple-tool:,apple: -s -k "${keychainPassword}" "${keychainPath}"`)
 
   // Append the new keychain to the user's search list — codesign
   // won't find identities without this. Preserve the existing
@@ -113,34 +120,34 @@ exports.default = async function afterPack(context) {
   const existingKeychains = execSync('security list-keychains -d user', { encoding: 'utf-8' })
     .split('\n')
     .map(line => line.trim().replace(/^"|"$/g, ''))
-    .filter(Boolean);
-  const searchList = [keychainPath, ...existingKeychains].map(k => `"${k}"`).join(' ');
-  execSync(`security list-keychains -d user -s ${searchList}`);
+    .filter(Boolean)
+  const searchList = [keychainPath, ...existingKeychains].map(k => `"${k}"`).join(' ')
+  execSync(`security list-keychains -d user -s ${searchList}`)
 
   // Find the Developer ID Application identity in our keychain.
   const findOut = execSync(
     `security find-identity -v -p codesigning "${keychainPath}"`,
     { encoding: 'utf-8' }
-  );
-  const match = findOut.match(/"(Developer ID Application[^"]+)"/);
+  )
+  const match = findOut.match(/"(Developer ID Application[^"]+)"/)
   if (!match) {
     throw new Error(
       `[afterPack] no Developer ID Application identity in keychain. find-identity output:\n${findOut}`
-    );
+    )
   }
-  const identity = match[1];
+  const identity = match[1]
 
   // Sign the appex with the same hardening flags electron-builder
   // will use for the parent .app (--options runtime --timestamp +
   // entitlements). codesign embeds the signature INTO the file, so
   // when electron-builder signs the parent .app later, the appex
   // signature is sealed in naturally.
-  const entitlementsPath = path.resolve('resources/entitlements.mac.plist');
+  const entitlementsPath = path.resolve('resources/entitlements.mac.plist')
   if (!fs.existsSync(entitlementsPath)) {
-    throw new Error(`[afterPack] entitlements file not found at ${entitlementsPath}`);
+    throw new Error(`[afterPack] entitlements file not found at ${entitlementsPath}`)
   }
 
-  console.log(`[afterPack] signing ${appexPath} with ${identity}`);
+  console.log(`[afterPack] signing ${appexPath} with ${identity}`)
   execFileSync('codesign', [
     '--force',
     '--sign', identity,
@@ -149,12 +156,12 @@ exports.default = async function afterPack(context) {
     '--entitlements', entitlementsPath,
     '--keychain', keychainPath,
     appexPath,
-  ], { stdio: 'inherit' });
+  ], { stdio: 'inherit' })
 
   // Verify before declaring success — `codesign --verify` surfaces
   // problems that the sign step itself reports as success (broken
   // entitlements, missing required keys, etc.).
-  execFileSync('codesign', ['--verify', '--verbose', appexPath], { stdio: 'inherit' });
+  execFileSync('codesign', ['--verify', '--verbose', appexPath], { stdio: 'inherit' })
 
-  console.log('[afterPack] QuickLook appex signed and verified');
-};
+  console.log('[afterPack] QuickLook appex signed and verified')
+}
