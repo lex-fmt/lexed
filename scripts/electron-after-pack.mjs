@@ -32,10 +32,13 @@
  *
  * Why .mjs
  * --------
- * lexed's eslint.config.js has a `scripts/**/*.mjs` block that
- * provides Node globals + ESM sourceType. Naming the file `.mjs`
- * picks up that block automatically and avoids an eslint-config
- * edit. electron-builder 22+ supports ESM afterPack hooks natively.
+ * lexed's eslint.config.js has a `scripts` glob that matches `.mjs`
+ * files and provides Node globals + ESM sourceType. Naming the file
+ * `.mjs` picks up that block automatically and avoids an eslint-
+ * config edit. electron-builder 22+ supports ESM afterPack hooks
+ * natively. (The actual glob lives in eslint.config.js — not
+ * written here because a literal block-comment-escape sequence
+ * would prematurely close this JSDoc.)
  *
  * Env contract (set by arthur-debert/release/.github/workflows/
  * electron-app.yml's slice-1.5 credentials decode step):
