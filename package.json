@@ -246,7 +246,8 @@
         "from": "comms/assets/logo-full.png",
         "to": "assets/logo-full.png"
       }
-    ]
+    ],
+    "afterPack": "./scripts/electron-after-pack.js"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

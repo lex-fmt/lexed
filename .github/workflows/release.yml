@@ -15,13 +15,13 @@
 #
 # Slice-1.5 caveats this caller carries forward:
 # - Windows builds produce unsigned binaries (code-signing → slice 3).
-# - QuickLook plugin (`Contents/PlugIns/LexQuickLook.appex`) is not
-#   yet re-signed via electron-builder's `afterPack` hook. The released
-#   `.app` bundle signs and notarizes correctly, but the embedded
-#   QuickLook extension is unsigned, so macOS Quick Look integration
-#   won't load on user machines. Tracking: TBD follow-up issue —
-#   port the previous in-tree re-sign step to an afterPack JS hook
-#   in package.json.
+#
+# QuickLook plugin signing: handled via the `scripts/electron-after-
+# pack.js` afterPack hook wired in package.json (resolves
+# arthur-debert/release#67). The hook signs the embedded
+# Contents/PlugIns/LexQuickLook.appex BEFORE electron-builder signs
+# the parent .app — necessary because electron-builder's sign pass
+# doesn't recurse into PlugIns/*.appex.
 
 name: Release LexEd
 
