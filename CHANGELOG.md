@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Add `## [Unreleased]` Keep-a-Changelog section so the canonical
+  `arthur-debert/release/.github/workflows/electron-app.yml@v1`
+  release pipeline (called via `release.yml`) can clear its
+  `prepare-release-npm` pre-flight, which expects this format. No
+  product-facing changes in this entry — it unblocks the first
+  end-to-end validation run of the canonical release workflow
+  against lexed.
+
 ## v0.10.2 (2026-05-18)
 
 ## v0.10.1 (2026-05-17)
