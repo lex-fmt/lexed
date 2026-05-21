@@ -124,4 +124,36 @@ describe('extractCheckableWords', () => {
     const words = extractCheckableWords(text)
     expect(words.map((w) => w.text)).toEqual(['This', 'is', 'indented', 'content'])
   })
+
+  it('handles space-indented verbatim blocks (lex spec: 4 spaces = 1 tab-stop)', () => {
+    // Same shape as the tab-indented verbatim test above but with spaces.
+    // Per welcome/general.lex §2 (Indentation), 4 spaces == 1 indent step.
+    const text = [
+      'Before',
+      '',
+      'Pythn code example:',
+      '    let x = 42;',
+      ':: rust ::',
+      '',
+      'After',
+    ].join('\n')
+    const words = extractCheckableWords(text)
+    expect(words.map((w) => w.text)).toEqual(['Before', 'Pythn', 'code', 'example', 'After'])
+  })
+
+  it('handles space-indented annotation block bodies', () => {
+    const text = ':: note ::\n    This is inside the annotation body\n::\n\nThis is outside'
+    const words = extractCheckableWords(text)
+    expect(words.map((w) => w.text)).toEqual([
+      'This',
+      'is',
+      'inside',
+      'the',
+      'annotation',
+      'body',
+      'This',
+      'is',
+      'outside',
+    ])
+  })
 })

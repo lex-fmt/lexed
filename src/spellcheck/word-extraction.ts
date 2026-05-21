@@ -31,7 +31,7 @@ export interface CheckableWord {
   endColumn: number
 }
 
-const WORD_RE = /[a-zA-ZÀ-ɏЀ-ӿ](?:[a-zA-ZÀ-ɏЀ-ӿ'']*[a-zA-ZÀ-ɏЀ-ӿ])?/g
+const WORD_RE = /[a-zA-ZÀ-ɏЀ-ӿ](?:[a-zA-ZÀ-ɏЀ-ӿ']*[a-zA-ZÀ-ɏЀ-ӿ])?/g
 
 type LineClass =
   | { kind: 'blank' }
@@ -49,15 +49,28 @@ type LineClass =
 interface BlockFrame {
   /** Whether prose inside this frame's body should be spell-checked */
   spell: boolean
-  /** Indent of body lines (one greater than the opener's own indent) */
+  /** Indent level of the opener (in tab-stops) — useful for disambiguating
+   * an explicit closer at the same level. */
+  openerIndent: number
+  /** Indent level of body lines (one greater than the opener's own indent) */
   bodyIndent: number
 }
 
-const TAB_RE = /^\t*/
+// Per `welcome/general.lex` (§ Indentation): one indent step = `tabStop`
+// spaces (default 4). Tabs are not recommended but count as `tabStop`
+// spaces when present. We return the indent level in tab-stops; only the
+// floor matters for structural comparisons.
+const TAB_STOP = 4
 
 function indentOf(line: string): number {
-  const m = line.match(TAB_RE)
-  return m ? m[0].length : 0
+  let cols = 0
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]
+    if (ch === '\t') cols += TAB_STOP
+    else if (ch === ' ') cols += 1
+    else break
+  }
+  return Math.floor(cols / TAB_STOP)
 }
 
 function findNextNonBlank(lines: string[], from: number): number {
@@ -67,15 +80,16 @@ function findNextNonBlank(lines: string[], from: number): number {
   return -1
 }
 
-// `:: label :: …`. Captures the byte offset where the trailing portion begins
+// `:: label :: …`. Captures the column where the trailing portion begins
 // (one past the closing `::`). Returns null if the line isn't `::`-prefixed.
+// Accepts tabs or spaces for leading indentation.
 function matchColonMarker(
   line: string
 ): { indent: number; trailingStart: number; trailing: string } | null {
-  // ^ <tabs>? :: <whitespace> <header (non-greedy, allows single colons)> <whitespace> :: <rest?>
-  const m = line.match(/^(\t*)(::[ \t]+(?:[^:\n]|:[^:\n])+[ \t]+::)(.*)$/)
+  // ^ <ws>? :: <ws> <header (non-greedy, allows single colons)> <ws> :: <rest?>
+  const m = line.match(/^([ \t]*)(::[ \t]+(?:[^:\n]|:[^:\n])+[ \t]+::)(.*)$/)
   if (!m) return null
-  const indent = m[1].length
+  const indent = indentOf(line)
   const trailingStart = m[1].length + m[2].length
   return { indent, trailingStart, trailing: m[3] }
 }
@@ -132,8 +146,11 @@ function findVerbatimCloser(
     // Bail once we've dedented past the subject — no closer at this scope.
     if ('indent' in c && c.indent < subjectIndent) return -1
     if (c.indent !== subjectIndent) continue
-    // A `:: label ::` line at the subject's indent closes a verbatim block.
-    if (c.kind === 'colon_marker_only' || c.kind === 'colon_marker_with_trailing') {
+    // A marker-only `:: label ::` line at the subject's indent closes the
+    // verbatim block. `:: label :: trailing` is a single annotation, not a
+    // closer — falling through here lets the outer scan continue to the
+    // real closer further down.
+    if (c.kind === 'colon_marker_only') {
       return j
     }
     // A bare `::` at the subject's indent doesn't close a verbatim — it
@@ -145,7 +162,8 @@ function findVerbatimCloser(
 /**
  * Per-line spell decision: returns the column range [start, end) to feed
  * to the word extractor, or null if the line should be skipped entirely.
- * Column indices are 0-based byte offsets into `lines[i]`.
+ * Column indices are 0-based UTF-16 code-unit offsets into `lines[i]`
+ * (consistent with JavaScript string indexing and Monaco/LSP positions).
  */
 function computeSpellRanges(
   lines: string[]
@@ -199,8 +217,11 @@ function computeSpellRanges(
 
     switch (c.kind) {
       case 'colon_close':
-        // Pops the topmost annotation frame, if any. Doesn't emit words.
-        if (stack.length > 0) stack.pop()
+        // The dedent-driven `while` above already pops any frame whose
+        // bodyIndent is greater than this line's indent — which is the
+        // normal case (closer sits at the opener's indent, one less than
+        // the body indent). No additional pop here, else nested blocks
+        // close twice and the outer scope is lost prematurely.
         break
 
       case 'colon_marker_only': {
@@ -210,7 +231,11 @@ function computeSpellRanges(
         // annotation inside verbatim isn't supported by lex syntax).
         const nextIdx = findNextNonBlank(lines, i + 1)
         if (nextIdx !== -1 && indentOf(lines[nextIdx]) > c.indent) {
-          stack.push({ spell: stackTopSpell(stack), bodyIndent: indentOf(lines[nextIdx]) })
+          stack.push({
+            spell: stackTopSpell(stack),
+            openerIndent: c.indent,
+            bodyIndent: indentOf(lines[nextIdx]),
+          })
         }
         // The opener line itself is just markers — skip words.
         break
