@@ -45,6 +45,15 @@ if [ -f Cargo.toml ] && command -v cargo >/dev/null 2>&1; then
   cargo fetch --locked --quiet || true
 fi
 
+# Go: `go mod download` populates the module cache without building.
+# Cheap when the cache is already warm; ~free in steady state. Keep
+# stderr visible so module-resolution / auth failures surface during
+# debugging — `|| true` keeps us best-effort without silencing the why.
+if [ -f go.mod ] && command -v go >/dev/null 2>&1; then
+  go version
+  go mod download || true
+fi
+
 # Node (npm/yarn/pnpm). We deliberately do NOT guard on `! -d node_modules`:
 # the env-snapshot caches a node_modules paired with a previous branch's
 # lockfile, and a feature branch that bumps the lockfile (Playwright is
@@ -79,20 +88,98 @@ fi
 
 # Python / pip + venv. Triggered by any of the conventional manifests
 # (pyproject.toml, requirements.txt, setup.py) so legacy projects are
-# covered too. Only initialises if .venv missing — pip install is slower
-# than node/cargo and the guard wins more than it costs.
+# covered too.
+#
+# Run unconditionally on every session start — pip install is idempotent
+# (sub-second when the deps are already in place), and the alternative
+# (gating on `[ ! -d .venv ]`) means a half-installed .venv from a
+# previous run persists across sessions, and re-running the script can
+# never recover. mkdocs-lex's snapshot left .venv with only pip +
+# setuptools and tests then failed with ModuleNotFoundError — the guard
+# saw the directory, skipped reinstall, and nothing ever fixed it.
+#
+# Also: do NOT redirect install stderr to /dev/null. Swallowing the
+# message is what made the partial-venv state silent in the first place.
+# A loud warning to stderr surfaces real installation problems instead
+# of papering over them.
 if { [ -f pyproject.toml ] || [ -f requirements.txt ] || [ -f setup.py ]; } \
-   && [ ! -d .venv ] && command -v python3 >/dev/null 2>&1; then
-  python3 -m venv .venv
-  .venv/bin/pip install --upgrade pip --quiet || true
-  if [ -f pyproject.toml ]; then
-    .venv/bin/pip install -e '.[dev]' --quiet 2>/dev/null \
-      || .venv/bin/pip install -e . --quiet 2>/dev/null \
-      || true
-  elif [ -f requirements.txt ]; then
-    .venv/bin/pip install -r requirements.txt --quiet || true
-  elif [ -f setup.py ]; then
-    .venv/bin/pip install -e . --quiet || true
+   && command -v python3 >/dev/null 2>&1; then
+  # Gate venv creation on `.venv/bin/pip` being executable, not just
+  # `.venv/` existing. A previous run can leave the directory in place
+  # with pip missing (interrupted mid-snapshot, broken extraction);
+  # checking pip directly recovers from that. Warn loudly when the
+  # creation itself fails — otherwise the next gate silently skips all
+  # pip work and the agent debugs a missing-module mystery.
+  if [ ! -x .venv/bin/pip ]; then
+    if ! python3 -m venv .venv; then
+      echo "warning: python3 -m venv .venv failed — pip installs will be skipped" >&2
+    fi
+  fi
+  if [ -x .venv/bin/pip ]; then
+    .venv/bin/pip install --upgrade pip --quiet || true
+    if [ -f pyproject.toml ]; then
+      # No fallback to plain `.` — modern pip treats `[dev]` against a
+      # pyproject without that extra as a warn-and-continue (still
+      # installs base, exits 0). A genuine failure means a real dep
+      # can't resolve, and falling back to `.` would silently leave
+      # the venv with base installed but dev-extras (pytest etc)
+      # missing. Surface the failure instead.
+      .venv/bin/pip install -e '.[dev]' --quiet \
+        || echo "warning: editable install failed — tests will not run (see pip output above)" >&2
+    elif [ -f requirements.txt ]; then
+      .venv/bin/pip install -r requirements.txt --quiet \
+        || echo "warning: requirements install failed — tests will not run" >&2
+    elif [ -f setup.py ]; then
+      .venv/bin/pip install -e . --quiet \
+        || echo "warning: editable install failed — tests will not run" >&2
+    fi
+
+    # Expose venv-installed CLIs on the agent's bare PATH.
+    #
+    # The cloud Bash tool runs non-interactive shells whose PATH is
+    # fixed at session start and does NOT include
+    # ${REPO_ROOT}/.venv/bin. ~/.bashrc returns early for non-
+    # interactive shells (`[ -z "$PS1" ] && return`), so PATH fixes
+    # there are unreachable. The agent's `subprocess.run(['mkdocs',
+    # …])` (or any test that shells out to a venv CLI) resolves the
+    # command against the agent's PATH and gets FileNotFoundError.
+    #
+    # Symlink every executable in .venv/bin (except the
+    # python/pip/activate family — those would shadow system commands
+    # or break venv internals) into ${HOME}/.local/bin/, which IS on
+    # the agent's PATH (it's where uv / pipx / similar Python tooling
+    # already drops entry points). Idempotent — `ln -sf` overwrites
+    # stale symlinks pointing into a previous session's path.
+    #
+    # Consumers that install ADDITIONAL CLIs from project-local extras
+    # (pinned-binary downloads from GitHub releases, etc) should drop
+    # them directly into ${HOME}/.local/bin rather than .venv/bin, so
+    # they're discoverable on the same PATH without needing a second
+    # symlink pass below the marker.
+    if [ -d .venv/bin ]; then
+      # Create ~/.local/bin if missing — env/setup.sh doesn't and Ubuntu
+      # cloud images don't ship it by default in fresh users. The
+      # directory is on the default PATH for any login that picks up
+      # ~/.profile, but we still need it to exist before we ln into it.
+      mkdir -p "${HOME}/.local/bin"
+      for _venv_bin in .venv/bin/*; do
+        # Require both regular file (after symlink resolution) AND
+        # executable bit. `-x` alone matches directories, which would
+        # produce a useless dangling symlink if the glob ever did.
+        [ -f "${_venv_bin}" ] && [ -x "${_venv_bin}" ] || continue
+        # Parameter expansion avoids forking basename per iteration.
+        _name="${_venv_bin##*/}"
+        case "${_name}" in
+          python|python[0-9]*|pip|pip[0-9]*|activate*|easy_install*|wheel|wheel[0-9]*)
+            continue
+            ;;
+        esac
+        # `--` defends against (pathological) filenames starting with -;
+        # `|| true` matches the script's best-effort policy — a single
+        # permission hiccup shouldn't abort the rest of session setup.
+        ln -sf -- "${REPO_ROOT}/.venv/bin/${_name}" "${HOME}/.local/bin/${_name}" || true
+      done
+    fi
   fi
 fi
 
@@ -128,52 +215,61 @@ fi
 if [ "$(uname -s)" = "Linux" ] \
    && command -v certutil >/dev/null 2>&1 \
    && command -v openssl >/dev/null 2>&1; then
-  _ca_tmp="$(mktemp -d)"
-  _found=0
+  # Subshell scopes the EXIT trap so cleanup is reliable under `set -e`
+  # AND doesn't overwrite a process-wide EXIT trap. The subshell exits
+  # when this block finishes, the trap fires, the tmp dir is gone — no
+  # leak even if awk/cp/openssl error out below.
+  #
+  # The trailing `|| true` matches the script's stated philosophy
+  # (line ~19: errors are best-effort). A cert-import failure shouldn't
+  # abort the rest of the dev-env bootstrap.
+  (
+    _ca_tmp="$(mktemp -d)"
+    trap 'rm -rf "${_ca_tmp}"' EXIT
+    _found=0
 
-  # Layout A: split the system bundle into per-cert PEMs if it contains
-  # any Anthropic CA. Cheap grep gate avoids the awk fork on non-cloud
-  # Linux boxes (where the bundle has no matches).
-  if [ -f /etc/ssl/certs/ca-certificates.crt ] \
-     && grep -q 'Anthropic' /etc/ssl/certs/ca-certificates.crt 2>/dev/null; then
-    awk '
-      /-----BEGIN CERTIFICATE-----/ { n++; fn = sandbox_dir "/bundle_" n ".pem"; in_cert = 1 }
-      in_cert                       { print > fn }
-      /-----END CERTIFICATE-----/   { in_cert = 0; close(fn) }
-    ' sandbox_dir="${_ca_tmp}" /etc/ssl/certs/ca-certificates.crt
-    _found=1
-  fi
-
-  # Layout B: copy standalone swp-ca-*.pem files into the scratch dir.
-  # The glob may be unexpanded if no file matches; guard with -f.
-  for _pem in /etc/ssl/certs/swp-ca-*.pem; do
-    [ -f "${_pem}" ] || continue
-    cp "${_pem}" "${_ca_tmp}/$(basename "${_pem}")"
-    _found=1
-  done
-
-  if [ "${_found}" = "1" ]; then
-    _nssdb="${HOME}/.pki/nssdb"
-    mkdir -p "${_nssdb}"
-    if [ ! -f "${_nssdb}/cert9.db" ]; then
-      certutil -d "sql:${_nssdb}" -N --empty-password >/dev/null 2>&1 || true
+    # Layout A: split the system bundle into per-cert PEMs if it contains
+    # any Anthropic CA. Cheap grep gate avoids the awk fork on non-cloud
+    # Linux boxes (where the bundle has no matches).
+    if [ -f /etc/ssl/certs/ca-certificates.crt ] \
+       && grep -q 'Anthropic' /etc/ssl/certs/ca-certificates.crt 2>/dev/null; then
+      awk -v sandbox_dir="${_ca_tmp}" '
+        /-----BEGIN CERTIFICATE-----/ { n++; fn = sandbox_dir "/bundle_" n ".pem"; in_cert = 1 }
+        in_cert                       { print > fn }
+        /-----END CERTIFICATE-----/   { in_cert = 0; close(fn) }
+      ' /etc/ssl/certs/ca-certificates.crt
+      _found=1
     fi
-    for _pem in "${_ca_tmp}"/*.pem; do
-      [ -f "${_pem}" ] || continue
-      _subject="$(openssl x509 -in "${_pem}" -noout -subject 2>/dev/null || true)"
-      case "${_subject}" in
-        *Anthropic*sandbox-egress*)
-          _nick="$(printf '%s' "${_subject}" | sed -nE 's/.*CN *= *([^,]+).*/\1/p')"
-          [ -n "${_nick}" ] || continue
-          if ! certutil -d "sql:${_nssdb}" -L -n "${_nick}" >/dev/null 2>&1; then
-            certutil -d "sql:${_nssdb}" -A -t "C,," -n "${_nick}" -i "${_pem}" >/dev/null 2>&1 || true
-          fi
-          ;;
-      esac
-    done
-  fi
 
-  rm -rf "${_ca_tmp}"
+    # Layout B: copy standalone swp-ca-*.pem files into the scratch dir.
+    # The glob may be unexpanded if no file matches; guard with -f.
+    for _pem in /etc/ssl/certs/swp-ca-*.pem; do
+      [ -f "${_pem}" ] || continue
+      cp "${_pem}" "${_ca_tmp}/$(basename "${_pem}")"
+      _found=1
+    done
+
+    if [ "${_found}" = "1" ]; then
+      _nssdb="${HOME}/.pki/nssdb"
+      mkdir -p "${_nssdb}"
+      if [ ! -f "${_nssdb}/cert9.db" ]; then
+        certutil -d "sql:${_nssdb}" -N --empty-password >/dev/null 2>&1 || true
+      fi
+      for _pem in "${_ca_tmp}"/*.pem; do
+        [ -f "${_pem}" ] || continue
+        _subject="$(openssl x509 -in "${_pem}" -noout -subject 2>/dev/null || true)"
+        case "${_subject}" in
+          *Anthropic*sandbox-egress*)
+            _nick="$(printf '%s' "${_subject}" | sed -nE 's/.*CN *= *([^,]+).*/\1/p')"
+            [ -n "${_nick}" ] || continue
+            if ! certutil -d "sql:${_nssdb}" -L -n "${_nick}" >/dev/null 2>&1; then
+              certutil -d "sql:${_nssdb}" -A -t "C,," -n "${_nick}" -i "${_pem}" >/dev/null 2>&1 || true
+            fi
+            ;;
+        esac
+      done
+    fi
+  ) || true
 fi
 
 # --- 3. Pre-commit hook wiring -------------------------------------------
@@ -199,39 +295,11 @@ fi
 #
 # No trailing `exit 0` — bash exits 0 on EOF when `set -euo pipefail`
 # succeeded. Adding one here would make appended extras unreachable.
-
-# Headless display (Xvfb) for Electron / GUI e2e tests.
-# The pre-commit hook here runs `npm run test:e2e:built`, which launches
-# Electron — without DISPLAY, Chromium aborts with "Missing X server or
-# $DISPLAY" and SIGSEGVs. We start an Xvfb daemon on :99 once per
-# session (idempotent — `pgrep` filters out the matcher's own argv via
-# the $$ guard) and export DISPLAY for the current shell. Future
-# interactive shells pick it up from ~/.bashrc / ~/.profile.
 #
-# Husky v9 sources ${XDG_CONFIG_HOME:-~/.config}/husky/init.sh before
-# every hook, so wire DISPLAY there too — `git commit`'s pre-commit
-# subprocess is a non-interactive non-login shell that sources neither
-# ~/.bashrc nor ~/.profile, and without DISPLAY Electron in
-# test:e2e:built aborts every spec with "Missing X server or $DISPLAY".
-#
-# The NSS cert import for the sandbox-egress CA (which Electron's
-# Chromium renderer also needs to load HTTPS resources without
-# ERR_CERT_AUTHORITY_INVALID) now lives in the canonical template
-# above, so nothing more to do here for that.
-if [ "$(uname -s)" = "Linux" ] && command -v Xvfb >/dev/null 2>&1; then
-  if ! pgrep -fa 'Xvfb :99' 2>/dev/null | awk -v me=$$ '$1 != me {found=1} END {exit !found}'; then
-    nohup Xvfb :99 -screen 0 1280x1024x24 >/dev/null 2>&1 &
-    disown 2>/dev/null || true
-  fi
-  export DISPLAY=:99
-  for f in "${HOME}/.bashrc" "${HOME}/.profile"; do
-    [ -f "$f" ] || continue
-    grep -q '^export DISPLAY=:99' "$f" 2>/dev/null || echo 'export DISPLAY=:99' >> "$f"
-  done
-  husky_init_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/husky"
-  husky_init="${husky_init_dir}/init.sh"
-  mkdir -p "${husky_init_dir}"
-  if [ ! -f "${husky_init}" ] || ! grep -q '^export DISPLAY=:99' "${husky_init}" 2>/dev/null; then
-    echo 'export DISPLAY=:99' >> "${husky_init}"
-  fi
-fi
+# Below: the `release-sync:marker-end` sentinel marks the end of the
+# canonical section. release-sync splits the consumer's file at this
+# sentinel — content at or above is replaced on every sync from
+# release/; content below is the consumer's project-local extras and is
+# preserved across syncs. The sentinel must be the LAST line of the
+# canonical (no trailing prose) so the splitter knows where to cut.
+# release-sync:marker-end

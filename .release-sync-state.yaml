@@ -1,0 +1,28 @@
+# Managed by release-sync. Do not edit.
+synced_from: arthur-debert/release
+ref: fix/npm-quality-fragment-yaml-parse
+sha: 392a1f0d0b974fd380d80339d011100741b4413c
+synced_at: 2026-05-21T04:11:52Z
+stack: electron-app
+components:
+  - shell-quality
+  - npm-quality
+files:
+  - .claude/settings.json
+  - .editorconfig
+  - .github/CODEOWNERS
+  - .github/copilot-instructions.md
+  - .github/dependabot.yml
+  - .github/pull_request_template.md
+  - .github/workflows/copilot-review.yml
+  - .markdownlint.json
+  - .release-sync-state.yaml
+  - .shellcheckrc
+  - .yamllint
+  - bin/check
+  - bin/check-fmt
+  - bin/check-lint
+  - bin/check-tests
+  - bin/diff-since-release
+  - lefthook.yml
+  - scripts/setup-dev-env.sh
