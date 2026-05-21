@@ -1,5 +1,29 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Spell-check policy aligned with `tree-sitter-lex@v0.11.0`: the block
+  detection in `src/spellcheck/word-extraction.ts` is now a two-pass
+  state machine that distinguishes verbatim blocks (subject + body + `::
+  lang ::` closer; body suppressed) from annotation blocks (`:: label ::`
+  opener + body + `::` closer; body spell-checked). Trailing descriptors
+  on `:: label :: <text>` are spell-checked; the label prefix is not.
+  Math span delimiter switched from `$…$` → `#…#` to match the lex
+  grammar. Indent handling now correctly accounts for spaces (4 = 1
+  indent stop) and tabs per `welcome/general.lex` §2, fixing a latent
+  bug where space-indented documents had broken subject/body detection.
+- `tree-sitter` pin bumped to `v0.11.0`.
+
+### Added
+
+- `src/spellcheck/__tests__/spellcheck-fixture.test.ts` — fixture-based
+  e2e tests over the canonical fixture mirrored from `tree-sitter-lex`,
+  asserting prose typos surface and non-prose typos stay hidden across
+  titles, paragraphs, table cells, verbatim subjects, annotation
+  bodies, trailing descriptors, code spans, math spans, and references.
+
 ## v0.10.3 (2026-05-21)
 
 ### Changed
