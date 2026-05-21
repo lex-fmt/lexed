@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+## [0.10.4] - 2026-05-21
+
+
 ### Changed
 
 - Spell-check policy aligned with `tree-sitter-lex@v0.11.0`: the block
