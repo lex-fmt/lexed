@@ -1,47 +1,42 @@
 name: Lexed CI
 
+# Thin caller for the canonical reusable electron-app CI workflow at
+# arthur-debert/release. The `check` job replaces the previously
+# hand-rolled setup-node + npm ci + shared build + typecheck + lint +
+# unit-test sequence.
+#
+# The `e2e` job stays bespoke for now — fetching lex-lsp binaries,
+# downloading the tree-sitter grammar, building the renderer/main
+# bundle, running xvfb-wrapped Playwright with packaged-mode env flags
+# is orchestration the reusable workflow deliberately doesn't try to
+# fold in (see docs/per-stack/electron-ci.md in the release/ repo).
+#
+# See docs/per-stack/electron-ci.md in arthur-debert/release for the
+# full input reference. lexed is the reference adopter — closes the
+# CI workflow reusability gap for the electron-app fleet.
+
 on:
   push:
     branches: ['**']
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
-  build:
-    name: Build and Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          submodules: true
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '22.18.0'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build shared module
-        run: |
-          cd shared
-          npm ci
-          npm run build
-
-      - name: Type check
-        run: npm run typecheck
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Unit tests
-        run: npm run test:unit -- --run
+  check:
+    uses: arthur-debert/release/.github/workflows/electron-ci.yml@v1
+    with:
+      node-version: '22.18.0'
+      shared-build-dir: shared
+      submodules: 'true'
 
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       PLAYWRIGHT_BROWSERS_PATH: '0'
     steps:

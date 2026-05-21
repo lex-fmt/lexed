@@ -45,7 +45,7 @@
     "tries:update": "node scripts/generate-tries.mjs",
     "tries:update:force": "node scripts/generate-tries.mjs --force",
     "tries:check": "node scripts/generate-tries.mjs --check",
-    "prepare": "husky"
+    "prepare": "lefthook install || true"
   },
   "dependencies": {
     "@lex-fmt/lex-buffer": "file:./packages/lex-buffer",
@@ -89,9 +89,9 @@
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
-    "husky": "^9.1.7",
     "icon-gen": "^5.0.0",
     "jsdom": "^29.1.1",
+    "lefthook": "^2.1.8",
     "lint-staged": "^16.4.0",
     "playwright": "^1.57.0",
     "postcss": "^8.5.14",
