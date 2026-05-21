@@ -1,8 +1,8 @@
 # Managed by release-sync. Do not edit.
 synced_from: arthur-debert/release
-ref: fix/npm-quality-fragment-yaml-parse
-sha: 392a1f0d0b974fd380d80339d011100741b4413c
-synced_at: 2026-05-21T04:11:52Z
+ref: origin/main
+sha: a61f9849c07d9232ed7053c751e989c7d3848ac0
+synced_at: 2026-05-21T04:34:17Z
 stack: electron-app
 components:
   - shell-quality
