@@ -74,6 +74,17 @@ describe('spellcheck-fixture e2e', () => {
       expect(line38Words).toContain('paragraph')
       expect(line38Words).toContain('ignored')
     })
+
+    it('suppresses reference contents (`[teh refernce]`)', () => {
+      // Line 39 has `plus a [teh refernce] that is also ignored.` — the
+      // bracketed reference text must not surface, but the surrounding
+      // prose (`plus`, `also`, `ignored`) does.
+      const line39Words = words.filter((w) => w.startLine === 39).map((w) => w.text)
+      expect(line39Words).not.toContain('teh')
+      expect(line39Words).not.toContain('refernce')
+      expect(line39Words).toContain('plus')
+      expect(line39Words).toContain('ignored')
+    })
   })
 
   describe('annotation block bodies are spell-checked', () => {

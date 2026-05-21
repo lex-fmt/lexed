@@ -36,4 +36,4 @@ Sectoin: Verbatim and annotation tests
 
 	Inline atoms:
 		A paragraph with `teh code span` and #teh math# that should be ignored,
-		plus a [reference] that is also ignored.
+		plus a [teh refernce] that is also ignored.
