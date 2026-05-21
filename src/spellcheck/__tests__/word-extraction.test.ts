@@ -32,10 +32,41 @@ describe('extractCheckableWords', () => {
     expect(words[2].startColumn).toBe(1)
   })
 
-  it('skips verbatim blocks', () => {
-    const text = 'Before\n\n:: rust ::\nlet x = 42;\n::\n\nAfter'
+  it('skips verbatim block bodies (subject + body + `:: lang ::` closer)', () => {
+    // Real lex verbatim: a subject line, indented body, then `:: lang ::` closer.
+    // The subject is prose (checked), the body is code (skipped), the closer is markers.
+    const text = [
+      'Before',
+      '',
+      'Pythn code example:',
+      '\tlet x = 42;',
+      ':: rust ::',
+      '',
+      'After',
+    ].join('\n')
     const words = extractCheckableWords(text)
-    expect(words.map((w) => w.text)).toEqual(['Before', 'After'])
+    expect(words.map((w) => w.text)).toEqual(['Before', 'Pythn', 'code', 'example', 'After'])
+  })
+
+  it('spell-checks annotation block bodies but skips the `:: label ::` opener and `::` closer', () => {
+    const text = ':: note ::\n\tThis is inside\n::\n\nThis is outside'
+    const words = extractCheckableWords(text)
+    expect(words.map((w) => w.text)).toEqual(['This', 'is', 'inside', 'This', 'is', 'outside'])
+  })
+
+  it('spell-checks the trailing descriptor on `:: label :: <text>` but not the label', () => {
+    // The label `note` and the marker tokens are not prose; the trailing portion is.
+    const text = ':: note :: this is teh descriptor'
+    const words = extractCheckableWords(text)
+    expect(words.map((w) => w.text)).toEqual(['this', 'is', 'teh', 'descriptor'])
+  })
+
+  it('skips `:: label ::` alone (no trailing) — the whole line is markers', () => {
+    const text = 'Before\n:: note ::\n:: data param=value ::'
+    const words = extractCheckableWords(text)
+    // The `:: note ::` line has no trailing — but it also has no body, so it's
+    // a single annotation with no descriptor; nothing to spell-check on it.
+    expect(words.map((w) => w.text)).toEqual(['Before'])
   })
 
   it('skips inline code', () => {
@@ -44,8 +75,8 @@ describe('extractCheckableWords', () => {
     expect(words.map((w) => w.text)).toEqual(['Use', 'to', 'iterate'])
   })
 
-  it('skips inline math', () => {
-    const text = 'The formula $E=mc^2$ is famous'
+  it('skips inline math (`#…#` delimiter per lex spec)', () => {
+    const text = 'The formula #E=mc^2# is famous'
     const words = extractCheckableWords(text)
     expect(words.map((w) => w.text)).toEqual(['The', 'formula', 'is', 'famous'])
   })
@@ -78,21 +109,12 @@ describe('extractCheckableWords', () => {
     expect(words.map((w) => w.text)).toEqual(['well', 'known', 'state', 'of', 'the', 'art'])
   })
 
-  it('skips annotation/verbatim blocks entirely', () => {
-    // :: label :: opens a verbatim/annotation block, :: closes it.
-    // The heuristic treats both annotations and verbatim the same way
-    // (toggle on open marker, toggle on close marker).
-    const text = ':: note ::\nThis is inside\n::\n\nThis is outside'
-    const words = extractCheckableWords(text)
-    expect(words.map((w) => w.text)).toEqual(['This', 'is', 'outside'])
-  })
-
   it('handles empty input', () => {
     expect(extractCheckableWords('')).toEqual([])
   })
 
   it('handles text with only skipped content', () => {
-    const text = '`code` [ref] $math$'
+    const text = '`code` [ref] #math#'
     const words = extractCheckableWords(text)
     expect(words).toEqual([])
   })
@@ -101,5 +123,37 @@ describe('extractCheckableWords', () => {
     const text = '    This is indented content'
     const words = extractCheckableWords(text)
     expect(words.map((w) => w.text)).toEqual(['This', 'is', 'indented', 'content'])
+  })
+
+  it('handles space-indented verbatim blocks (lex spec: 4 spaces = 1 tab-stop)', () => {
+    // Same shape as the tab-indented verbatim test above but with spaces.
+    // Per welcome/general.lex §2 (Indentation), 4 spaces == 1 indent step.
+    const text = [
+      'Before',
+      '',
+      'Pythn code example:',
+      '    let x = 42;',
+      ':: rust ::',
+      '',
+      'After',
+    ].join('\n')
+    const words = extractCheckableWords(text)
+    expect(words.map((w) => w.text)).toEqual(['Before', 'Pythn', 'code', 'example', 'After'])
+  })
+
+  it('handles space-indented annotation block bodies', () => {
+    const text = ':: note ::\n    This is inside the annotation body\n::\n\nThis is outside'
+    const words = extractCheckableWords(text)
+    expect(words.map((w) => w.text)).toEqual([
+      'This',
+      'is',
+      'inside',
+      'the',
+      'annotation',
+      'body',
+      'This',
+      'is',
+      'outside',
+    ])
   })
 })
