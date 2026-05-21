@@ -9,7 +9,14 @@ interface LspErrorModalProps {
   autoDismissMs?: number
 }
 
-export function LspErrorModal({ isOpen, title, message, suggestion, onClose, autoDismissMs = 15000 }: LspErrorModalProps) {
+export function LspErrorModal({
+  isOpen,
+  title,
+  message,
+  suggestion,
+  onClose,
+  autoDismissMs = 15000,
+}: LspErrorModalProps) {
   useEffect(() => {
     if (!isOpen) return
     if (!autoDismissMs || autoDismissMs <= 0) {
@@ -33,15 +40,11 @@ export function LspErrorModal({ isOpen, title, message, suggestion, onClose, aut
         className="w-[500px] rounded-lg border border-border bg-panel shadow-xl text-foreground"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="border-b border-border px-4 py-3 text-sm font-semibold">
-          {title}
-        </div>
+        <div className="border-b border-border px-4 py-3 text-sm font-semibold">{title}</div>
         <div className="space-y-4 px-4 py-4 text-sm">
           <p>{message}</p>
           {suggestion && (
-            <p className="text-muted-foreground text-xs leading-relaxed">
-              {suggestion}
-            </p>
+            <p className="text-muted-foreground text-xs leading-relaxed">{suggestion}</p>
           )}
           <div className="flex justify-end">
             <button

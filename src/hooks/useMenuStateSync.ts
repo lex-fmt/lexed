@@ -1,14 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect } from 'react'
 
 export function useMenuStateSync(hasOpenFile: boolean, isLexFile: boolean) {
   useEffect(() => {
     if (typeof window === 'undefined') {
-      return;
+      return
     }
-    const { ipcRenderer } = window;
+    const { ipcRenderer } = window
     if (!ipcRenderer?.updateMenuState) {
-      return;
+      return
     }
-    ipcRenderer.updateMenuState({ hasOpenFile, isLexFile });
-  }, [hasOpenFile, isLexFile]);
+    ipcRenderer.updateMenuState({ hasOpenFile, isLexFile })
+  }, [hasOpenFile, isLexFile])
 }

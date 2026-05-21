@@ -1,10 +1,4 @@
-import {
-  test,
-  expect,
-  loc,
-  resetFormattingRequest,
-  expectFormattingRequest,
-} from './lib'
+import { test, expect, loc, resetFormattingRequest, expectFormattingRequest } from './lib'
 import { openFixture } from './helpers'
 
 const FORMATTER_SETTINGS = {
