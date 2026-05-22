@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+## [0.10.5] - 2026-05-22
+
+
 ### Changed
 
 - Adopted the canonical `bin/build` from the `electron-app` release
@@ -15,7 +18,6 @@
 
 - Removed the bespoke `dependabot-auto-merge.yml`; the canonical
   Dependabot auto-merge policy is delivered via repo ruleset.
-
 ## [0.10.4] - 2026-05-21
 
 
