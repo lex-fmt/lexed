@@ -68,4 +68,8 @@ export E2E_SKIP_BUILD=1
 echo "smoke.sh: PLATFORM=${PLATFORM} ARCH=${ARCH} → ${PACKAGED_APP_PATH}"
 echo "smoke.sh: running Playwright packaged project"
 
-"${SMOKE_PREFIX[@]}" npx playwright test --project=packaged
+# `${SMOKE_PREFIX[@]+"${SMOKE_PREFIX[@]}"}`: bash 3.2-safe expansion
+# of a possibly-empty array under `set -u`. /bin/bash on the macOS
+# runner is 3.2; on 3.2, `"${arr[@]}"` errors with "unbound variable"
+# when arr is empty. The `+` form only expands when set.
+${SMOKE_PREFIX[@]+"${SMOKE_PREFIX[@]}"} npx playwright test --project=packaged

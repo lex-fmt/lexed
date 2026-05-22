@@ -191,7 +191,7 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 1
-        print(f"  ✓ {TARGET.relative_to(REPO_DIR)} matches generator")
+        print(f"  OK {TARGET.relative_to(REPO_DIR)} matches generator")
         return 0
 
     TARGET.write_text(expected, encoding="utf-8")
