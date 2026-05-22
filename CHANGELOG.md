@@ -6,8 +6,8 @@
 
 - Adopted the canonical `bin/build` from the `electron-app` release
   stack (`arthur-debert/release#160`). The release workflow now invokes
-  `bin/build` instead of `npm run build` directly, matching the per-
-  stack convention across the rest of the ecosystem.
+  `bin/build` instead of `npm run build` directly, matching the
+  per-stack convention across the rest of the ecosystem.
 - Migrated `on-upstream-released.yml` to the canonical
   `cascade-handler@v1` reusable workflow.
 
