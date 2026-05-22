@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+## [0.10.6] - 2026-05-22
+
+
 ### Fixed
 
 - `scripts/smoke.sh`: bash 3.2-safe expansion of `SMOKE_PREFIX[@]` so
@@ -9,7 +12,6 @@
   error when the array is empty.
 - `scripts/gen-theme.py`: replaced the `✓` glyph with ASCII `OK` so
   Windows runners' cp1252 stdout doesn't fail the `theme:check` step.
-
 ## [0.10.5] - 2026-05-22
 
 
