@@ -5,15 +5,18 @@ name: Lexed CI
 # hand-rolled setup-node + npm ci + shared build + typecheck + lint +
 # unit-test sequence.
 #
-# The `e2e` job stays bespoke for now — fetching lex-lsp binaries,
+# The `e2e` job is now ALSO driven by the canonical (opt-in via
+# `e2e: true`, see arthur-debert/release#185). lexed's bespoke e2e
+# orchestration — fetching lex-lsp via `scripts/fetch-deps.sh`,
 # downloading the tree-sitter grammar, building the renderer/main
-# bundle, running xvfb-wrapped Playwright with packaged-mode env flags
-# is orchestration the reusable workflow deliberately doesn't try to
-# fold in (see docs/per-stack/electron-ci.md in the release/ repo).
+# bundle, running xvfb-wrapped Playwright with packaged-mode env
+# flags — is split between the canonical's `pre-test` input (binary
+# fetches) and a consumer-side `test:e2e:ci` npm script (build +
+# xvfb-run + env flags). This keeps the consumer caller a thin call
+# while still expressing the lexed-specific bits.
 #
 # See docs/per-stack/electron-ci.md in arthur-debert/release for the
-# full input reference. lexed is the reference adopter — closes the
-# CI workflow reusability gap for the electron-app fleet.
+# full input reference.
 
 on:
   push:
@@ -31,59 +34,21 @@ jobs:
       node-version: '22.18.0'
       shared-build-dir: shared
       submodules: 'true'
-
-  e2e:
-    name: E2E Tests
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    env:
-      PLAYWRIGHT_BROWSERS_PATH: '0'
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          submodules: true
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '22.18.0'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build shared module
-        run: |
-          cd shared
-          npm ci
-          npm run build
-
-      - name: Fetch lex-lsp binary
-        run: bash scripts/fetch-deps.sh
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download tree-sitter grammar
-        run: bash scripts/download-tree-sitter.sh
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build renderer and main process
-        run: npm run icons && npx tsc && npx vite build
-
-      - name: Run E2E tests
-        run: xvfb-run --auto-servernum npx playwright test tests/e2e
-        env:
-          E2E_USE_BUILD: '1'
-          E2E_SKIP_BUILD: '1'
-          E2E_HIDE_WINDOW: '1'
-          E2E_DISABLE_PERSISTENCE: '1'
-
-      - name: Upload traces on failure
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: playwright-traces
-          path: test-results/
-          retention-days: 7
+      e2e: true
+      e2e-script: test:e2e:ci
+      # Fetch sibling release binaries the e2e job needs before the
+      # build runs. `--if-missing` keeps these cheap when re-running
+      # locally; in CI they always download. `GITHUB_TOKEN` is the env
+      # var the scripts read; the canonical exposes `GH_TOKEN` so we
+      # translate inline. Runs in BOTH check and e2e jobs (the
+      # canonical contract); the check-job overhead is ~5-10s of
+      # network and is acceptable for the single source of truth.
+      pre-test: |
+        GITHUB_TOKEN="$GH_TOKEN" bash scripts/fetch-deps.sh --if-missing
+        GITHUB_TOKEN="$GH_TOKEN" bash scripts/download-tree-sitter.sh --if-missing
+        GITHUB_TOKEN="$GH_TOKEN" bash scripts/download-embedded-grammars.sh --if-missing
+      # lexed's e2e suite (full dev + packaged smoke) regularly takes
+      # 15-25min on ubuntu-latest; bump from the canonical's 30min
+      # default to give headroom without blanket-extending the check
+      # job.
+      timeout: 45
