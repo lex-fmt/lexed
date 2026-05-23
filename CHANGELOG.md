@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Changed
+
+- CI: adopted the canonical `e2e: true` input on
+  `arthur-debert/release/.github/workflows/electron-ci.yml@v1`
+  (see arthur-debert/release#185). The previously bespoke `e2e` job
+  in `.github/workflows/test.yml` is gone; the e2e gate now runs
+  via the reusable workflow's dedicated e2e job. lexed-specific
+  orchestration (lex-lsp fetch, tree-sitter download, embedded
+  grammars) moves to the canonical's `pre-test` input; the
+  packaged-build + xvfb wrapping lives in a new `test:e2e:ci` npm
+  script.
+
 ## [0.10.6] - 2026-05-22
 
 
