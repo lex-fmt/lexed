@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Canonical electron-app e2e runner. Same script local + CI.
+#
+# Delegates to the consumer's `<pm> run test:e2e` script. The
+# consumer's package.json owns what e2e actually means: typically
+# `playwright test tests/e2e` (often gated on a pre-built binary via
+# E2E_USE_BUILD / E2E_HIDE_WINDOW / similar env vars). The
+# electron-ci.yml@v1 workflow's `e2e: true` job runs this script
+# after the packaged build is available.
+#
+# Skip-with-notice if the consumer hasn't wired a `test:e2e` script.
+
+# CWD-first pm detection across all three lockfile types, falling
+# back to repo root only after exhausting CWD. This matters in
+# monorepos where a subdir-local lockfile of one type can coexist
+# with a root lockfile of another (e.g. an npm-managed subpackage
+# under a pnpm workspace).
+detect_pm() {
+    if [ -f pnpm-lock.yaml ]; then echo pnpm; return; fi
+    if [ -f yarn.lock ];      then echo yarn; return; fi
+    if [ -f package-lock.json ]; then echo npm; return; fi
+    local root
+    root="$(git rev-parse --show-toplevel 2>/dev/null || echo ".")"
+    if [ -f "${root}/pnpm-lock.yaml" ]; then echo pnpm; return; fi
+    if [ -f "${root}/yarn.lock" ];      then echo yarn; return; fi
+    echo npm
+}
+
+if [ ! -f package.json ]; then
+    echo "No package.json — skipping e2e."
+    exit 0
+fi
+
+# Optional chaining (Node >= 14) — cleaner than the && guard.
+if ! node -e "process.exit(require('./package.json').scripts?.['test:e2e'] ? 0 : 1)" 2>/dev/null; then
+    echo "No 'test:e2e' script in package.json — skipping e2e."
+    exit 0
+fi
+
+PM=$(detect_pm)
+echo "Running e2e tests via ${PM} run test:e2e..."
+case "${PM}" in
+    npm)        exec npm run --silent test:e2e -- "$@" ;;
+    pnpm|yarn)  exec "${PM}" run test:e2e "$@" ;;
+esac
