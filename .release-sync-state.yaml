@@ -1,8 +1,8 @@
 # Managed by release-sync. Do not edit.
 synced_from: arthur-debert/release
 ref: origin/main
-sha: e0f37b0ab91600a283872035bc0e9137938b63b1
-synced_at: 2026-05-22T18:02:58Z
+sha: 245ccc855ad47e90320bd067274c52ea11b3237e
+synced_at: 2026-05-24T17:11:50Z
 stack: electron-app
 components:
   - shell-quality
@@ -20,10 +20,19 @@ files:
   - .shellcheckrc
   - .yamllint
   - bin/build
+  - bin/changelog
+  - bin/changelog-add
+  - bin/changelog-cut
+  - bin/changelog-render
   - bin/check
   - bin/check-fmt
   - bin/check-lint
   - bin/check-tests
   - bin/diff-since-release
+  - bin/e2e
+  - CHANGELOG/README.txt
   - lefthook.yml
   - scripts/setup-dev-env.sh
+  - vendor/semver-tool/LICENSE
+  - vendor/semver-tool/README.md
+  - vendor/semver-tool/semver

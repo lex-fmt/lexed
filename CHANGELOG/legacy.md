@@ -1,9 +1,3 @@
-<!-- generated - do not edit. See CHANGELOG/README.txt -->
-
-# Changelog
-
-## Unreleased
-
 
 ## v0.10.7 (2026-05-24)
 
