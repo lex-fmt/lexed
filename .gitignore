@@ -6,17 +6,19 @@ node_modules
 /build
 /tmp
 
-# Downloaded binaries
+# Downloaded binaries (fetched by canonical fetch-deps)
 /resources/lexd-lsp
 /resources/lexd-lsp.exe
 
 # Downloaded tree-sitter grammar + queries
-# (fetched by scripts/download-tree-sitter.sh)
 /resources/tree-sitter-lex.wasm
 /resources/queries/
 /resources/embedded-grammars.json
 /resources/embedded-grammars/
 /resources/.tree-sitter-version
+
+# Dependency stamps (fetch-deps + fetch-embedded-grammars)
+/.deps/
 
 # Logs
 logs

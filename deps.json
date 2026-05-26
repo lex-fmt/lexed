@@ -1,0 +1,19 @@
+{
+  "lexd-lsp": {
+    "repo": "lex-fmt/lex",
+    "version": "v0.14.1",
+    "asset": "lexd-lsp-{{target}}{{ext}}",
+    "binary": "lexd-lsp",
+    "dest": "resources"
+  },
+  "tree-sitter": {
+    "repo": "lex-fmt/tree-sitter-lex",
+    "version": "v0.11.0",
+    "asset": "tree-sitter.tar.gz",
+    "extract": {
+      "tree-sitter-lex.wasm": "resources",
+      "queries": "resources/queries",
+      "shared/embedded-grammars.json": "resources"
+    }
+  }
+}
