@@ -5,7 +5,7 @@ The vendored Hunspell base dictionaries are SCOWL-derived at size=60 and
 miss a lot of modern tech / programming / OS / networking vocabulary
 (`lifecycle`, `amd64`, `stdin`, `csrf`…). This script builds a plain
 word-list file that's consumed at BUILD TIME by
-`scripts/generate-tries.mjs`, which merges it into every language's
+`app-bin/generate-tries.mjs`, which merges it into every language's
 precompiled `.trie.gz` (one lookup, no separate runtime supplement).
 
 Tech terms are loanwords, so the same supplement helps every language.
@@ -26,9 +26,9 @@ Cache:
   match (CI use).
 
 Usage:
-  python3 scripts/generate-dictionary-supplement.py
-  python3 scripts/generate-dictionary-supplement.py --force
-  python3 scripts/generate-dictionary-supplement.py --check
+  python3 app-bin/generate-dictionary-supplement.py
+  python3 app-bin/generate-dictionary-supplement.py --force
+  python3 app-bin/generate-dictionary-supplement.py --check
 """
 
 from __future__ import annotations
@@ -46,7 +46,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DICT_DIR = ROOT / "dictionaries"
 SOURCE_DIR = DICT_DIR / "source"
 LICENSES_DIR = DICT_DIR / "licenses"
-# Build-input only. The tries generator (scripts/generate-tries.mjs)
+# Build-input only. The tries generator (app-bin/generate-tries.mjs)
 # merges this list into every language's .trie.gz. Not loaded at runtime.
 # Plain word list — no Hunspell count header.
 OUTPUT = SOURCE_DIR / "supplement.txt"
@@ -313,7 +313,7 @@ def main() -> int:
             print("supplement.txt is up to date")
             return 0
         print(
-            "supplement.txt is stale — run `python3 scripts/generate-dictionary-supplement.py`",
+            "supplement.txt is stale — run `python3 app-bin/generate-dictionary-supplement.py`",
             file=sys.stderr,
         )
         return 1

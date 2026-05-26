@@ -34,6 +34,7 @@ pre-commit:
       glob:
         - "**/*.{sh,bash}"
         - "scripts/**"
+        - "app-bin/**"
         - "bin/**"
       exclude:
         - "**/*.{md,json,yaml,yml,toml,py,rb,rs,js,ts,mjs,cjs,html,css,txt,lock}"

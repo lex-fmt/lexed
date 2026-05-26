@@ -16,7 +16,7 @@ DERIVED_DATA="$HOME/Library/Developer/Xcode/DerivedData"
 
 xcodebuild -project "$PROJECT_PATH" -scheme "$SCHEME" -configuration "$CONFIGURATION" build
 
-LATEST_BUILD_DIR="$(ls -dt "$DERIVED_DATA"/LexQuickLook-*/Build/Products/Release 2>/dev/null | head -n 1 || true)"
+LATEST_BUILD_DIR="$(find "$DERIVED_DATA" -maxdepth 3 -type d -path '*/LexQuickLook-*/Build/Products/Release' -print 2>/dev/null | head -n 1 || true)"
 if [[ -z "$LATEST_BUILD_DIR" ]]; then
   echo "Unable to locate LexQuickLook build artifacts in DerivedData" >&2
   exit 1
