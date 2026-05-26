@@ -55,7 +55,7 @@ npm run format       # Prettier
    - `npm run build:quicklook` - Build QuickLook extension (macOS only)
 
 2. `npm run build` executes:
-   - `scripts/fetch-deps.sh` - Download lexd-lsp binary from GitHub releases (CI-referenced)
+   - `app-bin/fetch-deps.sh` - Download lexd-lsp binary from GitHub releases (CI-referenced)
    - App-specific generators live in `app-bin/`
    - `tsc` - TypeScript compilation
    - `vite build` - Bundle renderer, main, and preload

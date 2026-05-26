@@ -4,7 +4,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 RESOURCES_DIR="$APP_DIR/resources"
-LEX_DEPS="$APP_DIR/shared/lex-deps.json"
 
 # ---------------------------------------------------------------------------
 # Read dep metadata from lex-deps.json via read-lex-config.mjs
@@ -201,7 +200,7 @@ mkdir -p "$RESOURCES_DIR"
 if [[ -n "$REQUESTED_DEP" ]]; then
   DEPS=("$REQUESTED_DEP")
 else
-  DEPS=($(node "$SCRIPT_DIR/read-lex-config.mjs" --list-deps))
+  mapfile -t DEPS < <(node "$SCRIPT_DIR/read-lex-config.mjs" --list-deps)
 fi
 
 for dep in "${DEPS[@]}"; do
