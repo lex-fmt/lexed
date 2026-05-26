@@ -133,7 +133,7 @@ export class LspManager {
     }
 
     if (!fs.existsSync(lspPath)) {
-      const message = `Lex language server binary not found at ${lspPath}. Run: bash scripts/fetch-deps.sh`
+      const message = `Lex language server binary not found at ${lspPath}. Run: bash app-bin/fetch-deps.sh`
       log(message)
       console.error(message)
       this.sendStatus({ status: 'missing-binary', message, path: lspPath })

@@ -172,7 +172,7 @@ export default [
   },
   // Scripts (Node context, .mjs)
   {
-    files: ['scripts/**/*.mjs'],
+    files: ['scripts/**/*.mjs', 'app-bin/**/*.mjs'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',

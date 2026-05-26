@@ -32,7 +32,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ ! -f "$MANIFEST" ]]; then
-  echo "error: $MANIFEST not found — run scripts/download-tree-sitter.sh first" >&2
+  echo "error: $MANIFEST not found — run app-bin/download-tree-sitter.sh first" >&2
   exit 1
 fi
 

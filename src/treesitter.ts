@@ -7,7 +7,7 @@
  * The runtime `tree-sitter.wasm` ships inside the `web-tree-sitter` package
  * and is fingerprinted by Vite. The lex grammar `tree-sitter-lex.wasm` plus
  * the `.scm` queries live in `resources/` and are downloaded by
- * `scripts/download-tree-sitter.sh` at install / build time.
+ * `app-bin/download-tree-sitter.sh` at install / build time.
  *
  * Each `initTreeSitter()` call resolves to a `LexTreeSitter` instance or
  * `null` — the module mirrors the vscode adapter's fallback contract

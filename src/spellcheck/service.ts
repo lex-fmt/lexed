@@ -2,7 +2,7 @@
  * Client-side spellcheck service using cspell-trie-lib.
  *
  * Runs entirely in the renderer process. Per-language tries are
- * precompiled offline (see scripts/generate-tries.mjs) and shipped as
+ * precompiled offline (see app-bin/generate-tries.mjs) and shipped as
  * `dictionaries/<lang>.trie.gz`; the main process decompresses them and
  * hands the text to `importTrie`. Startup cost is 50–320ms — well under
  * a frame on English and under a third of a second for morphologically

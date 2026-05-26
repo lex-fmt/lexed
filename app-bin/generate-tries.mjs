@@ -27,7 +27,7 @@ const SOURCE_DIR = path.join(DICT_DIR, 'source')
 const STAMP = path.join(DICT_DIR, '.tries.stamp')
 const SUPPLEMENT = path.join(SOURCE_DIR, 'supplement.txt')
 
-// Kept in sync with scripts/generate-dictionary-supplement.py's
+// Kept in sync with app-bin/generate-dictionary-supplement.py's
 // SUPPORTED_LANGUAGES. A language listed here MUST have a matching
 // .aff/.dic pair under dictionaries/source/.
 const LANGUAGES = [

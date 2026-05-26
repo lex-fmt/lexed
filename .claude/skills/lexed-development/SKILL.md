@@ -13,7 +13,7 @@ description: |
 
 ## Project Structure
 
-```
+```text
 lexed/
 ├── electron/           # Main process code
 │   ├── main.ts         # App entry, window management, IPC handlers
@@ -27,7 +27,8 @@ lexed/
 ├── shared/             # Shared types (main ↔ renderer)
 ├── bin/                # CLI script for macOS
 ├── quicklook/          # macOS QuickLook extension (Swift)
-├── scripts/            # Build scripts
+├── app-bin/            # App-specific build/gen scripts
+├── scripts/            # CI-referenced scripts (fetch-deps, smoke, etc.)
 ├── tests/              # e2e and fixtures
 ├── welcome/            # First-launch welcome document
 └── dictionaries/       # Spellcheck dictionaries
@@ -54,7 +55,8 @@ npm run format       # Prettier
    - `npm run build:quicklook` - Build QuickLook extension (macOS only)
 
 2. `npm run build` executes:
-   - `scripts/fetch-deps.sh` - Download lexd-lsp binary from GitHub releases
+   - `app-bin/fetch-deps.sh` - Download lexd-lsp binary from GitHub releases (CI-referenced)
+   - App-specific generators live in `app-bin/`
    - `tsc` - TypeScript compilation
    - `vite build` - Bundle renderer, main, and preload
    - `electron-builder` - Package into DMG/installer
@@ -62,10 +64,12 @@ npm run format       # Prettier
 ## LSP Integration
 
 ### Binary Resolution (in order)
+
 1. `LEX_LSP_PATH` environment variable (for local dev)
 2. Bundled binary in `resources/lexd-lsp` (production)
 
 ### Development with Local LSP
+
 ```bash
 # Build lexd-lsp from the lex repo
 cd /path/to/lex && cargo build -p lexd-lsp
@@ -77,6 +81,7 @@ LEX_LSP_PATH=/path/to/lex/target/debug/lexd-lsp npm run dev:local
 ## Testing
 
 ### E2E Tests (Playwright)
+
 ```bash
 npm run test:e2e           # Full e2e with fresh build
 npm run test:e2e:dev       # E2e against dev server (faster)
@@ -84,11 +89,13 @@ npm run test:e2e:built     # E2e against built app
 ```
 
 ### Unit Tests (Vitest)
+
 ```bash
 npm run test:unit          # Run unit tests
 ```
 
 ### Test Environment Variables
+
 - `E2E_DISABLE_PERSISTENCE=1` - Disable settings persistence
 - `E2E_DISABLE_SINGLE_INSTANCE_LOCK=1` - Allow multiple instances
 - `E2E_HIDE_WINDOW=1` - Hide window during tests
@@ -97,11 +104,13 @@ npm run test:unit          # Run unit tests
 ## macOS-Specific Features
 
 ### QuickLook Extension
+
 - Location: `quicklook/LexQuickLook.xcodeproj`
 - Built with xcodebuild, output to `build/quicklook/`
 - Bundled into `LexEd.app/Contents/PlugIns/`
 
 ### CLI Tool (`lexed` command)
+
 - Source: `bin/lexed` (shell script)
 - Bundled to: `LexEd.app/Contents/Resources/bin/lexed`
 - Install via: Shell menu → "Install 'lexed' command in PATH"
@@ -109,12 +118,14 @@ npm run test:unit          # Run unit tests
 ## IPC Communication
 
 ### Main → Renderer Events
+
 - `open-file-path` - Open file in editor
 - `open-folder-path` - Set workspace folder
 - `menu-*` - Menu command triggers
 - `settings-changed` - Settings updated
 
 ### Renderer → Main Handlers
+
 - `file-new`, `file-open`, `file-save`, `file-read`
 - `folder-open`, `get-initial-folder`, `set-last-folder`
 - `get-open-tabs`, `set-open-tabs`
@@ -123,11 +134,13 @@ npm run test:unit          # Run unit tests
 ## Adding Features
 
 ### Main Process (electron/main.ts)
+
 1. Add IPC handler with `ipcMain.handle()` or `ipcMain.on()`
 2. Update preload.ts to expose via `contextBridge`
 3. Add types to shared/ for type safety
 
 ### Renderer Features
+
 1. Components go in `src/components/`
 2. LSP features in `src/lsp/providers/`
 3. Use `window.electronAPI.*` for IPC calls
@@ -135,14 +148,17 @@ npm run test:unit          # Run unit tests
 ## Debugging
 
 ### Logs
+
 - File: `~/Library/Logs/LexEd/lexed.log`
 - Console: Set `LEX_LOG_CONSOLE_LEVEL=debug`
 
 ### DevTools
+
 - Menu: View → Toggle DevTools
 - Or: `Cmd+Option+I`
 
 ### Environment Variables
+
 - `LEX_LOG_LEVEL` - File log level
 - `LEX_LOG_CONSOLE_LEVEL` - Console log level
 - `NODE_ENV=development` - Development mode

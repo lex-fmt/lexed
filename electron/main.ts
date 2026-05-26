@@ -1156,7 +1156,7 @@ function getCustomDictionaryPath(): string {
 }
 
 ipcMain.handle('spellcheck-load-trie', async (_event, language: string) => {
-  // Per-language precompiled trie (see scripts/generate-tries.mjs). The
+  // Per-language precompiled trie (see app-bin/generate-tries.mjs). The
   // trie is a cspell-trie-lib text format, gzipped for storage. We
   // decompress here on the main side (async, off the main thread via
   // libuv's threadpool) so the renderer doesn't need a gzip dependency

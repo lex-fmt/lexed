@@ -7,7 +7,7 @@ name: Lexed CI
 #
 # The `e2e` job is now ALSO driven by the canonical (opt-in via
 # `e2e: true`, see arthur-debert/release#185). lexed's bespoke e2e
-# orchestration — fetching lex-lsp via `scripts/fetch-deps.sh`,
+# orchestration — fetching lex-lsp via `app-bin/fetch-deps.sh`,
 # downloading the tree-sitter grammar, building the renderer/main
 # bundle, running xvfb-wrapped Playwright with packaged-mode env
 # flags — is split between the canonical's `pre-test` input (binary
@@ -44,9 +44,9 @@ jobs:
       # canonical contract); the check-job overhead is ~5-10s of
       # network and is acceptable for the single source of truth.
       pre-test: |
-        GITHUB_TOKEN="$GH_TOKEN" bash scripts/fetch-deps.sh --if-missing
-        GITHUB_TOKEN="$GH_TOKEN" bash scripts/download-tree-sitter.sh --if-missing
-        GITHUB_TOKEN="$GH_TOKEN" bash scripts/download-embedded-grammars.sh --if-missing
+        GITHUB_TOKEN="$GH_TOKEN" bash app-bin/fetch-deps.sh --if-missing
+        GITHUB_TOKEN="$GH_TOKEN" bash app-bin/download-tree-sitter.sh --if-missing
+        GITHUB_TOKEN="$GH_TOKEN" bash app-bin/download-embedded-grammars.sh --if-missing
       # lexed's e2e suite (full dev + packaged smoke) regularly takes
       # 15-25min on ubuntu-latest; bump from the canonical's 30min
       # default to give headroom without blanket-extending the check
