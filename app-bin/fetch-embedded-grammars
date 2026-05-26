@@ -49,7 +49,11 @@ if $IF_MISSING; then
     lang=$(jq -r ".grammars[$i].name" "$MANIFEST")
     version=$(jq -r ".grammars[$i].version" "$MANIFEST")
     stamp="$STAMP_DIR/grammar-${lang}.stamp"
-    if [[ ! -f "$stamp" ]] || [[ "$(cat "$stamp")" != "$version" ]]; then
+    lang_dir="$GRAMMARS_DIR/$lang"
+    if [[ ! -f "$stamp" ]] \
+       || [[ "$(cat "$stamp")" != "$version" ]] \
+       || [[ ! -f "$lang_dir/parser.wasm" ]] \
+       || [[ ! -f "$lang_dir/highlights.scm" ]]; then
       all_present=false
       break
     fi
@@ -84,16 +88,20 @@ for i in $(seq 0 $((count - 1))); do
   mkdir -p "$lang_dir"
 
   wasm_url="https://github.com/$repo/releases/download/$version/$wasm_asset"
-  if ! curl "${curl_opts[@]}" -o "$lang_dir/parser.wasm" "$wasm_url"; then
+  if ! curl "${curl_opts[@]}" -o "$lang_dir/parser.wasm.tmp" "$wasm_url"; then
     echo "Failed to download $wasm_url" >&2
+    rm -f "$lang_dir/parser.wasm.tmp"
     exit 1
   fi
+  mv "$lang_dir/parser.wasm.tmp" "$lang_dir/parser.wasm"
 
   highlights_url="https://raw.githubusercontent.com/$repo/$version/$queries_path"
-  if ! curl "${curl_opts[@]}" -o "$lang_dir/highlights.scm" "$highlights_url"; then
+  if ! curl "${curl_opts[@]}" -o "$lang_dir/highlights.scm.tmp" "$highlights_url"; then
     echo "Failed to download $highlights_url" >&2
+    rm -f "$lang_dir/highlights.scm.tmp"
     exit 1
   fi
+  mv "$lang_dir/highlights.scm.tmp" "$lang_dir/highlights.scm"
 
   printf '%s' "$version" > "$stamp"
   echo "  embedded grammar $lang $version installed"
