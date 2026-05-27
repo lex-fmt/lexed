@@ -1,6 +1,6 @@
-import { Command } from '../types.js';
+import { Command } from '../types.js'
 export interface InsertVerbatimArgs {
-    content: string;
-    language: string;
+  content: string
+  language: string
 }
-export declare const InsertVerbatimCommand: Command<InsertVerbatimArgs>;
+export declare const InsertVerbatimCommand: Command<InsertVerbatimArgs>

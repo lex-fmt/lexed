@@ -66,7 +66,9 @@ export default async function afterPack(context) {
   const cscLink = process.env.CSC_LINK
   const cscPassword = process.env.CSC_KEY_PASSWORD || ''
   if (!cscLink) {
-    console.log('[afterPack] CSC_LINK not set — skipping QuickLook appex signing (local-dev build).')
+    console.log(
+      '[afterPack] CSC_LINK not set — skipping QuickLook appex signing (local-dev build).'
+    )
     return
   }
 
@@ -113,8 +115,12 @@ export default async function afterPack(context) {
   execSync(`security create-keychain -p "${keychainPassword}" "${keychainPath}"`)
   execSync(`security set-keychain-settings -lut 3600 "${keychainPath}"`)
   execSync(`security unlock-keychain -p "${keychainPassword}" "${keychainPath}"`)
-  execSync(`security import "${certPath}" -k "${keychainPath}" -P "${cscPassword}" -T /usr/bin/codesign`)
-  execSync(`security set-key-partition-list -S apple-tool:,apple: -s -k "${keychainPassword}" "${keychainPath}"`)
+  execSync(
+    `security import "${certPath}" -k "${keychainPath}" -P "${cscPassword}" -T /usr/bin/codesign`
+  )
+  execSync(
+    `security set-key-partition-list -S apple-tool:,apple: -s -k "${keychainPassword}" "${keychainPath}"`
+  )
 
   // Append the new keychain to the user's search list — codesign
   // won't find identities without this. Preserve the existing
@@ -122,16 +128,15 @@ export default async function afterPack(context) {
   // working.
   const existingKeychains = execSync('security list-keychains -d user', { encoding: 'utf-8' })
     .split('\n')
-    .map(line => line.trim().replace(/^"|"$/g, ''))
+    .map((line) => line.trim().replace(/^"|"$/g, ''))
     .filter(Boolean)
-  const searchList = [keychainPath, ...existingKeychains].map(k => `"${k}"`).join(' ')
+  const searchList = [keychainPath, ...existingKeychains].map((k) => `"${k}"`).join(' ')
   execSync(`security list-keychains -d user -s ${searchList}`)
 
   // Find the Developer ID Application identity in our keychain.
-  const findOut = execSync(
-    `security find-identity -v -p codesigning "${keychainPath}"`,
-    { encoding: 'utf-8' }
-  )
+  const findOut = execSync(`security find-identity -v -p codesigning "${keychainPath}"`, {
+    encoding: 'utf-8',
+  })
   const match = findOut.match(/"(Developer ID Application[^"]+)"/)
   if (!match) {
     throw new Error(
@@ -151,15 +156,23 @@ export default async function afterPack(context) {
   }
 
   console.log(`[afterPack] signing ${appexPath} with ${identity}`)
-  execFileSync('codesign', [
-    '--force',
-    '--sign', identity,
-    '--options', 'runtime',
-    '--timestamp',
-    '--entitlements', entitlementsPath,
-    '--keychain', keychainPath,
-    appexPath,
-  ], { stdio: 'inherit' })
+  execFileSync(
+    'codesign',
+    [
+      '--force',
+      '--sign',
+      identity,
+      '--options',
+      'runtime',
+      '--timestamp',
+      '--entitlements',
+      entitlementsPath,
+      '--keychain',
+      keychainPath,
+      appexPath,
+    ],
+    { stdio: 'inherit' }
+  )
 
   // Verify before declaring success — `codesign --verify` surfaces
   // problems that the sign step itself reports as success (broken

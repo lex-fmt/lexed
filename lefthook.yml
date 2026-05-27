@@ -9,7 +9,7 @@ pre-commit:
   parallel: true
   commands:
     markdownlint:
-      glob: "**/*.md"
+      glob: '**/*.md'
       run: >-
         if command -v markdownlint >/dev/null 2>&1; then
 
@@ -20,7 +20,7 @@ pre-commit:
         fi
       priority: 2
     yamllint:
-      glob: "**/*.{yml,yaml}"
+      glob: '**/*.{yml,yaml}'
       run: >-
         if command -v yamllint >/dev/null 2>&1; then
 
@@ -32,11 +32,11 @@ pre-commit:
       priority: 2
     shellcheck:
       glob:
-        - "**/*.{sh,bash}"
-        - "scripts/**"
-        - "bin/**"
+        - '**/*.{sh,bash}'
+        - 'scripts/**'
+        - 'bin/**'
       exclude:
-        - "**/*.{md,json,yaml,yml,toml,py,rb,rs,js,ts,mjs,cjs,html,css,txt,lock}"
+        - '**/*.{md,json,yaml,yml,toml,py,rb,rs,js,ts,mjs,cjs,html,css,txt,lock}'
       run: >-
         if command -v shellcheck >/dev/null 2>&1; then
 
@@ -48,19 +48,19 @@ pre-commit:
       priority: 2
     eslint:
       glob:
-        - "**/*.{js,jsx,ts,tsx,vue,mjs,cjs}"
-        - "**/.eslintrc*"
-        - "**/eslint.config.*"
+        - '**/*.{js,jsx,ts,tsx,vue,mjs,cjs}'
+        - '**/.eslintrc*'
+        - '**/eslint.config.*'
       run: npx --no-install eslint --max-warnings 0 -- {staged_files}
       priority: 2
     prettier:
       glob:
-        - "**/*.{js,jsx,ts,tsx,vue,svelte,json,html,css,scss,md,yml,yaml}"
+        - '**/*.{js,jsx,ts,tsx,vue,svelte,json,html,css,scss,md,yml,yaml}'
       run: npx --no-install prettier --check -- {staged_files}
       priority: 2
     typecheck:
       glob:
-        - "**/*.{ts,tsx}"
-        - "**/tsconfig*.json"
+        - '**/*.{ts,tsx}'
+        - '**/tsconfig*.json'
       run: npm run --silent typecheck --if-present
       priority: 2

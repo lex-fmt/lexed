@@ -57,4 +57,4 @@
  * @see ElectronAdapter - Electron implementation
  * @see WebAdapter - Browser implementation (in lex-web)
  */
-export {};
+export {}

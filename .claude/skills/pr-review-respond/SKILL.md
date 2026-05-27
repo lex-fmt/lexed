@@ -60,6 +60,7 @@ gh api graphql -F owner="$OWNER" -F name="$REPO" -F pr="$PR" -f query='
 ```
 
 The output gives you everything needed to triage and act:
+
 - `threadId` — the `PRRT_*` GraphQL ID to pass to `resolveReviewThread` (step 3).
 - `firstCommentId` — the numeric REST `databaseId` to POST replies against (step 2). Always the root comment, even when the thread has follow-up replies.
 - `comments[]` — full thread history in order, so you see the latest reviewer comment plus any earlier replies. The newest comment (`comments[-1]`) usually carries the most current request.
@@ -103,11 +104,13 @@ GitHub does **not** auto-resolve threads when you push a fix or reply. Without t
 For each unresolved thread, pick one:
 
 **A) Real, project-specific issue → fix the code, push, resolve the thread.** The diff is the proof. Examples seen in this ecosystem:
+
 - `cargo clippy -D warnings` must be `cargo clippy -- -D warnings` (the `--` forwards `-D` to rustc).
 - `permissions: { pull-requests: write }` alone removes default `contents: read`; add `contents: read` explicitly.
 - Fork PRs need a `github.event.pull_request.head.repo.fork == false` guard before posting reviewers.
 
 **B) Project ethos drift → rationale-reply, then resolve. Do not change the file.** End the reply with `Recording for future review passes: don't ask us to <X>.` so it's grep-able next round. Examples that always get pushback in this ecosystem:
+
 - "Pin org-internal reusable workflows to a SHA." Same owner controls both repos; pinning defeats the "fix once, propagate" point.
 - "Per-repo customize the multi-repo template." The template is intentionally generic — pointing at only what's local defeats its purpose.
 - "Match fallback flags exactly to CI." The fallback is a generic approximation; CI is the source of truth and varies per project.
