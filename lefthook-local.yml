@@ -14,5 +14,11 @@ pre-commit:
       exclude:
         - '**/*.{md,json,yaml,yml,toml,py,rb,rs,js,ts,mjs,cjs,html,css,txt,lock}'
         - 'bin/share/**'
+      run: >-
+        if command -v shellcheck >/dev/null 2>&1; then
+          shellcheck --severity=warning {staged_files};
+        else
+          echo "shellcheck not installed, skipping"; true;
+        fi
     eslint:
       run: npx --no-install eslint --no-warn-ignored --max-warnings 0 -- {staged_files}
