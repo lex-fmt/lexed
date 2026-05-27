@@ -58,95 +58,95 @@
  * @see WebAdapter - Browser implementation (in lex-web)
  */
 
-import type { MessageReader, MessageWriter } from 'vscode-jsonrpc';
+import type { MessageReader, MessageWriter } from 'vscode-jsonrpc'
 
 // ============================================================================
 // Core Types
 // ============================================================================
 
 /** Theme mode: light or dark */
-export type ThemeMode = 'dark' | 'light';
+export type ThemeMode = 'dark' | 'light'
 
 /** Result of opening a file via dialog */
 export interface OpenFileResult {
-  filePath: string;
-  content: string;
+  filePath: string
+  content: string
 }
 
 /** Directory entry from readDir */
 export interface DirEntry {
-  name: string;
-  path: string;
-  isDirectory: boolean;
+  name: string
+  path: string
+  isDirectory: boolean
 }
 
 /** Pane layout for persistence */
 export interface PaneLayout {
-  panes: Array<{ id: string; tabs: string[]; activeTab: string | null }>;
-  activePaneId: string | null;
+  panes: Array<{ id: string; tabs: string[]; activeTab: string | null }>
+  activePaneId: string | null
   rows: Array<{
-    id: string;
-    paneIds: string[];
-    size?: number;
-    paneSizes?: Record<string, number>;
-  }>;
+    id: string
+    paneIds: string[]
+    size?: number
+    paneSizes?: Record<string, number>
+  }>
 }
 
 /** Editor settings */
 export interface EditorSettings {
-  showRuler: boolean;
-  rulerWidth: number;
-  vimMode: boolean;
+  showRuler: boolean
+  rulerWidth: number
+  vimMode: boolean
 }
 
 /** Formatter settings */
 export interface FormatterSettings {
-  sessionBlankLinesBefore: number;
-  sessionBlankLinesAfter: number;
-  normalizeSeqMarkers: boolean;
-  unorderedSeqMarker: string;
-  maxBlankLines: number;
-  indentString: string;
-  preserveTrailingBlanks: boolean;
-  normalizeVerbatimMarkers: boolean;
-  formatOnSave: boolean;
+  sessionBlankLinesBefore: number
+  sessionBlankLinesAfter: number
+  normalizeSeqMarkers: boolean
+  unorderedSeqMarker: string
+  maxBlankLines: number
+  indentString: string
+  preserveTrailingBlanks: boolean
+  normalizeVerbatimMarkers: boolean
+  formatOnSave: boolean
 }
 
 /** Spellcheck settings */
 export interface SpellcheckSettings {
-  enabled: boolean;
-  language: string;
+  enabled: boolean
+  language: string
 }
 
 /** Keybinding override for a command */
 export interface KeybindingOverride {
-  mac?: string | null;
-  windows?: string | null;
-  linux?: string | null;
+  mac?: string | null
+  windows?: string | null
+  linux?: string | null
 }
 
 /** Keybinding settings */
 export interface KeybindingSettings {
-  overrides: Record<string, KeybindingOverride>;
+  overrides: Record<string, KeybindingOverride>
 }
 
 /** File tree display settings */
 export interface FileTreeSettings {
-  showHiddenFiles: boolean;
+  showHiddenFiles: boolean
 }
 
 /** All application settings */
 export interface AppSettings {
-  editor: EditorSettings;
-  formatter: FormatterSettings;
-  spellcheck: SpellcheckSettings;
-  keybindings: KeybindingSettings;
-  fileTree: FileTreeSettings;
-  lastFolder?: string;
+  editor: EditorSettings
+  formatter: FormatterSettings
+  spellcheck: SpellcheckSettings
+  keybindings: KeybindingSettings
+  fileTree: FileTreeSettings
+  lastFolder?: string
 }
 
 /** Unsubscribe function returned by event listeners */
-export type Unsubscribe = () => void;
+export type Unsubscribe = () => void
 
 // ============================================================================
 // Platform Adapter Interface
@@ -164,51 +164,51 @@ export interface FileSystemAdapter {
    * Read file contents.
    * @returns File content as string, or null if file doesn't exist
    */
-  read(path: string): Promise<string | null>;
+  read(path: string): Promise<string | null>
 
   /**
    * Write content to a file.
    * On web, may require user gesture for File System Access API.
    */
-  write(path: string, content: string): Promise<void>;
+  write(path: string, content: string): Promise<void>
 
   /**
    * Compute a checksum of file contents.
    * Used by auto-save to detect external modifications.
    * @returns Checksum string, or null if file doesn't exist
    */
-  checksum(path: string): Promise<string | null>;
+  checksum(path: string): Promise<string | null>
 
   /**
    * Show file open dialog and read selected file.
    * @returns File path and content, or null if cancelled
    */
-  openDialog(): Promise<OpenFileResult | null>;
+  openDialog(): Promise<OpenFileResult | null>
 
   /**
    * Show folder open dialog.
    * @returns Selected folder path, or null if cancelled
    */
-  openFolderDialog(): Promise<string | null>;
+  openFolderDialog(): Promise<string | null>
 
   /**
    * Create a new file.
    * @param defaultPath Optional default directory for the new file
    * @returns New file path and empty content, or null if cancelled
    */
-  createNew(defaultPath?: string): Promise<OpenFileResult | null>;
+  createNew(defaultPath?: string): Promise<OpenFileResult | null>
 
   /**
    * List directory contents.
    * @returns Array of directory entries
    */
-  readDir(path: string): Promise<DirEntry[]>;
+  readDir(path: string): Promise<DirEntry[]>
 
   /**
    * Reveal file in system file manager.
    * No-op on web platform.
    */
-  showInFolder(path: string): Promise<void>;
+  showInFolder(path: string): Promise<void>
 }
 
 /**
@@ -218,13 +218,13 @@ export interface ThemeAdapter {
   /**
    * Get current system theme.
    */
-  getCurrent(): Promise<ThemeMode>;
+  getCurrent(): Promise<ThemeMode>
 
   /**
    * Subscribe to theme changes.
    * @returns Unsubscribe function
    */
-  onChange(callback: (theme: ThemeMode) => void): Unsubscribe;
+  onChange(callback: (theme: ThemeMode) => void): Unsubscribe
 }
 
 /**
@@ -234,38 +234,38 @@ export interface SettingsAdapter {
   /**
    * Load all application settings.
    */
-  load(): Promise<AppSettings>;
+  load(): Promise<AppSettings>
 
   /**
    * Save editor settings.
    */
-  saveEditor(settings: EditorSettings): Promise<void>;
+  saveEditor(settings: EditorSettings): Promise<void>
 
   /**
    * Save formatter settings.
    */
-  saveFormatter(settings: FormatterSettings): Promise<void>;
+  saveFormatter(settings: FormatterSettings): Promise<void>
 
   /**
    * Save spellcheck settings.
    */
-  saveSpellcheck(settings: SpellcheckSettings): Promise<void>;
+  saveSpellcheck(settings: SpellcheckSettings): Promise<void>
 
   /**
    * Subscribe to settings changes (from other windows or external).
    * @returns Unsubscribe function
    */
-  onChange(callback: (settings: AppSettings) => void): Unsubscribe;
+  onChange(callback: (settings: AppSettings) => void): Unsubscribe
 
   /**
    * Set the last opened folder path.
    */
-  setLastFolder(path: string): Promise<void>;
+  setLastFolder(path: string): Promise<void>
 
   /**
    * Get the initial folder to open on startup.
    */
-  getInitialFolder(): Promise<string | null>;
+  getInitialFolder(): Promise<string | null>
 }
 
 /**
@@ -276,29 +276,29 @@ export interface SettingsAdapter {
  * - Web: Direct calls to lex-wasm module
  */
 export interface LspTransport {
-  reader: MessageReader;
-  writer: MessageWriter;
+  reader: MessageReader
+  writer: MessageWriter
 }
 
 /** LSP server status */
 export interface LspStatus {
-  status: string;
-  message?: string;
-  path?: string;
-  code?: number | null;
+  status: string
+  message?: string
+  path?: string
+  code?: number | null
 }
 
 export interface LspAdapter {
   /**
    * Create an LSP transport for communication with the language server.
    */
-  createTransport(): LspTransport;
+  createTransport(): LspTransport
 
   /**
    * Subscribe to LSP status updates (connecting, ready, error).
    * @returns Unsubscribe function
    */
-  onStatus?(callback: (status: LspStatus) => void): Unsubscribe;
+  onStatus?(callback: (status: LspStatus) => void): Unsubscribe
 }
 
 /**
@@ -308,12 +308,12 @@ export interface PersistenceAdapter {
   /**
    * Load saved pane layout.
    */
-  loadLayout(): Promise<PaneLayout>;
+  loadLayout(): Promise<PaneLayout>
 
   /**
    * Save current pane layout.
    */
-  saveLayout(layout: PaneLayout): Promise<void>;
+  saveLayout(layout: PaneLayout): Promise<void>
 }
 
 /**
@@ -329,12 +329,12 @@ export interface CommandsAdapter {
    * @param callback Handler function. For 'export', receives format string.
    * @returns Unsubscribe function
    */
-  onCommand(command: string, callback: (...args: unknown[]) => void): Unsubscribe;
+  onCommand(command: string, callback: (...args: unknown[]) => void): Unsubscribe
 
   /**
    * Update menu state (enable/disable items based on context).
    */
-  updateMenuState?(state: { hasOpenFile: boolean; isLexFile: boolean }): void;
+  updateMenuState?(state: { hasOpenFile: boolean; isLexFile: boolean }): void
 }
 
 /**
@@ -344,13 +344,13 @@ export interface ToastAdapter {
   /**
    * Show a toast notification.
    */
-  show(type: 'success' | 'error' | 'info', message: string): void;
+  show(type: 'success' | 'error' | 'info', message: string): void
 
   /**
    * Subscribe to toast requests (from main process or LSP).
    * @returns Unsubscribe function
    */
-  onShow?(callback: (type: 'success' | 'error' | 'info', message: string) => void): Unsubscribe;
+  onShow?(callback: (type: 'success' | 'error' | 'info', message: string) => void): Unsubscribe
 }
 
 // ============================================================================
@@ -365,26 +365,26 @@ export interface ToastAdapter {
  */
 export interface PlatformAdapter {
   /** Platform identifier */
-  readonly platform: 'electron' | 'web';
+  readonly platform: 'electron' | 'web'
 
   /** File system operations */
-  fileSystem: FileSystemAdapter;
+  fileSystem: FileSystemAdapter
 
   /** System theme detection */
-  theme: ThemeAdapter;
+  theme: ThemeAdapter
 
   /** Settings persistence */
-  settings: SettingsAdapter;
+  settings: SettingsAdapter
 
   /** LSP transport factory */
-  lsp: LspAdapter;
+  lsp: LspAdapter
 
   /** Tab/pane layout persistence */
-  persistence: PersistenceAdapter;
+  persistence: PersistenceAdapter
 
   /** Menu commands (optional on web) */
-  commands?: CommandsAdapter;
+  commands?: CommandsAdapter
 
   /** Toast notifications */
-  toast: ToastAdapter;
+  toast: ToastAdapter
 }

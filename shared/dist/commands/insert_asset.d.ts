@@ -1,5 +1,5 @@
-import { Command } from '../types.js';
+import { Command } from '../types.js'
 export interface InsertAssetArgs {
-    path: string;
+  path: string
 }
-export declare const InsertAssetCommand: Command<InsertAssetArgs>;
+export declare const InsertAssetCommand: Command<InsertAssetArgs>

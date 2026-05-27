@@ -3,3 +3,6 @@
 # so re-policing format buys nothing. Per arthur-debert/release#234.
 CHANGELOG.md
 CHANGELOG/
+
+# Compiled output — not hand-edited.
+shared/dist/

@@ -46,7 +46,6 @@ if [[ ! -d "$APP_PATH" ]] || [[ ! -f "$APP_PATH/Contents/MacOS/LexEd" ]]; then
   fi
 fi
 
-ELECTRON_PATH="$APP_PATH/Contents/MacOS/LexEd"
 WAIT_FLAG=""
 
 show_help() {

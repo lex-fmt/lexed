@@ -25,15 +25,15 @@ npm run build      # production build
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `Cmd+Shift+]` / `[` | Cycle through tabs |
-| `Cmd+1`…`9` | Focus pane by position |
-| `Cmd+K` | Command palette |
-| `Cmd+R` | Find and replace |
-| `Cmd+Shift+H` | Split horizontal |
-| `Cmd+Shift+V` | Split vertical |
-| `Cmd+Shift+/` | Shortcuts reference |
+| Shortcut            | Action                 |
+| ------------------- | ---------------------- |
+| `Cmd+Shift+]` / `[` | Cycle through tabs     |
+| `Cmd+1`…`9`         | Focus pane by position |
+| `Cmd+K`             | Command palette        |
+| `Cmd+R`             | Find and replace       |
+| `Cmd+Shift+H`       | Split horizontal       |
+| `Cmd+Shift+V`       | Split vertical         |
+| `Cmd+Shift+/`       | Shortcuts reference    |
 
 On Windows/Linux, `Cmd` maps to `Ctrl` and `Option` to `Alt`.
 
