@@ -1,0 +1,18 @@
+# Consumer-specific lefthook overrides for lexed.
+# lefthook merges this on top of the release-sync-managed lefthook.yml.
+#
+# shellcheck: bin/share/ contains vendored non-shell files (LICENSE)
+#   that the generic bin/** glob picks up. The exclude list here
+#   reproduces the upstream excludes and adds bin/share/**.
+#
+# eslint: upstream passes {staged_files} explicitly, which makes eslint
+#   emit "File ignored" warnings for files already in the config's
+#   ignores (shared/**, packages/**). --no-warn-ignored suppresses those.
+pre-commit:
+  commands:
+    shellcheck:
+      exclude:
+        - '**/*.{md,json,yaml,yml,toml,py,rb,rs,js,ts,mjs,cjs,html,css,txt,lock}'
+        - 'bin/share/**'
+    eslint:
+      run: npx --no-install eslint --no-warn-ignored --max-warnings 0 -- {staged_files}
