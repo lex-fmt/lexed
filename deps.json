@@ -15,5 +15,17 @@
       "queries": "resources/queries",
       "shared/embedded-grammars.json": "resources"
     }
+  },
+  "embedded-grammars": {
+    "from-manifest": "resources/embedded-grammars.json",
+    "for-each": ".grammars[]",
+    "repo": "{{.repo}}",
+    "version": "{{.version}}",
+    "asset": "{{.wasm_asset}}",
+    "dest": "resources/embedded-grammars/{{.name}}",
+    "binary-as": "parser.wasm",
+    "raw-files": {
+      "{{.queries_path}}": "highlights.scm"
+    }
   }
 }
