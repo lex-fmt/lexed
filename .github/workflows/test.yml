@@ -1,9 +1,10 @@
 name: Lexed CI
 
 # Thin caller for the canonical reusable electron-app CI workflow at
-# arthur-debert/release. Uses the canonical fetch-deps tool (bootstrapped
-# from release@main when not on PATH) plus a thin fetch-embedded-grammars
-# script for the per-grammar WASM + highlights loop.
+# arthur-debert/release. Bootstraps the canonical fetch-deps from
+# release@main when not on PATH; deps.json drives both the
+# tree-sitter manifest extract and the per-grammar WASM + highlights
+# iteration (via the from-manifest / for-each shape).
 #
 # See docs/per-stack/electron-ci.md in arthur-debert/release for the
 # full input reference.
@@ -27,7 +28,9 @@ jobs:
       e2e: true
       e2e-script: test:e2e:ci
       # Bootstrap the canonical fetch-deps from release@main (not on
-      # PATH in CI), then fetch all deps + embedded grammars.
+      # PATH in CI), then fetch every dep in deps.json — including the
+      # embedded-grammars iteration that used to live in a separate
+      # app-bin script.
       pre-test: |
         if command -v fetch-deps &>/dev/null; then
           FETCH_DEPS_BIN="fetch-deps"
@@ -39,7 +42,6 @@ jobs:
           chmod +x "$FETCH_DEPS_BIN"
         fi
         "$FETCH_DEPS_BIN" --if-missing
-        bash app-bin/fetch-embedded-grammars --if-missing
       # lexed's e2e suite (full dev + packaged smoke) regularly takes
       # 15-25min on ubuntu-latest; bump from the canonical's 30min
       # default to give headroom without blanket-extending the check
