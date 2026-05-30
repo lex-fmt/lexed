@@ -1,3 +1,7 @@
+<!-- BEGIN release-managed orientation — managed by release-sync; do not edit -->
+@.release/ORIENTATION.md
+<!-- END release-managed orientation -->
+
 # Releasing
 
 This repo participates in the lex release cascade. Cutting a release here is triggered automatically when lex or tree-sitter-lex releases (via the `on-upstream-released` handler workflow). lexed receives events from both upstreams; the handler re-checks all pins (`shared/lex-deps.json` — nested `.deps.<name>.{version,repo}` schema) via `should-release`.
