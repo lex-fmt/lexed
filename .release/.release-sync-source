@@ -1,0 +1,4 @@
+# release-sync provenance — the arthur-debert/release commit that
+# generated this .release/. Informational, not operational state (ADR-0002).
+# Regenerated on every sync. release-drift-check reads the SHA below.
+9412365b997e7d5fe816891d0d322b47feb08d7e
