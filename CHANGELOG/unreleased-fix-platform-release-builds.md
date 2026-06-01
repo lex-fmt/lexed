@@ -1,0 +1,1 @@
+Fix macOS and Windows release builds (#142). macOS: bundle only `bin/lexed` in app Resources instead of the whole `bin/` dir, which after the symlink migration shipped dangling links that aborted electron-builder. Windows: resource fetch (`fetch-deps`) CRLF bug fixed upstream so tree-sitter wasm + queries land correctly.
