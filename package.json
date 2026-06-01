@@ -136,8 +136,8 @@
           "to": "lexd-lsp"
         },
         {
-          "from": "bin",
-          "to": "bin"
+          "from": "bin/lexed",
+          "to": "bin/lexed"
         }
       ],
       "extendInfo": {
