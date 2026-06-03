@@ -345,6 +345,13 @@ export async function applySmartPaste(
     return false
   }
 
+  // The request is async; bail if the active model changed in flight (e.g.
+  // the user switched tabs) so we never write the transformed text into the
+  // wrong document. Reporting `false` here is safe: the paste range no longer
+  // refers to this editor's content, so a native fallback would be wrong too
+  // — the caller simply drops the stale paste.
+  if (editor.getModel() !== model) return false
+
   editor.executeEdits('lex-smart-paste', [
     {
       range: new monaco.Range(
@@ -384,10 +391,12 @@ export function installSmartPasteInterceptor(
 
     const clipboard = event.clipboardData
     if (!clipboard) return
-    // Only intercept plain-text pastes. Rich payloads (files, images, HTML
-    // the host handles specially) are left to Monaco / the platform.
+    // Only intercept *plain-text-only* pastes. If the clipboard advertises any
+    // richer type alongside `text/plain` (e.g. `text/html`, files, images),
+    // leave the whole paste to Monaco / the platform so rich handling isn't
+    // clobbered. An empty/unknown type list is treated as plain text.
     const types = Array.from(clipboard.types ?? [])
-    if (types.length > 0 && !types.includes('text/plain')) return
+    if (types.some((t) => t !== 'text/plain')) return
     const pastedText = clipboard.getData('text/plain')
     if (!pastedText) return
 
@@ -409,9 +418,14 @@ export function installSmartPasteInterceptor(
 
     void applySmartPaste(editor, pasteRange, pastedText).then((handled) => {
       if (!handled) {
+        // Bail if the active model changed while the request was in flight
+        // (e.g. tab switch) — applying the fallback would corrupt the wrong
+        // document.
+        if (editor.getModel() !== model) return
         // Native fallback: replace the (possibly stale) range with the
         // literal clipboard text. Re-read the live selection in case the
-        // model changed while the request was in flight.
+        // selection moved within the same model while the request was in
+        // flight.
         const live = editor.getSelection() ?? pasteRange
         editor.executeEdits('lex-smart-paste-fallback', [
           {

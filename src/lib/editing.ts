@@ -54,6 +54,13 @@ export type PreparePasteMode =
   | 'passthrough-table'
   | 'passthrough-single-line'
 
+const PREPARE_PASTE_MODES: ReadonlySet<string> = new Set<PreparePasteMode>([
+  're-anchor',
+  'passthrough-verbatim',
+  'passthrough-table',
+  'passthrough-single-line',
+])
+
 /**
  * Response shape of the `lex/preparePaste` request. The server returns `null`
  * when it declines to transform (the caller then performs a native paste); a
@@ -65,10 +72,7 @@ export interface PreparePasteResponse {
 }
 
 export function isPreparePasteResponse(value: unknown): value is PreparePasteResponse {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as { text?: unknown }).text === 'string' &&
-    typeof (value as { mode?: unknown }).mode === 'string'
-  )
+  if (typeof value !== 'object' || value === null) return false
+  const { text, mode } = value as { text?: unknown; mode?: unknown }
+  return typeof text === 'string' && typeof mode === 'string' && PREPARE_PASTE_MODES.has(mode)
 }

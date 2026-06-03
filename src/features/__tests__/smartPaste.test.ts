@@ -38,8 +38,9 @@ interface FakeEdit {
 function makeEditor() {
   const edits: FakeEdit[][] = []
   let undoStops = 0
+  let model: object = { uri: { toString: () => 'file:///doc.lex' } }
   const editor = {
-    getModel: () => ({ uri: { toString: () => 'file:///doc.lex' } }),
+    getModel: () => model,
     executeEdits: (_source: string, e: FakeEdit[]) => {
       edits.push(e)
       return true
@@ -53,6 +54,9 @@ function makeEditor() {
     editor: editor as unknown as Parameters<typeof applySmartPaste>[0],
     edits,
     undoStops: () => undoStops,
+    swapModel: () => {
+      model = { uri: { toString: () => 'file:///other.lex' } }
+    },
   }
 }
 
@@ -113,6 +117,20 @@ describe('applySmartPaste', () => {
   it('returns false (native fallback) when the request throws', async () => {
     sendRequest.mockRejectedValue(new Error('transport down'))
     const { editor, edits } = makeEditor()
+
+    const handled = await applySmartPaste(editor, RANGE, 'raw')
+
+    expect(handled).toBe(false)
+    expect(edits).toHaveLength(0)
+  })
+
+  it('does not edit when the active model changed while in flight', async () => {
+    const { editor, edits, swapModel } = makeEditor()
+    // Swap the model when the request resolves, simulating a tab switch.
+    sendRequest.mockImplementation(async () => {
+      swapModel()
+      return { mode: 're-anchor', text: 'x' }
+    })
 
     const handled = await applySmartPaste(editor, RANGE, 'raw')
 

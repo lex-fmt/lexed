@@ -62,5 +62,10 @@ describe('Editing Logic', () => {
       expect(isPreparePasteResponse({ mode: 're-anchor', text: 42 })).toBe(false)
       expect(isPreparePasteResponse(undefined)).toBe(false)
     })
+
+    it('rejects an unknown mode so the type predicate stays sound', () => {
+      expect(isPreparePasteResponse({ mode: 'bogus', text: 'foo' })).toBe(false)
+      expect(isPreparePasteResponse({ mode: 'toString', text: 'foo' })).toBe(false)
+    })
   })
 })

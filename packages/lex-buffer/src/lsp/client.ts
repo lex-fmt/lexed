@@ -67,7 +67,11 @@ export class LspClient {
    * a `false` as "feature unavailable, fall back to native behavior".
    */
   public hasExperimentalCapability(name: string): boolean {
-    return Boolean(this.serverExperimentalCapabilities?.[name])
+    const caps = this.serverExperimentalCapabilities
+    // `hasOwnProperty` guard so a capability name colliding with an
+    // `Object.prototype` member (e.g. `toString`) can't read through to the
+    // prototype and report a false positive.
+    return Boolean(caps && Object.prototype.hasOwnProperty.call(caps, name) && caps[name])
   }
 
   /**
