@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+## 0.11.0 - 2026-06-03
+
+Fix macOS and Windows release builds (#142). macOS: bundle only `bin/lexed` in app Resources instead of the whole `bin/` dir, which after the symlink migration shipped dangling links that aborted electron-builder. Windows: resource fetch (`fetch-deps`) CRLF bug fixed upstream so tree-sitter wasm + queries land correctly.
+Smart paste: route pastes into .lex buffers through the language server's lex/preparePaste request, re-anchoring pasted blocks to the caret's structural indentation level (#136). Guarded on the server capability; falls back to native paste against older servers. Bumps lexd-lsp to v0.17.0.
+
 ## 0.10.7 - 2026-06-01
 
 - Migrate changelog handling to the fragment-directory model
