@@ -3,6 +3,8 @@ import { lspClient } from '@lex-fmt/lex-buffer'
 import {
   isSnippetInsertionPayload,
   calculateSnippetInsertion,
+  isPreparePasteResponse,
+  computePasteEndPosition,
   type SnippetInsertionPayload,
 } from '@/lib/editing'
 
@@ -276,4 +278,196 @@ export async function extractToInclude(
   )
   if (!response) throw new Error('Extract returned an empty response')
   await applyExtractWorkspaceEdit(editor, response)
+}
+
+// ============================================================================
+// Smart paste (lex#708, lexed#136)
+// ============================================================================
+
+/** Experimental capability flag advertised by a server implementing the request. */
+export const PREPARE_PASTE_CAPABILITY = 'lexPreparePaste'
+
+/**
+ * Whether the connected server can transform pastes. The paste interceptor
+ * checks this before intercepting so that — against an older server, or before
+ * the LSP has initialized — paste falls through to Monaco's native handler.
+ */
+export function isSmartPasteAvailable(): boolean {
+  return lspClient.hasExperimentalCapability(PREPARE_PASTE_CAPABILITY)
+}
+
+/**
+ * Route a paste through `lex/preparePaste` and apply the transformed text as a
+ * single replacement edit over `pasteRange`.
+ *
+ * Returns `true` when the server transformed the paste and the edit was
+ * applied; returns `false` when the caller should perform a native paste
+ * instead (server declined with `null`, returned a malformed payload, or the
+ * request failed). The caller owns the native fallback so this function never
+ * throws for the common "not handled" path.
+ *
+ * `pasteRange` is the Monaco range the pasted text would occupy — the current
+ * selection for a replace-paste, or an empty range at the caret for an insert.
+ */
+export async function applySmartPaste(
+  editor: monaco.editor.IStandaloneCodeEditor,
+  pasteRange: monaco.IRange,
+  pastedText: string
+): Promise<boolean> {
+  const model = editor.getModel()
+  if (!model) return false
+
+  // Convert Monaco's 1-indexed range to LSP's 0-indexed range.
+  const range: LspRange = {
+    start: {
+      line: pasteRange.startLineNumber - 1,
+      character: pasteRange.startColumn - 1,
+    },
+    end: {
+      line: pasteRange.endLineNumber - 1,
+      character: pasteRange.endColumn - 1,
+    },
+  }
+
+  let response: unknown
+  try {
+    response = await lspClient.sendRequest<unknown>('lex/preparePaste', {
+      textDocument: { uri: model.uri.toString() },
+      range,
+      pastedText,
+    })
+  } catch (error) {
+    console.error('lex/preparePaste failed; falling back to native paste', error)
+    return false
+  }
+
+  if (!isPreparePasteResponse(response)) {
+    // `null` (server declined) or a malformed payload — let the host paste.
+    return false
+  }
+
+  // The request is async; bail if the active model changed in flight (e.g.
+  // the user switched tabs) so we never write the transformed text into the
+  // wrong document. Reporting `false` here is safe: the paste range no longer
+  // refers to this editor's content, so a native fallback would be wrong too
+  // — the caller simply drops the stale paste.
+  if (editor.getModel() !== model) return false
+
+  // Collapse the selection to the end of the inserted text, matching native
+  // paste behavior (cursor after the pasted block, nothing selected). Passed
+  // as `endCursorState` because `executeEdits` leaves the selection untouched
+  // otherwise. Wrapped so a throw applying the edit (e.g. editor disposed
+  // mid-flight) reports `false` rather than rejecting — the interceptor has
+  // already prevented the native paste, so a rejection here would lose it.
+  try {
+    const end = computePasteEndPosition(
+      response.text,
+      pasteRange.startLineNumber,
+      pasteRange.startColumn
+    )
+    editor.executeEdits(
+      'lex-smart-paste',
+      [
+        {
+          range: new monaco.Range(
+            pasteRange.startLineNumber,
+            pasteRange.startColumn,
+            pasteRange.endLineNumber,
+            pasteRange.endColumn
+          ),
+          text: response.text,
+          forceMoveMarkers: true,
+        },
+      ],
+      [new monaco.Selection(end.lineNumber, end.column, end.lineNumber, end.column)]
+    )
+    editor.pushUndoStop()
+  } catch (error) {
+    console.error('Failed to apply smart-paste edit; falling back to native paste', error)
+    return false
+  }
+  return true
+}
+
+/**
+ * Install the smart-paste interceptor on a Monaco editor and return a
+ * disposer. Listens at the editor's DOM surface (capture phase, before
+ * Monaco's own paste handling) and, for a plain-text paste into a `.lex`
+ * buffer while the server advertises the capability, routes the clipboard
+ * text through {@link applySmartPaste}. Anything else — non-`.lex` buffer,
+ * capability absent, non-text clipboard payload, or a server that declines —
+ * falls through to Monaco's native paste untouched.
+ */
+export function installSmartPasteInterceptor(
+  editor: monaco.editor.IStandaloneCodeEditor
+): () => void {
+  const node = editor.getContainerDomNode()
+
+  const onPaste = (event: ClipboardEvent) => {
+    const model = editor.getModel()
+    if (!model || model.getLanguageId() !== 'lex') return
+    if (!isSmartPasteAvailable()) return
+
+    const clipboard = event.clipboardData
+    if (!clipboard) return
+    // Only intercept *plain-text-only* pastes. If the clipboard advertises any
+    // richer type alongside `text/plain` (e.g. `text/html`, files, images),
+    // leave the whole paste to Monaco / the platform so rich handling isn't
+    // clobbered. An empty/unknown type list is treated as plain text.
+    const types = Array.from(clipboard.types ?? [])
+    if (types.some((t) => t !== 'text/plain')) return
+    const pastedText = clipboard.getData('text/plain')
+    if (!pastedText) return
+
+    const selection = editor.getSelection()
+    if (!selection) return
+
+    // We are handling this paste — stop Monaco's native handler. If the
+    // server later declines, we replay a native paste of the same text so
+    // the user never loses the paste.
+    event.preventDefault()
+    event.stopPropagation()
+
+    const pasteRange: monaco.IRange = {
+      startLineNumber: selection.startLineNumber,
+      startColumn: selection.startColumn,
+      endLineNumber: selection.endLineNumber,
+      endColumn: selection.endColumn,
+    }
+
+    void applySmartPaste(editor, pasteRange, pastedText).then((handled) => {
+      if (!handled) {
+        // Bail if the active model changed while the request was in flight
+        // (e.g. tab switch) — applying the fallback would corrupt the wrong
+        // document.
+        if (editor.getModel() !== model) return
+        // Native fallback: replace the (possibly stale) range with the
+        // literal clipboard text. Re-read the live selection in case the
+        // selection moved within the same model while the request was in
+        // flight.
+        const live = editor.getSelection() ?? pasteRange
+        const end = computePasteEndPosition(pastedText, live.startLineNumber, live.startColumn)
+        editor.executeEdits(
+          'lex-smart-paste-fallback',
+          [
+            {
+              range: new monaco.Range(
+                live.startLineNumber,
+                live.startColumn,
+                live.endLineNumber,
+                live.endColumn
+              ),
+              text: pastedText,
+              forceMoveMarkers: true,
+            },
+          ],
+          [new monaco.Selection(end.lineNumber, end.column, end.lineNumber, end.column)]
+        )
+        editor.pushUndoStop()
+      }
+    })
+  }
+
+  node.addEventListener('paste', onPaste, true)
+  return () => node.removeEventListener('paste', onPaste, true)
 }

@@ -1,7 +1,7 @@
 {
   "lexd-lsp": {
     "repo": "lex-fmt/lex",
-    "version": "v0.14.1",
+    "version": "v0.17.0",
     "asset": "lexd-lsp-{{target}}{{ext}}",
     "binary": "lexd-lsp",
     "dest": "resources"

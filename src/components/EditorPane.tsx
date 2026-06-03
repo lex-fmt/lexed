@@ -359,6 +359,18 @@ export const EditorPane = forwardRef<EditorPaneHandle, EditorPaneProps>(function
         )
       })
 
+      // Smart paste (lex#708, lexed#136): route pastes into .lex buffers
+      // through `lex/preparePaste` when the server advertises the capability.
+      // Self-guards (capability + language) so it is inert otherwise.
+      let smartPasteCancelled = false
+      let offSmartPaste: (() => void) | undefined
+      void import('../features/editing').then(({ installSmartPasteInterceptor }) => {
+        // The import is async; if cleanup already ran (component unmount or
+        // model swap) don't attach a listener that would never be removed.
+        if (smartPasteCancelled) return
+        offSmartPaste = installSmartPasteInterceptor(editor)
+      })
+
       const offAsset = platform.commands?.onCommand('insert-asset', () => {
         void import('../commands').then(({ insertAssetReference }) => {
           insertAssetReference(editor)
@@ -375,6 +387,8 @@ export const EditorPane = forwardRef<EditorPaneHandle, EditorPaneProps>(function
         injectionHighlighterRef.current?.dispose()
         injectionHighlighterRef.current = null
         embeddedTokenizer.dispose()
+        smartPasteCancelled = true
+        offSmartPaste?.()
         offAsset?.()
         offVerbatim?.()
       })

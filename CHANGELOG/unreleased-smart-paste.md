@@ -1,0 +1,1 @@
+Smart paste: route pastes into .lex buffers through the language server's lex/preparePaste request, re-anchoring pasted blocks to the caret's structural indentation level (#136). Guarded on the server capability; falls back to native paste against older servers. Bumps lexd-lsp to v0.17.0.
