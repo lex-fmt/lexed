@@ -26,6 +26,7 @@ const browserGlobals = {
   Event: 'readonly',
   KeyboardEvent: 'readonly',
   MouseEvent: 'readonly',
+  ClipboardEvent: 'readonly',
   CustomEvent: 'readonly',
   EventTarget: 'readonly',
   EventListener: 'readonly',

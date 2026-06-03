@@ -49,7 +49,26 @@ export class LspClient {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private pendingRequestHandlers = new Map<string, (params: any) => any>()
 
+  /**
+   * `experimental` block from the server's `InitializeResult.capabilities`.
+   * Captured on every successful `initialize` so feature glue can guard on a
+   * server capability before issuing a custom request (e.g. `lex/preparePaste`
+   * is advertised as `experimental.lexPreparePaste`). Reset to `null` on
+   * connection loss so a stale advertisement never outlives its connection.
+   */
+  private serverExperimentalCapabilities: Record<string, unknown> | null = null
+
   constructor() {}
+
+  /**
+   * True when the connected server advertised the named experimental
+   * capability as truthy in its `InitializeResult`. Returns `false` before
+   * the connection is initialized or after it is lost — callers should treat
+   * a `false` as "feature unavailable, fall back to native behavior".
+   */
+  public hasExperimentalCapability(name: string): boolean {
+    return Boolean(this.serverExperimentalCapabilities?.[name])
+  }
 
   /**
    * Set the transport factory for creating LSP connections.
@@ -291,6 +310,15 @@ export class LspClient {
       const result = await this.connection.sendRequest(InitializeRequest.type, initParams)
       log.debug('[LspClient] Initialize result:', result)
 
+      // Capture experimental capabilities so feature glue can guard custom
+      // requests (e.g. `lex/preparePaste` → `experimental.lexPreparePaste`).
+      const experimental = (result as { capabilities?: { experimental?: unknown } })?.capabilities
+        ?.experimental
+      this.serverExperimentalCapabilities =
+        experimental && typeof experimental === 'object'
+          ? (experimental as Record<string, unknown>)
+          : null
+
       await this.connection.sendNotification(InitializedNotification.type, {})
       log.info('[LspClient] Initialized')
       const e2e = getE2EBridge()
@@ -384,6 +412,7 @@ export class LspClient {
 
     this.connection = null
     this.readyPromise = null
+    this.serverExperimentalCapabilities = null
 
     if (this.retryCount < this.maxRetries) {
       const delay = this.baseRetryDelay * Math.pow(2, this.retryCount)

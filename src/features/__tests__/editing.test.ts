@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { calculateSnippetInsertion, isSnippetInsertionPayload } from '@/lib/editing'
+import {
+  calculateSnippetInsertion,
+  isSnippetInsertionPayload,
+  isPreparePasteResponse,
+} from '@/lib/editing'
 
 describe('Editing Logic', () => {
   describe('isSnippetInsertionPayload', () => {
@@ -33,6 +37,30 @@ describe('Editing Logic', () => {
       expect(result.textToInsert).toBe('\nHello\n')
       expect(result.prefix).toBe('\n')
       expect(result.newCursorOffset).toBe(13) // 10 + 1 (\n) + 2
+    })
+  })
+
+  describe('isPreparePasteResponse', () => {
+    it('accepts a well-formed re-anchor response', () => {
+      expect(isPreparePasteResponse({ mode: 're-anchor', text: 'foo\n  bar' })).toBe(true)
+    })
+
+    it('accepts each passthrough mode', () => {
+      expect(isPreparePasteResponse({ mode: 'passthrough-verbatim', text: 'x' })).toBe(true)
+      expect(isPreparePasteResponse({ mode: 'passthrough-table', text: 'x' })).toBe(true)
+      expect(isPreparePasteResponse({ mode: 'passthrough-single-line', text: 'x' })).toBe(true)
+    })
+
+    it('rejects null (server declined → native fallback)', () => {
+      expect(isPreparePasteResponse(null)).toBe(false)
+    })
+
+    it('rejects payloads missing a field', () => {
+      expect(isPreparePasteResponse({ mode: 're-anchor' })).toBe(false)
+      expect(isPreparePasteResponse({ text: 'foo' })).toBe(false)
+      expect(isPreparePasteResponse({ mode: 1, text: 'foo' })).toBe(false)
+      expect(isPreparePasteResponse({ mode: 're-anchor', text: 42 })).toBe(false)
+      expect(isPreparePasteResponse(undefined)).toBe(false)
     })
   })
 })
