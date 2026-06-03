@@ -3,6 +3,7 @@ import {
   calculateSnippetInsertion,
   isSnippetInsertionPayload,
   isPreparePasteResponse,
+  computePasteEndPosition,
 } from '@/lib/editing'
 
 describe('Editing Logic', () => {
@@ -66,6 +67,26 @@ describe('Editing Logic', () => {
     it('rejects an unknown mode so the type predicate stays sound', () => {
       expect(isPreparePasteResponse({ mode: 'bogus', text: 'foo' })).toBe(false)
       expect(isPreparePasteResponse({ mode: 'toString', text: 'foo' })).toBe(false)
+    })
+  })
+
+  describe('computePasteEndPosition', () => {
+    it('advances the column for single-line text', () => {
+      // caret at (line 2, col 5), paste "hello" (5 chars) → col 10, same line
+      expect(computePasteEndPosition('hello', 2, 5)).toEqual({ lineNumber: 2, column: 10 })
+    })
+
+    it('handles empty text (no movement)', () => {
+      expect(computePasteEndPosition('', 3, 4)).toEqual({ lineNumber: 3, column: 4 })
+    })
+
+    it('moves to the last line for multi-line text', () => {
+      // "a\n  bc" → 1 newline, last segment "  bc" (len 4) → col 5 on line+1
+      expect(computePasteEndPosition('a\n  bc', 2, 5)).toEqual({ lineNumber: 3, column: 5 })
+    })
+
+    it('handles a trailing newline (caret at column 1 of the new line)', () => {
+      expect(computePasteEndPosition('foo\n', 1, 1)).toEqual({ lineNumber: 2, column: 1 })
     })
   })
 })

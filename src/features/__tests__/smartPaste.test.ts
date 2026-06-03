@@ -21,6 +21,14 @@ vi.mock('monaco-editor', () => ({
       public endColumn: number
     ) {}
   },
+  Selection: class {
+    constructor(
+      public selectionStartLineNumber: number,
+      public selectionStartColumn: number,
+      public positionLineNumber: number,
+      public positionColumn: number
+    ) {}
+  },
 }))
 
 import { applySmartPaste } from '../editing'

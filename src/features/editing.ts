@@ -4,6 +4,7 @@ import {
   isSnippetInsertionPayload,
   calculateSnippetInsertion,
   isPreparePasteResponse,
+  computePasteEndPosition,
   type SnippetInsertionPayload,
 } from '@/lib/editing'
 
@@ -352,20 +353,31 @@ export async function applySmartPaste(
   // — the caller simply drops the stale paste.
   if (editor.getModel() !== model) return false
 
-  editor.executeEdits('lex-smart-paste', [
-    {
-      range: new monaco.Range(
-        pasteRange.startLineNumber,
-        pasteRange.startColumn,
-        pasteRange.endLineNumber,
-        pasteRange.endColumn
-      ),
-      text: response.text,
-      forceMoveMarkers: true,
-    },
-  ])
   // Collapse the selection to the end of the inserted text, matching native
-  // paste behavior (cursor after the pasted block, nothing selected).
+  // paste behavior (cursor after the pasted block, nothing selected). Passed
+  // as `endCursorState` because `executeEdits` leaves the selection untouched
+  // otherwise.
+  const end = computePasteEndPosition(
+    response.text,
+    pasteRange.startLineNumber,
+    pasteRange.startColumn
+  )
+  editor.executeEdits(
+    'lex-smart-paste',
+    [
+      {
+        range: new monaco.Range(
+          pasteRange.startLineNumber,
+          pasteRange.startColumn,
+          pasteRange.endLineNumber,
+          pasteRange.endColumn
+        ),
+        text: response.text,
+        forceMoveMarkers: true,
+      },
+    ],
+    [new monaco.Selection(end.lineNumber, end.column, end.lineNumber, end.column)]
+  )
   editor.pushUndoStop()
   return true
 }
@@ -427,18 +439,23 @@ export function installSmartPasteInterceptor(
         // selection moved within the same model while the request was in
         // flight.
         const live = editor.getSelection() ?? pasteRange
-        editor.executeEdits('lex-smart-paste-fallback', [
-          {
-            range: new monaco.Range(
-              live.startLineNumber,
-              live.startColumn,
-              live.endLineNumber,
-              live.endColumn
-            ),
-            text: pastedText,
-            forceMoveMarkers: true,
-          },
-        ])
+        const end = computePasteEndPosition(pastedText, live.startLineNumber, live.startColumn)
+        editor.executeEdits(
+          'lex-smart-paste-fallback',
+          [
+            {
+              range: new monaco.Range(
+                live.startLineNumber,
+                live.startColumn,
+                live.endLineNumber,
+                live.endColumn
+              ),
+              text: pastedText,
+              forceMoveMarkers: true,
+            },
+          ],
+          [new monaco.Selection(end.lineNumber, end.column, end.lineNumber, end.column)]
+        )
         editor.pushUndoStop()
       }
     })
