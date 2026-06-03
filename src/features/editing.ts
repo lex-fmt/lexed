@@ -356,29 +356,36 @@ export async function applySmartPaste(
   // Collapse the selection to the end of the inserted text, matching native
   // paste behavior (cursor after the pasted block, nothing selected). Passed
   // as `endCursorState` because `executeEdits` leaves the selection untouched
-  // otherwise.
-  const end = computePasteEndPosition(
-    response.text,
-    pasteRange.startLineNumber,
-    pasteRange.startColumn
-  )
-  editor.executeEdits(
-    'lex-smart-paste',
-    [
-      {
-        range: new monaco.Range(
-          pasteRange.startLineNumber,
-          pasteRange.startColumn,
-          pasteRange.endLineNumber,
-          pasteRange.endColumn
-        ),
-        text: response.text,
-        forceMoveMarkers: true,
-      },
-    ],
-    [new monaco.Selection(end.lineNumber, end.column, end.lineNumber, end.column)]
-  )
-  editor.pushUndoStop()
+  // otherwise. Wrapped so a throw applying the edit (e.g. editor disposed
+  // mid-flight) reports `false` rather than rejecting — the interceptor has
+  // already prevented the native paste, so a rejection here would lose it.
+  try {
+    const end = computePasteEndPosition(
+      response.text,
+      pasteRange.startLineNumber,
+      pasteRange.startColumn
+    )
+    editor.executeEdits(
+      'lex-smart-paste',
+      [
+        {
+          range: new monaco.Range(
+            pasteRange.startLineNumber,
+            pasteRange.startColumn,
+            pasteRange.endLineNumber,
+            pasteRange.endColumn
+          ),
+          text: response.text,
+          forceMoveMarkers: true,
+        },
+      ],
+      [new monaco.Selection(end.lineNumber, end.column, end.lineNumber, end.column)]
+    )
+    editor.pushUndoStop()
+  } catch (error) {
+    console.error('Failed to apply smart-paste edit; falling back to native paste', error)
+    return false
+  }
   return true
 }
 
