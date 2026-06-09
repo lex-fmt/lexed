@@ -1,12 +1,13 @@
 ---
 description: Test-driven development with red-green-refactor loop. Use when user wants to build features or fix bugs using TDD, mentions "red-green-refactor", wants integration tests, or asks for test-first development.
 metadata:
-    github-path: skills/engineering/tdd
-    github-ref: refs/heads/main
-    github-repo: https://github.com/mattpocock/skills
-    github-tree-sha: 75beb3030b4c979205dd771ff85ac600baeb68f4
+  github-path: skills/engineering/tdd
+  github-ref: refs/heads/main
+  github-repo: https://github.com/mattpocock/skills
+  github-tree-sha: 75beb3030b4c979205dd771ff85ac600baeb68f4
 name: tdd
 ---
+
 # Test-Driven Development
 
 ## Philosophy

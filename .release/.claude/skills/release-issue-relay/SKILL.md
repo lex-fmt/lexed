@@ -9,15 +9,15 @@ Portable port of the `gh-release-issue` / `release-core issue file` escalation t
 
 ## The hard rule about scope
 
-This skill is **only** for infrastructure issues that the consumer repo cannot fix in place. The canonical signal: *"I applied a local workaround to keep working, but the underlying problem is in arthur-debert/release, not here."*
+This skill is **only** for infrastructure issues that the consumer repo cannot fix in place. The canonical signal: _"I applied a local workaround to keep working, but the underlying problem is in arthur-debert/release, not here."_
 
-| Use it for | Do not use it for |
-|---|---|
-| `copilot-review.yml` workflow runs SUCCESS but Copilot is not actually attached as reviewer | A Copilot review comment that says "rename this variable" |
-| `gh-copilot-wait` times out on a non-draft PR with no obvious reason | A test failure specific to the code in this PR |
-| `apply-ruleset` / `gh-repo-setup` rejects a check name that exists in the workflow | A policy file conflict that's clearly intentional per-repo customization |
-| `rust-cli` reusable workflow errors out in a way that looks like infra, not project code | A `cargo clippy` warning that needs a code fix |
-| `sweep-github-policy` produces a conflict that looks like a template bug | A pre-commit hook failure specific to the staged diff |
+| Use it for                                                                                                                 | Do not use it for                                                                         |
+| -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `copilot-review.yml` workflow runs SUCCESS but Copilot is not actually attached as reviewer                                | A Copilot review comment that says "rename this variable"                                 |
+| `gh-copilot-wait` times out on a non-draft PR with no obvious reason                                                       | A test failure specific to the code in this PR                                            |
+| `apply-ruleset` / `gh-repo-setup` rejects a check name that exists in the workflow                                         | A policy file conflict that's clearly intentional per-repo customization                  |
+| `rust-cli` reusable workflow errors out in a way that looks like infra, not project code                                   | A `cargo clippy` warning that needs a code fix                                            |
+| `sweep-github-policy` produces a conflict that looks like a template bug                                                   | A pre-commit hook failure specific to the staged diff                                     |
 | A skill (this one, `pr-review-respond`, `gh-repo-setup`) misbehaves in a way you can't fix by editing the local invocation | A skill triggering on the wrong description match (that's a description tweak, not a bug) |
 
 If you're unsure which side a problem falls on, ask the user before filing.
@@ -207,19 +207,19 @@ Replace the `<...>` placeholders before running.
 
 These are the canonical buckets; the title prefix is what step 1's `--search` filters on. Stay within this list when possible — new components should be added deliberately:
 
-| Component | Covers |
-|---|---|
-| `copilot-review` | `copilot-review.yml` workflow misbehaves, Copilot not attached as reviewer, Auto-fix not firing |
-| `pr-review-loop` | `gh-copilot-{on,off,wait}`, `gh-pr-resolve-thread`, `gh-pr-checks-wait` and related helpers |
-| `rust-cli-release` | `rust-cli.yml` reusable release workflow (test, build, publish, homebrew, wasm) |
-| `ruleset` | `apply-ruleset` / branch protection / required check detection |
-| `sweep-policy` | `sweep-github-policy` / per-stack templates / destination mapping |
-| `gh-repo-setup` | The portable repo-setup skill (this one's sibling) |
-| `install-token` | `install-release-token`, `install-release-secrets`, secret-name conventions |
-| `audit` | `audit-portfolio`, `audit-repo`, `audit-smoke-test` |
-| `cloud-env` | Setup script, `~/.claude/skills/` install, `~/.claude/CLAUDE.md`, the env distribution mechanism |
-| `skill` | A skill itself misbehaves (be specific in the symptom about which skill) |
-| `other` | Anything not covered above; bias toward picking a more specific bucket if applicable |
+| Component          | Covers                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------ |
+| `copilot-review`   | `copilot-review.yml` workflow misbehaves, Copilot not attached as reviewer, Auto-fix not firing  |
+| `pr-review-loop`   | `gh-copilot-{on,off,wait}`, `gh-pr-resolve-thread`, `gh-pr-checks-wait` and related helpers      |
+| `rust-cli-release` | `rust-cli.yml` reusable release workflow (test, build, publish, homebrew, wasm)                  |
+| `ruleset`          | `apply-ruleset` / branch protection / required check detection                                   |
+| `sweep-policy`     | `sweep-github-policy` / per-stack templates / destination mapping                                |
+| `gh-repo-setup`    | The portable repo-setup skill (this one's sibling)                                               |
+| `install-token`    | `install-release-token`, `install-release-secrets`, secret-name conventions                      |
+| `audit`            | `audit-portfolio`, `audit-repo`, `audit-smoke-test`                                              |
+| `cloud-env`        | Setup script, `~/.claude/skills/` install, `~/.claude/CLAUDE.md`, the env distribution mechanism |
+| `skill`            | A skill itself misbehaves (be specific in the symptom about which skill)                         |
+| `other`            | Anything not covered above; bias toward picking a more specific bucket if applicable             |
 
 ## Pitfalls
 

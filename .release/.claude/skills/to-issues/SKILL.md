@@ -1,12 +1,13 @@
 ---
 description: Break a plan, spec, or PRD into independently-grabbable issues on the project issue tracker using tracer-bullet vertical slices. Use when user wants to convert a plan into issues, create implementation tickets, or break down work into issues.
 metadata:
-    github-path: skills/engineering/to-issues
-    github-ref: refs/heads/main
-    github-repo: https://github.com/mattpocock/skills
-    github-tree-sha: b38c5aa6ae5d6903e60d3f74a7aafd32d02f2c06
+  github-path: skills/engineering/to-issues
+  github-ref: refs/heads/main
+  github-repo: https://github.com/mattpocock/skills
+  github-tree-sha: b38c5aa6ae5d6903e60d3f74a7aafd32d02f2c06
 name: to-issues
 ---
+
 # To Issues
 
 Break a plan into independently-grabbable issues using vertical slices (tracer bullets).

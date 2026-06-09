@@ -1,12 +1,13 @@
 ---
 description: Create a detailed refactor plan with tiny commits via user interview, then file it as a GitHub issue. Use when user wants to plan a refactor, create a refactoring RFC, or break a refactor into safe incremental steps.
 metadata:
-    github-path: skills/deprecated/request-refactor-plan
-    github-ref: refs/heads/main
-    github-repo: https://github.com/mattpocock/skills
-    github-tree-sha: b0617c9cf69ac1e73a6b30f78c82ff81372079fd
+  github-path: skills/deprecated/request-refactor-plan
+  github-ref: refs/heads/main
+  github-repo: https://github.com/mattpocock/skills
+  github-tree-sha: b0617c9cf69ac1e73a6b30f78c82ff81372079fd
 name: request-refactor-plan
 ---
+
 This skill will be invoked when the user wants to create a refactor request. You should go through the steps below. You may skip steps if you don't consider them necessary.
 
 1. Ask the user for a long, detailed description of the problem they want to solve and any potential ideas for solutions.

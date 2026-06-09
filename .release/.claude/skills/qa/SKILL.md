@@ -1,12 +1,13 @@
 ---
 description: Interactive QA session where user reports bugs or issues conversationally, and the agent files GitHub issues. Explores the codebase in the background for context and domain language. Use when user wants to report bugs, do QA, file issues conversationally, or mentions "QA session".
 metadata:
-    github-path: skills/deprecated/qa
-    github-ref: refs/heads/main
-    github-repo: https://github.com/mattpocock/skills
-    github-tree-sha: 3eed5beeb18e77776349782ed087ee4560fd69c5
+  github-path: skills/deprecated/qa
+  github-ref: refs/heads/main
+  github-repo: https://github.com/mattpocock/skills
+  github-tree-sha: 3eed5beeb18e77776349782ed087ee4560fd69c5
 name: qa
 ---
+
 # QA Session
 
 Run an interactive QA session. The user describes problems they're encountering. You clarify, explore the codebase for context, and file GitHub issues that are durable, user-focused, and use the project's domain language.

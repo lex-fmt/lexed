@@ -1,12 +1,13 @@
 ---
 description: Triage issues through a state machine driven by triage roles. Use when user wants to create an issue, triage issues, review incoming bugs or feature requests, prepare issues for an AFK agent, or manage issue workflow.
 metadata:
-    github-path: skills/engineering/triage
-    github-ref: refs/heads/main
-    github-repo: https://github.com/mattpocock/skills
-    github-tree-sha: de4f182c30876a2460ca307e2f601b9b892527e5
+  github-path: skills/engineering/triage
+  github-ref: refs/heads/main
+  github-repo: https://github.com/mattpocock/skills
+  github-tree-sha: de4f182c30876a2460ca307e2f601b9b892527e5
 name: triage
 ---
+
 # Triage
 
 Move issues on the project issue tracker through a small state machine of triage roles.

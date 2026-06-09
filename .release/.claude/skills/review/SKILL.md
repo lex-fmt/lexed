@@ -1,12 +1,13 @@
 ---
 description: Review the changes since a fixed point (commit, branch, tag, or merge-base) along two axes — Standards (does the code follow this repo's documented coding standards?) and Spec (does the code match what the originating issue/PRD asked for?). Runs both reviews in parallel sub-agents and reports them side by side. Use when the user wants to review a branch, a PR, work-in-progress changes, or asks to "review since X".
 metadata:
-    github-path: skills/in-progress/review
-    github-ref: refs/heads/main
-    github-repo: https://github.com/mattpocock/skills
-    github-tree-sha: 756c8dd5c0f097682b45ff10d64ca23087b19159
+  github-path: skills/in-progress/review
+  github-ref: refs/heads/main
+  github-repo: https://github.com/mattpocock/skills
+  github-tree-sha: 756c8dd5c0f097682b45ff10d64ca23087b19159
 name: review
 ---
+
 # Review
 
 Two-axis review of the diff between `HEAD` and a fixed point the user supplies:

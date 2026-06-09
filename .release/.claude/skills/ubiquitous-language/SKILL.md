@@ -2,12 +2,13 @@
 description: Extract a DDD-style ubiquitous language glossary from the current conversation, flagging ambiguities and proposing canonical terms. Saves to UBIQUITOUS_LANGUAGE.md. Use when user wants to define domain terms, build a glossary, harden terminology, create a ubiquitous language, or mentions "domain model" or "DDD".
 disable-model-invocation: true
 metadata:
-    github-path: skills/deprecated/ubiquitous-language
-    github-ref: refs/heads/main
-    github-repo: https://github.com/mattpocock/skills
-    github-tree-sha: 483fe10b01bed81b7eba7ee26df3f1bef9540c88
+  github-path: skills/deprecated/ubiquitous-language
+  github-ref: refs/heads/main
+  github-repo: https://github.com/mattpocock/skills
+  github-tree-sha: 483fe10b01bed81b7eba7ee26df3f1bef9540c88
 name: ubiquitous-language
 ---
+
 # Ubiquitous Language
 
 Extract and formalize domain terminology from the current conversation into a consistent glossary, saved to a local file.
