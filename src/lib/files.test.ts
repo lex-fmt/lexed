@@ -30,6 +30,9 @@ describe('getLanguageForFile', () => {
     expect(getLanguageForFile('archive.tar.gz')).toBe('plaintext')
     expect(getLanguageForFile('Makefile')).toBe('plaintext')
     expect(getLanguageForFile('')).toBe('plaintext')
+    // a trailing dot or a lone dot has an empty final segment → plaintext
+    expect(getLanguageForFile('file.')).toBe('plaintext')
+    expect(getLanguageForFile('.')).toBe('plaintext')
   })
 
   it('uses only the final extension of a multi-dotted path', () => {
@@ -55,6 +58,8 @@ describe('isLexFile', () => {
     expect(isLexFile('a.txt')).toBe(false)
     // .lexd is lex but a name merely containing "lex" mid-string is not
     expect(isLexFile('lexicon.json')).toBe(false)
+    // a directory path that ends in the extension name + slash is not a lex file
+    expect(isLexFile('a.lex/')).toBe(false)
   })
 
   it('treats null/undefined/empty as not a lex file', () => {
@@ -76,6 +81,8 @@ describe('isMarkdownFile', () => {
     expect(isMarkdownFile('a.lex')).toBe(false)
     expect(isMarkdownFile('a.mdx')).toBe(false)
     expect(isMarkdownFile('a.txt')).toBe(false)
+    // a directory path that ends in the extension name + slash is not markdown
+    expect(isMarkdownFile('a.md/')).toBe(false)
   })
 
   it('treats null/undefined/empty as not a markdown file', () => {

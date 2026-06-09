@@ -1,1 +1,1 @@
-Add unit tests for lib/files file-type detection and file-action enablement
+- Add unit tests for lib/files file-type detection and file-action enablement (#153)
