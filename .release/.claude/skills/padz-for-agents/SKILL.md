@@ -27,25 +27,27 @@ Every `--output json` response has this skeleton:
 
 ```json
 {
-  "messages": [ { "level": "info|success|warning|error", "content": "..." } ],
+  "messages": [{ "level": "info|success|warning|error", "content": "..." }],
   "pads": [
     {
-      "index":    { "type": "Regular|Pinned|Archived|Deleted", "value": 1 },
+      "index": { "type": "Regular|Pinned|Archived|Deleted", "value": 1 },
       "pad": {
-        "content":  "<full body>",
+        "content": "<full body>",
         "metadata": {
-          "id":          "1f7d95d5-55c6-4dda-a688-199d91f4fd2f",
-          "title":       "...",
-          "status":      "Planned|InProgress|Done",
-          "tags":        ["..."],
-          "parent_id":   null,
-          "is_pinned":   false,
-          "created_at":  "2026-04-24T23:26:28Z",
-          "updated_at":  "2026-04-24T23:31:57Z"
+          "id": "1f7d95d5-55c6-4dda-a688-199d91f4fd2f",
+          "title": "...",
+          "status": "Planned|InProgress|Done",
+          "tags": ["..."],
+          "parent_id": null,
+          "is_pinned": false,
+          "created_at": "2026-04-24T23:26:28Z",
+          "updated_at": "2026-04-24T23:31:57Z"
         }
       },
-      "children": [ /* same shape, recursive */ ],
-      "matches":  null
+      "children": [
+        /* same shape, recursive */
+      ],
+      "matches": null
     }
   ]
 }
@@ -98,12 +100,12 @@ padz import path/to/archive.tar.gz       # restores pads + metadata
 
 Single config toggle: `mode = "notes"` (default) or `mode = "todos"` in `.padz/padz.toml` or via `padz config set mode todos`.
 
-| | notes (default) | todos |
-|---|---|---|
-| `create` default | opens `$EDITOR` | `--no-editor` implicit |
-| Status icons in list | hidden | shown |
-| `complete` behavior | marks Done **and deletes** | marks Done, pad stays |
-| Typical pad size | paragraphs / pages | single line |
+|                      | notes (default)            | todos                  |
+| -------------------- | -------------------------- | ---------------------- |
+| `create` default     | opens `$EDITOR`            | `--no-editor` implicit |
+| Status icons in list | hidden                     | shown                  |
+| `complete` behavior  | marks Done **and deletes** | marks Done, pad stays  |
+| Typical pad size     | paragraphs / pages         | single line            |
 
 Everything else (tags, archive, pin, move, parent/child, search) works identically in both modes. `padz list --show-status` forces status icons on even in notes mode.
 
@@ -168,17 +170,17 @@ padz import /path/to/padz-<timestamp>.tar.gz
 
 ## Selector syntax at a glance
 
-| Form | Meaning | Example |
-|---|---|---|
-| `N` | Regular DI | `3` |
-| `pN` | Pinned DI | `p1` |
-| `dN` | Deleted DI | `d2` |
-| `arN` | Archived DI | `ar1` |
-| `A.B` | Child path | `1.2` (second child of pad 1) |
-| `A-B` | Range | `1-3`, `p1-p3`, `d1-d5` |
-| 8+ hex chars | Short UUID | `1f7d95d5` |
-| full UUID | UUID | `1f7d95d5-55c6-4dda-a688-199d91f4fd2f` |
-| any other string | Title search | `"retry logic"` |
+| Form             | Meaning      | Example                                |
+| ---------------- | ------------ | -------------------------------------- |
+| `N`              | Regular DI   | `3`                                    |
+| `pN`             | Pinned DI    | `p1`                                   |
+| `dN`             | Deleted DI   | `d2`                                   |
+| `arN`            | Archived DI  | `ar1`                                  |
+| `A.B`            | Child path   | `1.2` (second child of pad 1)          |
+| `A-B`            | Range        | `1-3`, `p1-p3`, `d1-d5`                |
+| 8+ hex chars     | Short UUID   | `1f7d95d5`                             |
+| full UUID        | UUID         | `1f7d95d5-55c6-4dda-a688-199d91f4fd2f` |
+| any other string | Title search | `"retry logic"`                        |
 
 Most commands accept multiple selectors: `padz delete 1 3 p1` deletes three pads. `restore` and `purge` auto-prefix bare numbers with `d` so `padz restore 3` means `padz restore d3`.
 

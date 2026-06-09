@@ -38,24 +38,24 @@ Single home: **`~/h/release/bin/`** — both the policy/setup tools and the day-
 
 (Historical note: the PR-loop helpers used to live in `~/h/dotfiles/gh/bin/` while policy tooling lived in `release/bin/`. Consolidated 2026-05-05 — if you find an older copy in `dotfiles/gh/bin/`, it's stale; the canonical version is in `release/bin/`.)
 
-| Command | What it does |
-|---|---|
-| `release-core pr status [<pr>] [--json]` | **The orient step.** Reads the PR once and reports one lifecycle state (`REVIEWS_PENDING` / `ADDRESSING` / `REVIEWED` / `VALIDATING` / `READY` / `BLOCKED`) plus the next action. Reviewer-agnostic (Copilot required, Gemini best-effort), with circuit breakers folded in. Read-only. Resolves the current branch's PR if `<pr>` is omitted. See "Orienting with release-core pr status" below. |
-| `release-core pr copilot on <pr>` | Request Copilot review (`gh pr edit --add-reviewer @copilot` — goes through GraphQL with the bot's real node_id; the `requested_reviewers` REST POST silently no-ops with `reviewers[]=copilot-pull-request-reviewer[bot]`). |
-| `release-core pr copilot off <pr>` | Remove Copilot reviewer. |
-| `release-core pr copilot wait <pr>` | Block until Copilot posts a review on the PR's current head SHA. 7m initial sleep, 2m polling, 30m hard cap. Exit 0 = posted; 2 = timeout. |
-| `release-core pr copilot review <pr>` | Composite: on + wait + print review body and inline comments. |
-| `release-core pr resolve-thread <pr> <comment-id>` | Resolve the review thread containing the given comment via GraphQL `resolveReviewThread`. Idempotent — already-resolved threads exit 0 without complaint. Use after you fix-and-push or reply with rationale (see step 5 below). |
-| `release-core pr checks-wait <pr> [extra gh args...]` | Wait for all required checks to pass (or fail). Exit 0 = all pass; 1 = any fail. |
-| `release-core issue file <component> <symptom>` | File a bug at `arthur-debert/release` from inside any consumer repo. Auto-collects current repo, branch, PR, and recent workflow run for reproduction context. Use whenever the loop misbehaves in a way the consumer can't fix locally (see "When the loop misbehaves" below). |
-| `release-core admin policy ruleset [--dry-run] [--checks ...]` (retired flat: `apply-ruleset`) | Apply the canonical main-branch-protection ruleset to the current repo. Auto-detects required checks from the latest default-branch run of each PR-trigger workflow (handles matrix expansion + `name:` overrides). |
-| `release-core admin policy sweep [--force]` (retired flat: `sweep-github-policy`) | Drop the canonical `.github/` policy files into the current repo (CODEOWNERS, dependabot.yml, copilot-instructions.md, pull_request_template.md, workflows/copilot-review.yml). Reports created/updated/ok/conflict per file. |
-| `release-core detect-kind [<dir>]` | Identify the project Kind (rust, electron, vsce-ext, nvim-plugin, tree-sitter, brew-tap, github-action, static-site). |
-| `release-core admin secrets token` (retired flat: `install-release-token`) | Read a classic PAT from stdin and propagate as `RELEASE_TOKEN` secret to every onboarded repo. Verifies persistence per repo (older silent-fail mode is fixed). Required after PAT rotation. |
-| `release-core admin policy dependabot [--repos ...]` (retired flat: `enable-dependabot-security`) | Enable Dependabot vulnerability-alerts + auto-fix on every onboarded repo via the API toggle. |
-| `release-core audit [--repo <r>]` (retired flat: `audit-repo`) | Per-repo readout: ruleset, RELEASE_TOKEN, copilot-review pointer, CODEOWNERS, dep_security, dep_policy, ci_main_green, private go module auth. PASS/FAIL/WARN per row. |
-| `release-core admin repos audit [--only-failing]` (retired flat: `audit-portfolio`) | Loop the per-repo audit over the `managed-repos.yaml` fleet (the hardcoded source of truth; no discovery). Summary table + detail of problem repos. |
-| `release-core admin smoke-test <repo>` (retired flat: `audit-smoke-test`) | Open a no-op PR, verify Copilot fires + checks trigger + Copilot is added as reviewer (timeline event), close the PR. Real end-to-end verification. Use after a config change to confirm the loop actually still works. |
+| Command                                                                                           | What it does                                                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `release-core pr status [<pr>] [--json]`                                                          | **The orient step.** Reads the PR once and reports one lifecycle state (`REVIEWS_PENDING` / `ADDRESSING` / `REVIEWED` / `VALIDATING` / `READY` / `BLOCKED`) plus the next action. Reviewer-agnostic (Copilot required, Gemini best-effort), with circuit breakers folded in. Read-only. Resolves the current branch's PR if `<pr>` is omitted. See "Orienting with release-core pr status" below. |
+| `release-core pr copilot on <pr>`                                                                 | Request Copilot review (`gh pr edit --add-reviewer @copilot` — goes through GraphQL with the bot's real node_id; the `requested_reviewers` REST POST silently no-ops with `reviewers[]=copilot-pull-request-reviewer[bot]`).                                                                                                                                                                      |
+| `release-core pr copilot off <pr>`                                                                | Remove Copilot reviewer.                                                                                                                                                                                                                                                                                                                                                                          |
+| `release-core pr copilot wait <pr>`                                                               | Block until Copilot posts a review on the PR's current head SHA. 7m initial sleep, 2m polling, 30m hard cap. Exit 0 = posted; 2 = timeout.                                                                                                                                                                                                                                                        |
+| `release-core pr copilot review <pr>`                                                             | Composite: on + wait + print review body and inline comments.                                                                                                                                                                                                                                                                                                                                     |
+| `release-core pr resolve-thread <pr> <comment-id>`                                                | Resolve the review thread containing the given comment via GraphQL `resolveReviewThread`. Idempotent — already-resolved threads exit 0 without complaint. Use after you fix-and-push or reply with rationale (see step 5 below).                                                                                                                                                                  |
+| `release-core pr checks-wait <pr> [extra gh args...]`                                             | Wait for all required checks to pass (or fail). Exit 0 = all pass; 1 = any fail.                                                                                                                                                                                                                                                                                                                  |
+| `release-core issue file <component> <symptom>`                                                   | File a bug at `arthur-debert/release` from inside any consumer repo. Auto-collects current repo, branch, PR, and recent workflow run for reproduction context. Use whenever the loop misbehaves in a way the consumer can't fix locally (see "When the loop misbehaves" below).                                                                                                                   |
+| `release-core admin policy ruleset [--dry-run] [--checks ...]` (retired flat: `apply-ruleset`)    | Apply the canonical main-branch-protection ruleset to the current repo. Auto-detects required checks from the latest default-branch run of each PR-trigger workflow (handles matrix expansion + `name:` overrides).                                                                                                                                                                               |
+| `release-core admin policy sweep [--force]` (retired flat: `sweep-github-policy`)                 | Drop the canonical `.github/` policy files into the current repo (CODEOWNERS, dependabot.yml, copilot-instructions.md, pull_request_template.md, workflows/copilot-review.yml). Reports created/updated/ok/conflict per file.                                                                                                                                                                     |
+| `release-core detect-kind [<dir>]`                                                                | Identify the project Kind (rust, electron, vsce-ext, nvim-plugin, tree-sitter, brew-tap, github-action, static-site).                                                                                                                                                                                                                                                                             |
+| `release-core admin secrets token` (retired flat: `install-release-token`)                        | Read a classic PAT from stdin and propagate as `RELEASE_TOKEN` secret to every onboarded repo. Verifies persistence per repo (older silent-fail mode is fixed). Required after PAT rotation.                                                                                                                                                                                                      |
+| `release-core admin policy dependabot [--repos ...]` (retired flat: `enable-dependabot-security`) | Enable Dependabot vulnerability-alerts + auto-fix on every onboarded repo via the API toggle.                                                                                                                                                                                                                                                                                                     |
+| `release-core audit [--repo <r>]` (retired flat: `audit-repo`)                                    | Per-repo readout: ruleset, RELEASE_TOKEN, copilot-review pointer, CODEOWNERS, dep_security, dep_policy, ci_main_green, private go module auth. PASS/FAIL/WARN per row.                                                                                                                                                                                                                            |
+| `release-core admin repos audit [--only-failing]` (retired flat: `audit-portfolio`)               | Loop the per-repo audit over the `managed-repos.yaml` fleet (the hardcoded source of truth; no discovery). Summary table + detail of problem repos.                                                                                                                                                                                                                                               |
+| `release-core admin smoke-test <repo>` (retired flat: `audit-smoke-test`)                         | Open a no-op PR, verify Copilot fires + checks trigger + Copilot is added as reviewer (timeline event), close the PR. Real end-to-end verification. Use after a config change to confirm the loop actually still works.                                                                                                                                                                           |
 
 Templates live at `~/h/release/templates/<stack>/`; ruleset JSON at `~/h/release/rulesets/main-protection.json.tmpl`. Scripts resolve these relative to their own location, so no XDG/symlink indirection is needed.
 
@@ -86,32 +86,32 @@ Instead of piecing the PR's state together by hand on every wake — which revie
 release-core pr status <PR>          # human-readable; add --json to parse
 ```
 
-It reads the PR once and reports exactly one lifecycle state plus the next action. It *orchestrates* the primitives below — it does not replace them. Map the state to where you are in the flow:
+It reads the PR once and reports exactly one lifecycle state plus the next action. It _orchestrates_ the primitives below — it does not replace them. Map the state to where you are in the flow:
 
-| State | Meaning | What to do |
-|---|---|---|
-| `REVIEWS_PENDING` | a required reviewer (Copilot) hasn't finished | step 4 — `release-core pr copilot wait` |
-| `ADDRESSING` | reviews in, open threads remain | steps 5–5b — triage, fix/reply, resolve |
-| `REVIEWED` | reviews done, mergeability still computing | re-check shortly |
-| `VALIDATING` | reviews done, CI running | step 7 — `release-core pr checks-wait` |
-| `READY` | reviewed + CI green + mergeable | step 8 — flip draft→ready if drafted, page the user |
-| `BLOCKED` | failing check, merge conflict, **or a circuit breaker fired** | stop; surface the reason to the user |
+| State             | Meaning                                                       | What to do                                          |
+| ----------------- | ------------------------------------------------------------- | --------------------------------------------------- |
+| `REVIEWS_PENDING` | a required reviewer (Copilot) hasn't finished                 | step 4 — `release-core pr copilot wait`             |
+| `ADDRESSING`      | reviews in, open threads remain                               | steps 5–5b — triage, fix/reply, resolve             |
+| `REVIEWED`        | reviews done, mergeability still computing                    | re-check shortly                                    |
+| `VALIDATING`      | reviews done, CI running                                      | step 7 — `release-core pr checks-wait`              |
+| `READY`           | reviewed + CI green + mergeable                               | step 8 — flip draft→ready if drafted, page the user |
+| `BLOCKED`         | failing check, merge conflict, **or a circuit breaker fired** | stop; surface the reason to the user                |
 
-**Gemini is best-effort.** A silent or quota'd Gemini never holds the PR in `REVIEWS_PENDING` — only Copilot (required) gates. The snapshot is stateless and has no clock, so the *skip-after-timeout* call for a slow best-effort reviewer is yours: if you've already waited out `release-core pr copilot wait` and Gemini still shows `in_progress`, proceed.
+**Gemini is best-effort.** A silent or quota'd Gemini never holds the PR in `REVIEWS_PENDING` — only Copilot (required) gates. The snapshot is stateless and has no clock, so the _skip-after-timeout_ call for a slow best-effort reviewer is yours: if you've already waited out `release-core pr copilot wait` and Gemini still shows `in_progress`, proceed.
 
 **Circuit breakers.** When `release-core pr status` returns `BLOCKED` with a `breaker:` line (`cycle-cap`, `diff-trajectory`, `comment-set`, `repeat-finding`), the review loop is diverging — do **not** push another fixup cycle. Stop and surface the breaker reason to the user. This is the first-class "stop and hand back" outcome, not a failure.
 
 ### Leave a handoff note when you open the PR
 
-When you open a PR, drop a short handoff note capturing the **non-obvious reasoning** behind the change — the decisions a reviewer (or a later fixer agent) couldn't re-derive from the diff: why a particular approach, what's deliberately out of scope, what *not* to "fix." Put it either in the PR body under a `## Context` heading or in `.release/handoff-<pr>.md` (use the `/handoff` skill to generate it).
+When you open a PR, drop a short handoff note capturing the **non-obvious reasoning** behind the change — the decisions a reviewer (or a later fixer agent) couldn't re-derive from the diff: why a particular approach, what's deliberately out of scope, what _not_ to "fix." Put it either in the PR body under a `## Context` heading or in `.release/handoff-<pr>.md` (use the `/handoff` skill to generate it).
 
 Why: a detached auto-fix agent (`orc watch --auto`, release#338) addresses review comments as a **fresh** agent — it has the code but not your reasoning. The handoff note is the cheap, durable carrier of that reasoning, so the fixer respects deliberate decisions instead of undoing them to satisfy a comment. Skip it only for trivial chore/CI PRs.
 
 ### A note on draft PRs
 
-**PR drafts are user-requested only.** Never pass `--draft` to `gh pr create` unless the user used one of these exact triggers in *this* session: "open as draft", "draft PR", "WIP PR", "draft this", "for early feedback". Absent that explicit phrase, the PR is **live**. This is a hard rule.
+**PR drafts are user-requested only.** Never pass `--draft` to `gh pr create` unless the user used one of these exact triggers in _this_ session: "open as draft", "draft PR", "WIP PR", "draft this", "for early feedback". Absent that explicit phrase, the PR is **live**. This is a hard rule.
 
-Common signals that should *not* trigger a draft:
+Common signals that should _not_ trigger a draft:
 
 - **Title patterns**: `"feature(#N): ..."`, `"PR N of M"`, `"first of stacked series"`, anything containing `skeleton`, `scaffold`, `spec`, `initial`, or `WIP`.
 - **Body content**: unchecked test-plan checklist boxes, "follow-up commits planned" / "more coming" language, todo lists.
@@ -131,7 +131,7 @@ Build-dir migration PRs (from `migrate-consumer-to-build-dir`) carry a `migratio
 release-core pr copilot wait <PR>
 ```
 
-Run in background (`run_in_background: true`) so the conversation isn't tied up for 7+ minutes. The script will exit when Copilot's review is posted on the PR's *current head SHA* (the SHA filter is critical — `submitted_at >= start_time` was the previous design and failed when the review was already posted before the wait started).
+Run in background (`run_in_background: true`) so the conversation isn't tied up for 7+ minutes. The script will exit when Copilot's review is posted on the PR's _current head SHA_ (the SHA filter is critical — `submitted_at >= start_time` was the previous design and failed when the review was already posted before the wait started).
 
 ### Step 5: triaging Copilot comments
 
@@ -152,17 +152,17 @@ gh api 'repos/{owner}/{repo}/pulls/<PR>/comments/<COMMENT_ID>/replies' \
   -X POST -f body="..."
 ```
 
-The reply ends with a line like *"Recording for future review passes: don't ask us to `<X>`"* so the rationale is searchable later. Examples seen, all pushed back on:
+The reply ends with a line like _"Recording for future review passes: don't ask us to `<X>`"_ so the rationale is searchable later. Examples seen, all pushed back on:
 
 - **"Pin org-internal reusable workflows to a SHA."** Same owner controls both repos; supply-chain risk is negligible. Pinning defeats the "fix once, propagate" point of reusable workflows. Also baked into `copilot-instructions.md` so future passes don't re-raise.
-- **"Per-repo customize the multi-repo template."** The template (`~/h/release/templates/rust/`) lists umbrella-script names that *collectively* appear across the rollout (`check`, `pre-commit`, `rust-pre-commit`, `ci.sh`); pointing at only what's local would defeat the canonical-template purpose. Contributors recognize the one their repo uses.
+- **"Per-repo customize the multi-repo template."** The template (`~/h/release/templates/rust/`) lists umbrella-script names that _collectively_ appear across the rollout (`check`, `pre-commit`, `rust-pre-commit`, `ci.sh`); pointing at only what's local would defeat the canonical-template purpose. Contributors recognize the one their repo uses.
 - **"Match the fallback Cargo flags exactly to CI's flags."** The fallback is a generic approximation; the instructions explicitly direct readers to `.github/workflows/` for the source of truth — flags vary per project.
 
 **C) Cosmetic nits in already-merged style.** Skip. Don't reply unless the same nit is recurring — then push back generally.
 
 ### Step 5b: resolve threads as you go
 
-After acting on each comment — fix-and-push *or* rationale reply — resolve its thread:
+After acting on each comment — fix-and-push _or_ rationale reply — resolve its thread:
 
 ```sh
 release-core pr resolve-thread <PR> <COMMENT_ID>
@@ -180,7 +180,7 @@ The end state of a healthy PR: only contested threads (and the original review s
 
 Push to the same branch. CI re-runs automatically. **Do NOT** re-request Copilot on minor rounds — the workflow only auto-triggers on `opened`/`ready_for_review`, and one review per PR is the convention. Re-request only if the round of changes is substantial enough to warrant a fresh look.
 
-Before opening *another* fixup cycle, run `release-core pr status <PR>`. If it returns `BLOCKED` with a `breaker:` line, the loop is diverging — stop, don't iterate, and surface the breaker to the user (see "Orienting with release-core pr status").
+Before opening _another_ fixup cycle, run `release-core pr status <PR>`. If it returns `BLOCKED` with a `breaker:` line, the loop is diverging — stop, don't iterate, and surface the breaker to the user (see "Orienting with release-core pr status").
 
 ### Step 7: waiting for checks
 
@@ -198,7 +198,7 @@ Run in background. Exits 0 when all checks pass, 1 if any fail.
 gh pr ready <PR>      # only if it was a draft
 ```
 
-**Do NOT auto-merge.** The agent's job ends when the PR is in a *mergeable* state — checks green, threads resolved, CI clean. At that point, post a short status comment summarizing where things landed (or just the assistant turn — whatever's appropriate to the session) and stop. The user does the final read and merges.
+**Do NOT auto-merge.** The agent's job ends when the PR is in a _mergeable_ state — checks green, threads resolved, CI clean. At that point, post a short status comment summarizing where things landed (or just the assistant turn — whatever's appropriate to the session) and stop. The user does the final read and merges.
 
 ```sh
 # Confirm the PR is ready and stop:
@@ -224,7 +224,7 @@ If you genuinely can't merge because of a pre-existing CI failure unrelated to t
 
 ## The final-report contract (always, even mid-flow)
 
-Whenever you end a turn on a PR — ready to merge, blocked, or stopping early — close with a structured report. This is non-negotiable when the skill runs as a subagent: the parent has no other window into what happened, and a bare *"I'll wait for the background task to complete via notifications"* forces it to re-query every PR by hand. (Half of a 20-subagent migration batch stalled exactly this way — see release#300.)
+Whenever you end a turn on a PR — ready to merge, blocked, or stopping early — close with a structured report. This is non-negotiable when the skill runs as a subagent: the parent has no other window into what happened, and a bare _"I'll wait for the background task to complete via notifications"_ forces it to re-query every PR by hand. (Half of a 20-subagent migration batch stalled exactly this way — see release#300.)
 
 Two hard rules before you report:
 
@@ -234,7 +234,7 @@ Two hard rules before you report:
    gh pr view <PR> --json url,headRefOid,mergeStateStatus,mergeable,statusCheckRollup,reviews --jq '{url,head:.headRefOid,mergeState:.mergeStateStatus,mergeable,checks:[.statusCheckRollup[]?|{name:.name,c:.conclusion}],reviews:[.reviews[]?|{by:.author.login,state:.state}]}'
    ```
 
-2. **Never stop with only "I'll wait for the background task."** If a background wait is genuinely needed, *poll it to completion first* — `release-core pr copilot wait` and `release-core pr checks-wait` block precisely so you can. Returning before they resolve wastes the run: the parent finds the event already arrived and has to restart you.
+2. **Never stop with only "I'll wait for the background task."** If a background wait is genuinely needed, _poll it to completion first_ — `release-core pr copilot wait` and `release-core pr checks-wait` block precisely so you can. Returning before they resolve wastes the run: the parent finds the event already arrived and has to restart you.
 
 Then emit the report block verbatim — same shape every time so downstream agents can parse it:
 
@@ -345,8 +345,8 @@ Symptoms worth filing:
 
 ## Reference: the reusable copilot-review workflow
 
-Lives at `arthur-debert/release/.github/workflows/copilot-review.yml@v1`. (Migrated 2026-05-08 from `arthur-debert/gh-dagentic@main`, which used `GITHUB_TOKEN` and silently no-op'd the Copilot attach across the entire portfolio for months. The smoke test caught it; a one-off sweep migrated all consumers over.) The job is named `request`. In check-run output it appears as `request / request` (caller-job / called-job format). It is *not* a required check (excluded from ruleset auto-detection by filename), so a failure of that workflow doesn't block merges — but it does mean Copilot was never requested, which is worth fixing or filing.
+Lives at `arthur-debert/release/.github/workflows/copilot-review.yml@v1`. (Migrated 2026-05-08 from `arthur-debert/gh-dagentic@main`, which used `GITHUB_TOKEN` and silently no-op'd the Copilot attach across the entire portfolio for months. The smoke test caught it; a one-off sweep migrated all consumers over.) The job is named `request`. In check-run output it appears as `request / request` (caller-job / called-job format). It is _not_ a required check (excluded from ruleset auto-detection by filename), so a failure of that workflow doesn't block merges — but it does mean Copilot was never requested, which is worth fixing or filing.
 
-The workflow body uses `gh pr edit --add-reviewer @copilot` (GraphQL). It requires a user PAT with `repo + read:org` passed as `secrets.gh_token` (`RELEASE_TOKEN` is what every onboarded repo carries). Default `GITHUB_TOKEN` cannot attach Copilot — silently no-ops. Same-owner consumers can use `secrets: inherit`; cross-org consumers (lex-fmt/*) must list `gh_token: ${{ secrets.RELEASE_TOKEN }}` explicitly.
+The workflow body uses `gh pr edit --add-reviewer @copilot` (GraphQL). It requires a user PAT with `repo + read:org` passed as `secrets.gh_token` (`RELEASE_TOKEN` is what every onboarded repo carries). Default `GITHUB_TOKEN` cannot attach Copilot — silently no-ops. Same-owner consumers can use `secrets: inherit`; cross-org consumers (lex-fmt/\*) must list `gh_token: ${{ secrets.RELEASE_TOKEN }}` explicitly.
 
 If something seems off (a smoke-test fails, Copilot isn't attaching, etc.), trust `release-core admin smoke-test <repo>` over visual inspection — the silent no-op was invisible to every other check until smoke caught it.

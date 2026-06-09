@@ -1,12 +1,13 @@
 ---
 description: Find deepening opportunities in a codebase, informed by the domain language in CONTEXT.md and the decisions in docs/adr/. Use when the user wants to improve architecture, find refactoring opportunities, consolidate tightly-coupled modules, or make a codebase more testable and AI-navigable.
 metadata:
-    github-path: skills/engineering/improve-codebase-architecture
-    github-ref: refs/heads/main
-    github-repo: https://github.com/mattpocock/skills
-    github-tree-sha: 688c17ec27fe9309d84987716aca37b5ce7f3a88
+  github-path: skills/engineering/improve-codebase-architecture
+  github-ref: refs/heads/main
+  github-repo: https://github.com/mattpocock/skills
+  github-tree-sha: 688c17ec27fe9309d84987716aca37b5ce7f3a88
 name: improve-codebase-architecture
 ---
+
 # Improve Codebase Architecture
 
 Surface architectural friction and propose **deepening opportunities** — refactors that turn shallow modules into deep ones. The aim is testability and AI-navigability.

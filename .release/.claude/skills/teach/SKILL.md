@@ -3,12 +3,13 @@ argument-hint: What would you like to learn about?
 description: Teach the user a new skill or concept, within this workspace.
 disable-model-invocation: true
 metadata:
-    github-path: skills/in-progress/teach
-    github-ref: refs/heads/main
-    github-repo: https://github.com/mattpocock/skills
-    github-tree-sha: 2649a18218c39d578c4a5df7becd0fc96d356fbc
+  github-path: skills/in-progress/teach
+  github-ref: refs/heads/main
+  github-repo: https://github.com/mattpocock/skills
+  github-tree-sha: 2649a18218c39d578c4a5df7becd0fc96d356fbc
 name: teach
 ---
+
 The user has asked you to teach them something. This is a stateful request - they intend to learn the topic over multiple sessions.
 
 ## Teaching Workspace
