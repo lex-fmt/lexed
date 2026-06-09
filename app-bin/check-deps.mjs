@@ -39,6 +39,18 @@ const ROOT = path.resolve(__dirname, '..')
 export function requiredArtifacts(deps, grammars) {
   const required = new Set()
 
+  // Repo-relative paths are always POSIX (forward slashes): they are matched
+  // against the `/`-joined strings the tests assert and printed in the abort
+  // message, and `existsSync` accepts forward slashes on every platform. Using
+  // bare `path.join` would emit backslashes on Windows — the exact OS this
+  // preflight most needs to be correct on (#142 was a Windows fetch bug).
+  const join = (...segs) => path.posix.join(...segs)
+
+  // The lexd-lsp binary carries a `.exe` suffix on Windows (see
+  // package.json win.extraResources + electron/lsp-manager.ts), so the file
+  // on disk — and thus what we must assert — is platform-specific.
+  const exeSuffix = process.platform === 'win32' ? '.exe' : ''
+
   // tree-sitter: `extract` maps an archive entry -> a destination directory.
   // A bare-filename source lands as `<dest>/<basename>`; a directory source
   // (e.g. `queries`) lands as `<dest>` itself. We assert the destination the
@@ -46,10 +58,10 @@ export function requiredArtifacts(deps, grammars) {
   const ts = deps['tree-sitter']
   if (ts?.extract) {
     for (const [src, dest] of Object.entries(ts.extract)) {
-      const base = path.basename(src)
+      const base = path.posix.basename(src)
       // If src is a plain file (has an extension), it lands at dest/base.
       // If it's a directory (no extension, e.g. "queries"), dest IS the dir.
-      required.add(path.extname(base) ? path.join(dest, base) : dest)
+      required.add(path.posix.extname(base) ? join(dest, base) : dest)
     }
   }
 
@@ -58,21 +70,21 @@ export function requiredArtifacts(deps, grammars) {
   // They live under the tree-sitter `queries` extract destination.
   const queriesDest = ts?.extract?.queries ?? 'resources/queries'
   for (const q of ['highlights.scm', 'injections.scm']) {
-    required.add(path.join(queriesDest, q))
+    required.add(join(queriesDest, q))
   }
 
-  // lexd-lsp binary (deps.json `dest` + `binary`).
+  // lexd-lsp binary (deps.json `dest` + `binary`), platform-suffixed.
   const lsp = deps['lexd-lsp']
   if (lsp?.dest && lsp?.binary) {
-    required.add(path.join(lsp.dest, lsp.binary))
+    required.add(join(lsp.dest, lsp.binary + exeSuffix))
   }
 
   // embedded-grammars: one parser.wasm + highlights.scm per grammar in the
   // manifest. src/embedded.ts globs `resources/embedded-grammars/*/{parser.wasm,highlights.scm}`.
   for (const g of grammars?.grammars ?? []) {
-    const dir = path.join('resources/embedded-grammars', g.name)
-    required.add(path.join(dir, 'parser.wasm'))
-    required.add(path.join(dir, 'highlights.scm'))
+    const dir = join('resources/embedded-grammars', g.name)
+    required.add(join(dir, 'parser.wasm'))
+    required.add(join(dir, 'highlights.scm'))
   }
 
   return [...required]
@@ -87,14 +99,50 @@ export function findMissing(required, exists) {
   return required.filter((rel) => !exists(rel))
 }
 
-function main() {
-  const deps = JSON.parse(readFileSync(path.join(ROOT, 'deps.json'), 'utf8'))
-  const grammars = JSON.parse(
-    readFileSync(path.join(ROOT, 'resources/embedded-grammars.json'), 'utf8')
-  )
+/**
+ * Compute the missing-artifact list for a build tree, treating an
+ * absent/unreadable manifest as a missing required artifact rather than a
+ * crash — the manifests (deps.json, resources/embedded-grammars.json) are
+ * themselves fetched/extracted, so a missing one is exactly the failure this
+ * preflight exists to catch.
+ *
+ * Pure: all I/O is injected, so this is unit-testable without a filesystem.
+ *
+ * @param {(rel: string) => (object|null)} readManifest  parse a repo-relative
+ *   JSON manifest, or return null if it is missing/unreadable.
+ * @param {(rel: string) => boolean} exists  repo-relative existence probe.
+ * @returns {string[]} repo-relative paths that are missing.
+ */
+export function computeMissing(readManifest, exists) {
+  const missing = []
 
-  const required = requiredArtifacts(deps, grammars)
-  const missing = findMissing(required, (rel) => existsSync(path.join(ROOT, rel)))
+  const deps = readManifest('deps.json')
+  if (deps === null) missing.push('deps.json')
+
+  const grammars = readManifest('resources/embedded-grammars.json')
+  if (grammars === null) missing.push('resources/embedded-grammars.json')
+
+  // Derive from whatever manifests we *did* read; a null one contributes no
+  // entries (its absence is already reported above).
+  const required = requiredArtifacts(deps ?? {}, grammars ?? {})
+  missing.push(...findMissing(required, exists))
+
+  // De-dupe (a manifest can appear both as itself-missing and as a derived
+  // required artifact, e.g. embedded-grammars.json via the tree-sitter extract).
+  return [...new Set(missing)]
+}
+
+function main() {
+  const readManifest = (rel) => {
+    try {
+      return JSON.parse(readFileSync(path.join(ROOT, rel), 'utf8'))
+    } catch {
+      return null
+    }
+  }
+  const exists = (rel) => existsSync(path.join(ROOT, rel))
+
+  const missing = computeMissing(readManifest, exists)
 
   if (missing.length > 0) {
     const list = missing.map((m) => `    - ${m}`).join('\n')
