@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   check:
-    uses: arthur-debert/release/.github/workflows/electron-ci.yml@v2
+    uses: arthur-debert/release/.github/workflows/electron-ci.yml@v3
     with:
       node-version: '22.18.0'
       shared-build-dir: shared

@@ -38,7 +38,7 @@ permissions:
 
 jobs:
   release:
-    uses: arthur-debert/release/.github/workflows/electron-app.yml@v2
+    uses: arthur-debert/release/.github/workflows/electron-app.yml@v3
     with:
       version: ${{ inputs.version }}
       app-name: LexEd
