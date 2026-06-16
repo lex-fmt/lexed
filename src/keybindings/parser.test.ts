@@ -153,12 +153,18 @@ describe('parseShortcut', () => {
       expect(parsed?.chords[0].keyLabel).toBe('4')
     })
 
-    it('resolves function keys F1 through F12', () => {
-      for (const n of [1, 5, 9, 12]) {
+    it('resolves function keys (any 1-2 digit F-key)', () => {
+      // The parser regex is /^f[0-9]{1,2}$/, so F1 through F99 all resolve —
+      // not just the common F1..F12. Sample across the range to pin this.
+      for (const n of [1, 5, 9, 12, 19, 24, 99]) {
         const parsed = parseShortcut(`cmd+f${n}`, 'mac')
         expect(parsed?.chords[0].code, `F${n}`).toBe(`F${n}`)
         expect(parsed?.chords[0].keyLabel, `F${n}`).toBe(`F${n}`)
       }
+    })
+
+    it('rejects three-digit function-key tokens (regex caps at 2 digits)', () => {
+      expect(parseShortcut('cmd+f100', 'mac')).toBeNull()
     })
 
     it('resolves named navigation/editing keys', () => {
@@ -182,11 +188,22 @@ describe('parseShortcut', () => {
     })
 
     it('normalises matching bracket pairs to the same code', () => {
-      // `{` and `[` share BracketLeft (shift state lives in the modifier set).
-      expect(parseShortcut('cmd+{', 'mac')?.chords[0].code).toBe('BracketLeft')
-      expect(parseShortcut('cmd+[', 'mac')?.chords[0].code).toBe('BracketLeft')
-      expect(parseShortcut('cmd+}', 'mac')?.chords[0].code).toBe('BracketRight')
-      expect(parseShortcut('cmd+]', 'mac')?.chords[0].code).toBe('BracketRight')
+      // `{` / `[` and `}` / `]` map to the same KeyboardEvent.code. The parser
+      // does NOT synthesise an implicit shift modifier from `{` or `}` — the
+      // shift state has to be written in the shortcut string explicitly.
+      const brackOpenBrace = parseShortcut('cmd+{', 'mac')
+      const brackOpenSqr = parseShortcut('cmd+[', 'mac')
+      expect(brackOpenBrace?.chords[0].code).toBe('BracketLeft')
+      expect(brackOpenBrace?.chords[0].modifiers.shift).toBe(false)
+      expect(brackOpenSqr?.chords[0].code).toBe('BracketLeft')
+      expect(brackOpenSqr?.chords[0].modifiers.shift).toBe(false)
+
+      const brackCloseBrace = parseShortcut('cmd+}', 'mac')
+      const brackCloseSqr = parseShortcut('cmd+]', 'mac')
+      expect(brackCloseBrace?.chords[0].code).toBe('BracketRight')
+      expect(brackCloseBrace?.chords[0].modifiers.shift).toBe(false)
+      expect(brackCloseSqr?.chords[0].code).toBe('BracketRight')
+      expect(brackCloseSqr?.chords[0].modifiers.shift).toBe(false)
     })
 
     it('normalises named punctuation tokens (semicolon, quote, backslash, backquote)', () => {
