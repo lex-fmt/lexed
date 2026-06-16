@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+## 0.11.1 - 2026-06-16
+
+- Build fails fast with an actionable message when fetched resources are missing, instead of failing deep inside `vite build` (#152)
+- Add unit tests for lib/files file-type detection and file-action enablement (#153)
+- ci: migrate release reusable-workflow callers from @v2 to @v3
+
 ## 0.11.0 - 2026-06-03
 
 Fix macOS and Windows release builds (#142). macOS: bundle only `bin/lexed` in app Resources instead of the whole `bin/` dir, which after the symlink migration shipped dangling links that aborted electron-builder. Windows: resource fetch (`fetch-deps`) CRLF bug fixed upstream so tree-sitter wasm + queries land correctly.

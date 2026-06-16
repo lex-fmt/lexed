@@ -43,7 +43,7 @@ _warn_unarmed() {
 
 # Pinned gate-toolset versions + the gate_version_matches reconcile helper —
 # single source of truth, shared with the CI provisioner
-# bin-internal/provision-gate-toolset.sh so the two can't drift (release#498,
+# bin-internal/provision-gate-toolset.sh so the two can't diverge (release#498,
 # release#531). Synced alongside this script (same managed sync) so it is
 # normally always present; the `:=` fallbacks + the gate_version_matches fallback
 # are a last-resort safety net so a (broken) missing-file state can't abort the
@@ -123,7 +123,7 @@ gate_version_matches actionlint "$ACTIONLINT_VERSION" || _warn_unarmed "actionli
 # golangci-lint — the go-quality gate's linter. Only Go repos run that hook, so
 # gate the install on a root go.mod existing (we cd'd to REPO_ROOT above; the
 # §2 `go mod download` block uses the same root check). brew on macOS; on Linux
-# the canonical install script drops the binary into the Go bin dir, with `go
+# the install script drops the binary into the Go bin dir, with `go
 # install` as the fallback when go is present but curl/sh isn't. Pinned to a
 # version (single source) for reproducibility. Install stderr stays visible —
 # matches the ruff/yamllint blocks; only stdout is muted.
@@ -156,14 +156,14 @@ fi
 # resolves the latest release wheel, pip-installs it (--force-reinstall — the
 # wheel version is static, so `-U` would skip it; deps resolve from PyPI), THEN runs `release-core
 # init` itself (it locates the just-installed console-script across venv/--user/
-# system layouts). A bare `init` now materializes the WHOLE managed tree from the
-# wheel bundle (the .release/ build dir + every working-tree mirror — skills,
-# ORIENTATION, configs, the CLAUDE.md block) and auto-commits any managed change
+# system layouts). A bare `init` now installs the WHOLE set of managed files from
+# the wheel bundle (the .release/ temp dir + every working-tree mirror — skills,
+# configs, the CLAUDE.md header block) and auto-commits any managed change
 # (#476 cutover) — not just the config subset. So SessionStart self-syncs the full
-# tree from the pulled wheel: no push needed (no push mechanism exists). One
+# set from the pulled wheel: no push needed (no push mechanism exists). One
 # command does the whole boot. Runs in BOTH local and cloud (above the cloud-only
 # gate) — auto-update is the whole point. Runs BEFORE the hook wiring (release#567):
-# init materializes the ephemeral .release/ (the gate config), so the very first
+# init installs the ephemeral .release/ (the gate config), so the very first
 # session of a fresh clone wires a hook that has a gate to run.
 #
 # BEST-EFFORT, never aborts the session: every call is `|| warn`, and init
@@ -198,14 +198,12 @@ fi
 # Wiring `.git/hooks/pre-commit` is per-clone state — every fresh clone
 # (and cloud snapshot) starts without it, so we wire it on every session
 # and in both contexts. Runs ABOVE the cloud-only gate because skipping
-# it locally is what produces the "agents are still running husky"
-# symptom: lefthook never gets installed, husky's old wiring keeps
-# firing.
+# it locally leaves the session with no pre-commit hook wired at all.
 #
 # Runs AFTER the pull-model boot (§0.1) deliberately (release#567): on a
 # fresh clone/session the boot installs release-core and `release-core
-# init` materializes the ephemeral `.release/` (gitignored since WS4, so
-# EVERY session starts without it) — wiring first left the earliest
+# init` writes the ephemeral `.release/` temp dir (gitignored since WS4,
+# so EVERY session starts without it) — wiring first left the earliest
 # commits of a session without a hook at all, and a previously-wired hook
 # firing before init warn-and-passed on the missing config (the
 # first-commit-of-session boot hole; gate now fails loud on that too).
@@ -214,13 +212,6 @@ fi
 # brew/cargo/npm locally). Fallback for repos that ship a hand-rolled
 # app-bin/pre-commit instead (zed-lex, tree-sitter-lex pattern): symlink
 # it into .git/hooks/.
-#
-# Husky migration: if a previous `husky install` set
-# `core.hooksPath=.husky`, git routes hooks to `.husky/pre-commit` and
-# ignores `.git/hooks/pre-commit` entirely — so `lefthook install`
-# silently no-ops. Clear that config first when migrating a repo to
-# lefthook. We do NOT delete `.husky/` itself; that's a consumer-side
-# cleanup (committed file, belongs in a PR).
 
 # Resolve lefthook binary. npm/pnpm consumers commonly have lefthook
 # installed at `node_modules/.bin/lefthook` (via `prepare: lefthook install`
@@ -237,7 +228,7 @@ fi
 if command -v release-core >/dev/null 2>&1 \
    && { [ -f .release/lefthook.yml ] || [ ! -f lefthook.yml ]; }; then
   # WS3 (release#524): the gate definition lives ONLY in the ephemeral .release/
-  # build dir — there is no tracked root lefthook.yml for a stock `lefthook
+  # temp dir — there is no tracked root lefthook.yml for a stock `lefthook
   # install` shim to discover. Wire the git hook through the binary instead:
   # `release-core gate --install-hook` writes .git/hooks/pre-commit (→ `release-core
   # gate --hook`, which points lefthook at .release/lefthook.yml) and unsets any
@@ -248,30 +239,12 @@ if command -v release-core >/dev/null 2>&1 \
   # The no-root-lefthook.yml arm (release#567): a consumer whose §0.1 init failed
   # (network hiccup) has no .release/lefthook.yml YET — wire the binary hook
   # anyway, so its commits hit `release-core gate --hook`'s fail-loud
-  # unmaterialized-config error instead of running ungated with no hook at all.
+  # unbuilt-config error instead of running ungated with no hook at all.
   if ! release-core gate --install-hook >/dev/null; then
     echo "warning: release-core gate --install-hook failed — pre-commit hook NOT wired" >&2
   fi
 elif [ -f lefthook.yml ] && [ -n "${_lefthook}" ]; then
-  # `git config --get` returns 1 when unset. Command substitution exit
-  # codes don't propagate `set -e` from a conditional context, but the
-  # explicit `|| true` makes the empty-when-unset intent unambiguous.
-  _hooks_path="$(git config --get core.hooksPath 2>/dev/null || true)"
-  # Unset core.hooksPath if set to ANY value (not just .husky). Any
-  # custom hooksPath redirects git away from .git/hooks/, which is
-  # where `lefthook install` writes its pre-commit shim — so a leftover
-  # config from any prior hook manager (husky, pre-commit framework,
-  # custom) makes the install silently no-op.
-  if [ -n "${_hooks_path}" ]; then
-    # Don't suppress unset failures with `|| true` — if the unset
-    # fails (e.g. unwritable .git/config), the custom redirect stays
-    # in place and the subsequent `lefthook install` is effectively
-    # a no-op. The user needs to know that, not have it silently
-    # swallowed.
-    if ! git config --unset core.hooksPath; then
-      echo "warning: failed to unset core.hooksPath (=${_hooks_path}); custom redirect still active — lefthook install will not take effect" >&2
-    fi
-  fi
+  # Root-lefthook.yml branch — release's own repo (hand-authored root gate).
   if ! "${_lefthook}" install >/dev/null; then
     echo "warning: lefthook install failed — pre-commit hook NOT wired" >&2
   fi
@@ -334,7 +307,7 @@ fi
 # Node (npm/yarn/pnpm). We deliberately do NOT guard on `! -d node_modules`:
 # the env-snapshot caches a node_modules paired with a previous branch's
 # lockfile, and a feature branch that bumps the lockfile (Playwright is
-# the canonical case) drifts silently. Re-installing when already in sync
+# the case) diverges silently. Re-installing when already in sync
 # is ~2s; chasing a stale lockfile bug is hours. Pay the two seconds.
 if [ -f package.json ]; then
   if [ -f package-lock.json ] && command -v npm >/dev/null 2>&1; then
