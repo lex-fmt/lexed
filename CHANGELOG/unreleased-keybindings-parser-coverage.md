@@ -1,0 +1,1 @@
+- Expand unit test coverage for keybindings shortcut parser (getShortcutVariants and parseShortcut edge cases)
