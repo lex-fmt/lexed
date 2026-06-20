@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+## 0.11.2 - 2026-06-20
+
+- Expand unit test coverage for keybindings shortcut parser (getShortcutVariants and parseShortcut edge cases)
+
 ## 0.11.1 - 2026-06-16
 
 - Build fails fast with an actionable message when fetched resources are missing, instead of failing deep inside `vite build` (#152)
