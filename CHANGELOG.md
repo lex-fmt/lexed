@@ -25,7 +25,6 @@ Smart paste: route pastes into .lex buffers through the language server's lex/pr
   (arthur-debert/release#201). Future entries go in
   CHANGELOG/unreleased-`<slug>`.md fragments via `bin/changelog add`.
 
-
 ## v0.10.7 (2026-05-24)
 
 ### Changed
@@ -42,7 +41,6 @@ Smart paste: route pastes into .lex buffers through the language server's lex/pr
 
 ## [0.10.6] - 2026-05-22
 
-
 ### Fixed
 
 - `scripts/smoke.sh`: bash 3.2-safe expansion of `SMOKE_PREFIX[@]` so
@@ -50,8 +48,8 @@ Smart paste: route pastes into .lex buffers through the language server's lex/pr
   error when the array is empty.
 - `scripts/gen-theme.py`: replaced the `✓` glyph with ASCII `OK` so
   Windows runners' cp1252 stdout doesn't fail the `theme:check` step.
-## [0.10.5] - 2026-05-22
 
+## [0.10.5] - 2026-05-22
 
 ### Changed
 
@@ -66,8 +64,8 @@ Smart paste: route pastes into .lex buffers through the language server's lex/pr
 
 - Removed the bespoke `dependabot-auto-merge.yml`; the canonical
   Dependabot auto-merge policy is delivered via repo ruleset.
-## [0.10.4] - 2026-05-21
 
+## [0.10.4] - 2026-05-21
 
 ### Changed
 
@@ -118,7 +116,7 @@ Smart paste: route pastes into .lex buffers through the language server's lex/pr
   file and replaces the host range with
   `:: lex.include src="…" ::`. All path validation
   (URL-scheme / root-escape / existing-target / missing-parent-dir)
-  + indent-shifting + parse pre-check happens server-side in
+  - indent-shifting + parse pre-check happens server-side in
   [lex v0.12.0](https://github.com/lex-fmt/lex/releases/tag/v0.12.0);
   this PR adds the editor-side wiring: `extractToInclude` feature,
   `ExtractToIncludeModal` component, `editor.extractToInclude`

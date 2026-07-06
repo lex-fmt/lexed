@@ -21,6 +21,7 @@ quotes, tabWidth=2). Run after editing the canonical file. The npm
 `theme:check` script runs `gen-theme.py --check`; pre-commit and
 CI fail on stale output.
 """
+
 from __future__ import annotations
 
 import json

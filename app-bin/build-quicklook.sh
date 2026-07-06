@@ -2,8 +2,8 @@
 set -euo pipefail
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
-  echo "Skipping QuickLook build (macOS only)"
-  exit 0
+	echo "Skipping QuickLook build (macOS only)"
+	exit 0
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -18,14 +18,14 @@ xcodebuild -project "$PROJECT_PATH" -scheme "$SCHEME" -configuration "$CONFIGURA
 
 LATEST_BUILD_DIR="$(find "$DERIVED_DATA" -maxdepth 5 -type d -path '*/LexQuickLook-*/Build/Products/Release' -exec stat -f "%m %N" {} + 2>/dev/null | sort -rn | head -n 1 | cut -d' ' -f2- || true)"
 if [[ -z "$LATEST_BUILD_DIR" ]]; then
-  echo "Unable to locate LexQuickLook build artifacts in DerivedData" >&2
-  exit 1
+	echo "Unable to locate LexQuickLook build artifacts in DerivedData" >&2
+	exit 1
 fi
 SOURCE_APPEX="$LATEST_BUILD_DIR/LexQuickLook.appex"
 
 if [[ ! -d "$SOURCE_APPEX" ]]; then
-  echo "QuickLook appex not found at $SOURCE_APPEX" >&2
-  exit 1
+	echo "QuickLook appex not found at $SOURCE_APPEX" >&2
+	exit 1
 fi
 
 mkdir -p "$OUTPUT_DIR"
