@@ -12,10 +12,10 @@ Testing table and formatting
   3. Milk
   c. Egg
 
-    Bellow a verbatim block with label doc.table that should be automatically formatted.
+    Bellow a verbatim block with label table that should be automatically formatted.
   The Table:
 | Markup Language | Great |
 | --------------- | ----- |
 | Markdown | No    |
 | Lex     | Yes    |
-  :: doc.table ::
+  :: table ::
