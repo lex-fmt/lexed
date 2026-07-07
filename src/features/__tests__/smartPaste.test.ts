@@ -6,8 +6,8 @@ const sendRequest = vi.fn()
 vi.mock('@lex-fmt/lex-buffer', () => ({
   lspClient: {
     sendRequest: (...args: unknown[]) => sendRequest(...args),
-    hasExperimentalCapability: () => true,
-  },
+    hasExperimentalCapability: () => true
+  }
 }))
 
 // `monaco-editor` is a heavy ESM module; stub the surface `editing.ts` uses
@@ -28,7 +28,7 @@ vi.mock('monaco-editor', () => ({
       public positionLineNumber: number,
       public positionColumn: number
     ) {}
-  },
+  }
 }))
 
 import { applySmartPaste } from '../editing'
@@ -56,7 +56,7 @@ function makeEditor() {
     pushUndoStop: () => {
       undoStops += 1
       return true
-    },
+    }
   }
   return {
     editor: editor as unknown as Parameters<typeof applySmartPaste>[0],
@@ -64,7 +64,7 @@ function makeEditor() {
     undoStops: () => undoStops,
     swapModel: () => {
       model = { uri: { toString: () => 'file:///other.lex' } }
-    },
+    }
   }
 }
 
@@ -85,7 +85,7 @@ describe('applySmartPaste', () => {
       textDocument: { uri: 'file:///doc.lex' },
       // Monaco 1-indexed (2,5) → LSP 0-indexed (1,4)
       range: { start: { line: 1, character: 4 }, end: { line: 1, character: 4 } },
-      pastedText: 'pasted',
+      pastedText: 'pasted'
     })
   })
 

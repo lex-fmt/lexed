@@ -15,7 +15,7 @@ export const createPreviewTab = (sourceFile: string, content: string): PreviewTa
     name: `Preview: ${fileName}`,
     type: 'preview',
     previewContent: content,
-    sourceFile,
+    sourceFile
   }
 }
 
@@ -34,7 +34,7 @@ export function placePreviewTab({
   previewTab,
   setPanes,
   setPaneRows,
-  setActivePaneId,
+  setActivePaneId
 }: PreviewWorkspaceOptions) {
   if (panes.length === 1) {
     const newPane = createEmptyPane()
@@ -72,13 +72,13 @@ export function placePreviewTab({
         return {
           ...pane,
           tabs: pane.tabs.map((tab) => (tab.id === previewTab.id ? previewTab : tab)),
-          activeTabId: previewTab.id,
+          activeTabId: previewTab.id
         }
       }
       return {
         ...pane,
         tabs: [...pane.tabs, previewTab],
-        activeTabId: previewTab.id,
+        activeTabId: previewTab.id
       }
     })
   )

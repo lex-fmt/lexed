@@ -4,7 +4,7 @@ import {
   focusEditor,
   expectNoCompletionItem,
   expectCompletionItem,
-  openWorkspace,
+  openWorkspace
 } from './lib'
 import { openFixture } from './helpers'
 import path from 'node:path'
@@ -26,7 +26,7 @@ test.describe('Path completion', () => {
     const workspace = await openWorkspace(page, [
       { relativePath: 'notes/entry.lex', content: '# Entry File\n\nThis is a test document.\n' },
       { relativePath: 'assets/image.png', content: 'fake-image' },
-      { relativePath: '.gitignore', content: '' },
+      { relativePath: '.gitignore', content: '' }
     ])
 
     try {

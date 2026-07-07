@@ -18,7 +18,7 @@ type CompletionFilter = {
 function matchesFilter(item: CompletionItem, filter: CompletionFilter): boolean {
   for (const [key, expected] of Object.entries(filter) as [
     keyof CompletionFilter,
-    string | RegExp,
+    string | RegExp
   ][]) {
     const actual = item[key]
     if (actual === undefined) return false

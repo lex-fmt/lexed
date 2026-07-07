@@ -13,5 +13,5 @@ export const SPELLCHECK_LANGUAGES: SpellcheckLanguageOption[] = [
   { value: 'it_IT', label: 'Italian' },
   { value: 'ru_RU', label: 'Russian' },
   { value: 'nl_NL', label: 'Dutch' },
-  { value: 'pl_PL', label: 'Polish' },
+  { value: 'pl_PL', label: 'Polish' }
 ]

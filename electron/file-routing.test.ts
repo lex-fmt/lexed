@@ -6,7 +6,7 @@ import {
   routeOpenFile,
   updateRecentRoots,
   type OpenWindowState,
-  type RecentRoot,
+  type RecentRoot
 } from './file-routing'
 
 describe('isCaseSensitiveFs', () => {
@@ -114,7 +114,7 @@ describe('findBestRoot', () => {
       [
         { root: '/project', score: 10 },
         { root: '/project', score: 100 },
-        { root: '/project', score: 5 },
+        { root: '/project', score: 5 }
       ],
       (c) => c.root,
       (c) => c.score,
@@ -143,7 +143,7 @@ describe('routeOpenFile', () => {
       filePath: '/docs/a.lex',
       openWindows: [],
       recentRoots: empty,
-      platform: 'linux',
+      platform: 'linux'
     })
     expect(route).toEqual({ kind: 'newWindow', filePath: '/docs/a.lex' })
   })
@@ -151,13 +151,13 @@ describe('routeOpenFile', () => {
   it('picks an open window whose root contains the file', () => {
     const windows: OpenWindowState[] = [
       { windowId: 1, root: '/elsewhere' },
-      { windowId: 2, root: '/docs' },
+      { windowId: 2, root: '/docs' }
     ]
     const route = routeOpenFile({
       filePath: '/docs/a.lex',
       openWindows: windows,
       recentRoots: empty,
-      platform: 'linux',
+      platform: 'linux'
     })
     expect(route).toEqual({ kind: 'existingWindow', windowId: 2, filePath: '/docs/a.lex' })
   })
@@ -165,13 +165,13 @@ describe('routeOpenFile', () => {
   it('prefers the longest matching open root', () => {
     const windows: OpenWindowState[] = [
       { windowId: 1, root: '/docs' },
-      { windowId: 2, root: '/docs/sub' },
+      { windowId: 2, root: '/docs/sub' }
     ]
     const route = routeOpenFile({
       filePath: '/docs/sub/a.lex',
       openWindows: windows,
       recentRoots: empty,
-      platform: 'linux',
+      platform: 'linux'
     })
     expect(route).toMatchObject({ kind: 'existingWindow', windowId: 2 })
   })
@@ -179,13 +179,13 @@ describe('routeOpenFile', () => {
   it('among equally-specific open roots, prefers the focused window', () => {
     const windows: OpenWindowState[] = [
       { windowId: 1, root: '/docs', lastFocusedAt: 10 },
-      { windowId: 2, root: '/docs', lastFocusedAt: 5, isFocused: true },
+      { windowId: 2, root: '/docs', lastFocusedAt: 5, isFocused: true }
     ]
     const route = routeOpenFile({
       filePath: '/docs/a.lex',
       openWindows: windows,
       recentRoots: empty,
-      platform: 'linux',
+      platform: 'linux'
     })
     expect(route).toMatchObject({ kind: 'existingWindow', windowId: 2 })
   })
@@ -194,13 +194,13 @@ describe('routeOpenFile', () => {
     const windows: OpenWindowState[] = [
       { windowId: 1, root: '/docs', lastFocusedAt: 10 },
       { windowId: 2, root: '/docs', lastFocusedAt: 50 },
-      { windowId: 3, root: '/docs', lastFocusedAt: 5 },
+      { windowId: 3, root: '/docs', lastFocusedAt: 5 }
     ]
     const route = routeOpenFile({
       filePath: '/docs/a.lex',
       openWindows: windows,
       recentRoots: empty,
-      platform: 'linux',
+      platform: 'linux'
     })
     expect(route).toMatchObject({ kind: 'existingWindow', windowId: 2 })
   })
@@ -209,31 +209,31 @@ describe('routeOpenFile', () => {
     const windows: OpenWindowState[] = [{ windowId: 1, root: '/unrelated' }]
     const recent: RecentRoot[] = [
       { path: '/projects/old', lastUsedAt: 1 },
-      { path: '/projects/notes', lastUsedAt: 2 },
+      { path: '/projects/notes', lastUsedAt: 2 }
     ]
     const route = routeOpenFile({
       filePath: '/projects/notes/a.lex',
       openWindows: windows,
       recentRoots: recent,
-      platform: 'linux',
+      platform: 'linux'
     })
     expect(route).toEqual({
       kind: 'newWindowWithRoot',
       root: '/projects/notes',
-      filePath: '/projects/notes/a.lex',
+      filePath: '/projects/notes/a.lex'
     })
   })
 
   it('among equally-specific recent roots, picks the most recently used', () => {
     const recent: RecentRoot[] = [
       { path: '/projects/notes', lastUsedAt: 10 },
-      { path: '/projects/notes', lastUsedAt: 100 },
+      { path: '/projects/notes', lastUsedAt: 100 }
     ]
     const route = routeOpenFile({
       filePath: '/projects/notes/a.lex',
       openWindows: [],
       recentRoots: recent,
-      platform: 'linux',
+      platform: 'linux'
     })
     // newWindowWithRoot is the right kind since no windows are open
     expect(route.kind).toBe('newWindowWithRoot')
@@ -246,7 +246,7 @@ describe('routeOpenFile', () => {
       filePath: '/projects/notes/a.lex',
       openWindows: windows,
       recentRoots: recent,
-      platform: 'linux',
+      platform: 'linux'
     })
     expect(route).toMatchObject({ kind: 'existingWindow', windowId: 1 })
   })
@@ -254,13 +254,13 @@ describe('routeOpenFile', () => {
   it('falls back to focused open window when no root matches', () => {
     const windows: OpenWindowState[] = [
       { windowId: 1, root: '/projects/a', lastFocusedAt: 10 },
-      { windowId: 2, root: '/projects/b', lastFocusedAt: 50, isFocused: true },
+      { windowId: 2, root: '/projects/b', lastFocusedAt: 50, isFocused: true }
     ]
     const route = routeOpenFile({
       filePath: '/tmp/orphan.lex',
       openWindows: windows,
       recentRoots: empty,
-      platform: 'linux',
+      platform: 'linux'
     })
     expect(route).toMatchObject({ kind: 'existingWindow', windowId: 2 })
   })
@@ -268,13 +268,13 @@ describe('routeOpenFile', () => {
   it('falls back to most-recently-focused open window when no focus flag is set', () => {
     const windows: OpenWindowState[] = [
       { windowId: 1, root: '/projects/a', lastFocusedAt: 10 },
-      { windowId: 2, root: '/projects/b', lastFocusedAt: 50 },
+      { windowId: 2, root: '/projects/b', lastFocusedAt: 50 }
     ]
     const route = routeOpenFile({
       filePath: '/tmp/orphan.lex',
       openWindows: windows,
       recentRoots: empty,
-      platform: 'linux',
+      platform: 'linux'
     })
     expect(route).toMatchObject({ kind: 'existingWindow', windowId: 2 })
   })
@@ -285,7 +285,7 @@ describe('routeOpenFile', () => {
       filePath: '/tmp/orphan.lex',
       openWindows: windows,
       recentRoots: empty,
-      platform: 'linux',
+      platform: 'linux'
     })
     expect(route).toMatchObject({ kind: 'existingWindow', windowId: 1 })
   })
@@ -296,7 +296,7 @@ describe('routeOpenFile', () => {
       filePath: '/users/alice/docs/a.lex',
       openWindows: windows,
       recentRoots: empty,
-      platform: 'darwin',
+      platform: 'darwin'
     })
     expect(route).toMatchObject({ kind: 'existingWindow', windowId: 1 })
   })
@@ -317,7 +317,7 @@ describe('updateRecentRoots', () => {
   it('keeps list sorted by lastUsedAt descending', () => {
     const existing: RecentRoot[] = [
       { path: '/projects/a', lastUsedAt: 10 },
-      { path: '/projects/b', lastUsedAt: 30 },
+      { path: '/projects/b', lastUsedAt: 30 }
     ]
     const result = updateRecentRoots(existing, '/projects/c', 20, 20, 'linux')
     expect(result.map((r) => r.path)).toEqual(['/projects/b', '/projects/c', '/projects/a'])
@@ -326,7 +326,7 @@ describe('updateRecentRoots', () => {
   it('caps the list to `max` entries', () => {
     const existing: RecentRoot[] = Array.from({ length: 5 }, (_, i) => ({
       path: `/p${i}`,
-      lastUsedAt: i,
+      lastUsedAt: i
     }))
     const result = updateRecentRoots(existing, '/new', 100, 3, 'linux')
     expect(result).toHaveLength(3)

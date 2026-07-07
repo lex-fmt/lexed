@@ -42,7 +42,7 @@ import type {
   FormatterSettings,
   SpellcheckSettings,
   PaneLayout,
-  Unsubscribe,
+  Unsubscribe
 } from '@lex/shared'
 import { IpcMessageReader, IpcMessageWriter } from '@/lsp/ipc-connection'
 
@@ -81,7 +81,7 @@ const fileSystemAdapter: FileSystemAdapter = {
 
   async showInFolder(path: string): Promise<void> {
     await window.ipcRenderer.showItemInFolder(path)
-  },
+  }
 }
 
 // ============================================================================
@@ -95,7 +95,7 @@ const themeAdapter: ThemeAdapter = {
 
   onChange(callback: (theme: ThemeMode) => void): Unsubscribe {
     return window.ipcRenderer.onNativeThemeChanged(callback)
-  },
+  }
 }
 
 // ============================================================================
@@ -129,7 +129,7 @@ const settingsAdapter: SettingsAdapter = {
 
   async getInitialFolder(): Promise<string | null> {
     return window.ipcRenderer.getInitialFolder()
-  },
+  }
 }
 
 // ============================================================================
@@ -140,13 +140,13 @@ const lspAdapter: LspAdapter = {
   createTransport(): LspTransport {
     return {
       reader: new IpcMessageReader(window.ipcRenderer),
-      writer: new IpcMessageWriter(window.ipcRenderer),
+      writer: new IpcMessageWriter(window.ipcRenderer)
     }
   },
 
   onStatus(callback: (status: LspStatus) => void): Unsubscribe {
     return window.ipcRenderer.onLspStatus(callback)
-  },
+  }
 }
 
 // ============================================================================
@@ -160,7 +160,7 @@ const persistenceAdapter: PersistenceAdapter = {
 
   async saveLayout(layout: PaneLayout): Promise<void> {
     await window.ipcRenderer.setOpenTabs(layout.panes, layout.rows, layout.activePaneId)
-  },
+  }
 }
 
 // ============================================================================
@@ -223,7 +223,7 @@ const commandsAdapter: CommandsAdapter = {
 
   updateMenuState(state: { hasOpenFile: boolean; isLexFile: boolean }): void {
     window.ipcRenderer.updateMenuState(state)
-  },
+  }
 }
 
 // ============================================================================
@@ -240,7 +240,7 @@ const toastAdapter: ToastAdapter = {
 
   onShow(callback: (type: 'success' | 'error' | 'info', message: string) => void): Unsubscribe {
     return window.ipcRenderer.onShowToast(callback)
-  },
+  }
 }
 
 // ============================================================================
@@ -261,5 +261,5 @@ export const electronAdapter: PlatformAdapter = {
   lsp: lspAdapter,
   persistence: persistenceAdapter,
   commands: commandsAdapter,
-  toast: toastAdapter,
+  toast: toastAdapter
 }

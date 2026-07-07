@@ -8,7 +8,7 @@ const paneFocusDefinitions: KeybindingDefinition[] = Array.from({ length: 9 }).m
     description: 'Focus a specific editor pane based on its visual order',
     category: 'Workspace',
     contexts: ['workspace'],
-    shortcut: `cmd+${position}`,
+    shortcut: `cmd+${position}`
   }
 })
 
@@ -19,7 +19,7 @@ export const KEYBINDING_DEFINITIONS: KeybindingDefinition[] = [
     description: 'Move focus to the next tab (cycles across panes)',
     category: 'Navigation',
     contexts: ['workspace'],
-    shortcut: 'cmd+shift+]',
+    shortcut: 'cmd+shift+]'
   },
   {
     id: 'workspace.tab.previous',
@@ -27,7 +27,7 @@ export const KEYBINDING_DEFINITIONS: KeybindingDefinition[] = [
     description: 'Move focus to the previous tab (cycles across panes)',
     category: 'Navigation',
     contexts: ['workspace'],
-    shortcut: 'cmd+shift+[',
+    shortcut: 'cmd+shift+['
   },
   ...paneFocusDefinitions,
   {
@@ -36,7 +36,7 @@ export const KEYBINDING_DEFINITIONS: KeybindingDefinition[] = [
     description: 'Split the active pane into a new horizontal row',
     category: 'Workspace',
     contexts: ['workspace'],
-    shortcut: 'cmd+shift+h',
+    shortcut: 'cmd+shift+h'
   },
   {
     id: 'workspace.pane.split.vertical',
@@ -44,7 +44,7 @@ export const KEYBINDING_DEFINITIONS: KeybindingDefinition[] = [
     description: 'Split the active pane side-by-side',
     category: 'Workspace',
     contexts: ['workspace'],
-    shortcut: 'cmd+shift+v',
+    shortcut: 'cmd+shift+v'
   },
   {
     id: 'editor.showReplace',
@@ -52,7 +52,7 @@ export const KEYBINDING_DEFINITIONS: KeybindingDefinition[] = [
     description: 'Open the replace UI in the active editor',
     category: 'Editor',
     contexts: ['editor'],
-    shortcut: 'cmd+r',
+    shortcut: 'cmd+r'
   },
   {
     id: 'commandPalette.show',
@@ -60,7 +60,7 @@ export const KEYBINDING_DEFINITIONS: KeybindingDefinition[] = [
     description: 'Toggle the LexEd command palette',
     category: 'General',
     contexts: ['global', 'modal'],
-    shortcut: 'cmd+k',
+    shortcut: 'cmd+k'
   },
   {
     id: 'workspace.shortcuts.show',
@@ -68,7 +68,7 @@ export const KEYBINDING_DEFINITIONS: KeybindingDefinition[] = [
     description: 'Display all available keyboard shortcuts',
     category: 'General',
     contexts: ['global', 'modal'],
-    shortcut: 'cmd+shift+/',
+    shortcut: 'cmd+shift+/'
   },
   {
     id: 'file.copyPath',
@@ -76,7 +76,7 @@ export const KEYBINDING_DEFINITIONS: KeybindingDefinition[] = [
     description: 'Copy the absolute path of the current file to clipboard',
     category: 'File',
     contexts: ['editor'],
-    shortcut: 'cmd+p',
+    shortcut: 'cmd+p'
   },
   {
     id: 'file.copyRelativePath',
@@ -84,7 +84,7 @@ export const KEYBINDING_DEFINITIONS: KeybindingDefinition[] = [
     description: 'Copy the relative path of the current file to clipboard',
     category: 'File',
     contexts: ['editor'],
-    shortcut: 'cmd+shift+p',
+    shortcut: 'cmd+shift+p'
   },
   {
     id: 'editor.extractToInclude',
@@ -93,6 +93,6 @@ export const KEYBINDING_DEFINITIONS: KeybindingDefinition[] = [
       'Split the current selection into a new include file referenced via :: lex.include ::',
     category: 'Editor',
     contexts: ['editor'],
-    shortcut: 'cmd+shift+e',
-  },
+    shortcut: 'cmd+shift+e'
+  }
 ]

@@ -28,7 +28,7 @@ export function useLexTestBridge({
   panesRef,
   panes,
   openFileInPane,
-  setRootPath,
+  setRootPath
 }: UseLexTestBridgeOptions) {
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -107,8 +107,8 @@ export function useLexTestBridge({
             endLineNumber: 1,
             endColumn: lastColumn,
             message: 'Mock diagnostic for testing',
-            source: 'lex-test',
-          },
+            source: 'lex-test'
+          }
         ])
         return true
       },
@@ -195,7 +195,7 @@ export function useLexTestBridge({
         const model = editorInstance?.getModel?.()
         if (!model) return null
         return lspClient.sendRequest('textDocument/foldingRange', {
-          textDocument: { uri: model.uri.toString() },
+          textDocument: { uri: model.uri.toString() }
         })
       },
       requestDocumentLinks: async () => {
@@ -203,7 +203,7 @@ export function useLexTestBridge({
         const model = editorInstance?.getModel?.()
         if (!model) return null
         return lspClient.sendRequest('textDocument/documentLink', {
-          textDocument: { uri: model.uri.toString() },
+          textDocument: { uri: model.uri.toString() }
         })
       },
       requestReferences: async (line: number, column: number) => {
@@ -213,7 +213,7 @@ export function useLexTestBridge({
         return lspClient.sendRequest('textDocument/references', {
           textDocument: { uri: model.uri.toString() },
           position: { line: line - 1, character: column - 1 },
-          context: { includeDeclaration: true },
+          context: { includeDeclaration: true }
         })
       },
       requestHover: async (line: number, column: number) => {
@@ -222,7 +222,7 @@ export function useLexTestBridge({
         if (!model) return null
         return lspClient.sendRequest('textDocument/hover', {
           textDocument: { uri: model.uri.toString() },
-          position: { line: line - 1, character: column - 1 },
+          position: { line: line - 1, character: column - 1 }
         })
       },
       requestCodeActions: async (
@@ -244,15 +244,15 @@ export function useLexTestBridge({
         if (!model) return null
         const range = diagnostic?.range ?? {
           start: { line: line - 1, character: column - 1 },
-          end: { line: line - 1, character: column - 1 },
+          end: { line: line - 1, character: column - 1 }
         }
         return lspClient.sendRequest('textDocument/codeAction', {
           textDocument: { uri: model.uri.toString() },
           range,
           context: {
             diagnostics: diagnostic ? [diagnostic] : [],
-            only: ['quickfix'],
-          },
+            only: ['quickfix']
+          }
         })
       },
       // Append text to the active model via `executeEdits`, mirroring
@@ -270,8 +270,8 @@ export function useLexTestBridge({
           {
             range: new monaco.Range(lastLine, lastColumn, lastLine, lastColumn),
             text,
-            forceMoveMarkers: true,
-          },
+            forceMoveMarkers: true
+          }
         ])
         return insertedFirstLine
       },
@@ -312,8 +312,8 @@ export function useLexTestBridge({
                   e.range.end.line + 1,
                   e.range.end.character + 1
                 ),
-                text: e.newText,
-              },
+                text: e.newText
+              }
             ])
           }
         }
@@ -362,7 +362,7 @@ export function useLexTestBridge({
         if (!highlighter) return false
         await highlighter.refresh()
         return true
-      },
+      }
     }
     window.__e2e.bridge = api
     return () => {

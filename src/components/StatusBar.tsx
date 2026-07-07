@@ -27,7 +27,7 @@ export function StatusBar({ editor, exportStatus, onVimStatusNodeChange }: Statu
     line: 1,
     column: 1,
     selected: 0,
-    selectedLines: 0,
+    selectedLines: 0
   })
   const { settings, updateSpellcheckSettings, updateEditorSettings } = useSettings()
   const [isSpellMenuOpen, setIsSpellMenuOpen] = useState(false)
@@ -65,14 +65,14 @@ export function StatusBar({ editor, exportStatus, onVimStatusNodeChange }: Statu
           line: position.lineNumber,
           column: position.column,
           selected,
-          selectedLines,
+          selectedLines
         })
       }
     }
 
     const disposables = [
       editor.onDidChangeCursorPosition(updateCursor),
-      editor.onDidChangeCursorSelection(updateCursor),
+      editor.onDidChangeCursorSelection(updateCursor)
     ]
 
     updateCursor()

@@ -8,7 +8,7 @@ export async function insertAssetReference(editor: monaco.editor.IStandaloneCode
   // Request file selection from main process
   const filePath = await window.ipcRenderer.invoke<string | null>('dialog-show-open-dialog', {
     properties: ['openFile'],
-    title: 'Select asset to insert',
+    title: 'Select asset to insert'
   })
 
   if (!filePath) return
@@ -22,7 +22,7 @@ export async function insertAssetReference(editor: monaco.editor.IStandaloneCode
   const relativePath = await window.ipcRenderer.invoke<string>('path-relative', docPath, filePath)
 
   await commands.InsertAssetCommand.execute(adapter, {
-    path: relativePath,
+    path: relativePath
   })
 }
 
@@ -31,7 +31,7 @@ export async function insertVerbatimBlock(editor: monaco.editor.IStandaloneCodeE
 
   const filePath = await window.ipcRenderer.invoke<string | null>('dialog-show-open-dialog', {
     properties: ['openFile'],
-    title: 'Select file to embed as verbatim block',
+    title: 'Select file to embed as verbatim block'
   })
 
   if (!filePath) return
@@ -50,6 +50,6 @@ export async function insertVerbatimBlock(editor: monaco.editor.IStandaloneCodeE
 
   await commands.InsertVerbatimCommand.execute(adapter, {
     content: content.trim(),
-    language,
+    language
   })
 }

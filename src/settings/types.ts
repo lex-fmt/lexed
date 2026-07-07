@@ -26,7 +26,7 @@ export interface FileTreeSettings {
 }
 
 export const defaultFileTreeSettings: FileTreeSettings = {
-  showHiddenFiles: false,
+  showHiddenFiles: false
 }
 
 export type KeybindingPlatform = 'mac' | 'windows' | 'linux'
@@ -53,7 +53,7 @@ export interface AppSettings {
 export const defaultEditorSettings: EditorSettings = {
   showRuler: false,
   rulerWidth: 100,
-  vimMode: false,
+  vimMode: false
 }
 
 export const defaultFormatterSettings: FormatterSettings = {
@@ -65,16 +65,16 @@ export const defaultFormatterSettings: FormatterSettings = {
   indentString: '    ',
   preserveTrailingBlanks: false,
   normalizeVerbatimMarkers: true,
-  formatOnSave: false,
+  formatOnSave: false
 }
 
 export const defaultSpellcheckSettings: SpellcheckSettings = {
   enabled: true,
-  language: 'en_US',
+  language: 'en_US'
 }
 
 export const defaultKeybindingSettings: KeybindingSettings = {
-  overrides: {},
+  overrides: {}
 }
 
 export const defaultAppSettings: AppSettings = {
@@ -83,5 +83,5 @@ export const defaultAppSettings: AppSettings = {
   spellcheck: defaultSpellcheckSettings,
   keybindings: defaultKeybindingSettings,
   fileTree: defaultFileTreeSettings,
-  lastFolder: undefined,
+  lastFolder: undefined
 }

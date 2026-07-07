@@ -35,7 +35,7 @@ export function TrustPromptModal() {
         // Same fail-closed behaviour as click-outside.
         trustPromptCoordinator.resolveCurrent({
           decision: 'denied',
-          reason: `Trust prompt for namespace \`${ns}\` was dismissed without a decision.`,
+          reason: `Trust prompt for namespace \`${ns}\` was dismissed without a decision.`
         })
       }
     }
@@ -52,7 +52,7 @@ export function TrustPromptModal() {
   const handleDeny = () => {
     trustPromptCoordinator.resolveCurrent({
       decision: 'denied',
-      reason: `User denied trust for namespace \`${params.namespace}\` in this workspace.`,
+      reason: `User denied trust for namespace \`${params.namespace}\` in this workspace.`
     })
   }
   const handleDismiss = () => {
@@ -61,7 +61,7 @@ export function TrustPromptModal() {
     // above, which routes to the same outcome.
     trustPromptCoordinator.resolveCurrent({
       decision: 'denied',
-      reason: `Trust prompt for namespace \`${params.namespace}\` was dismissed without a decision.`,
+      reason: `Trust prompt for namespace \`${params.namespace}\` was dismissed without a decision.`
     })
   }
 

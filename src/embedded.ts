@@ -26,7 +26,7 @@ import type { SemanticTokens } from '@lex/monaco-inline-injections'
 const wasmUrls = import.meta.glob<string>('../resources/embedded-grammars/*/parser.wasm', {
   eager: true,
   query: '?url',
-  import: 'default',
+  import: 'default'
 })
 const highlightSources = import.meta.glob<string>(
   '../resources/embedded-grammars/*/highlights.scm',
@@ -74,7 +74,7 @@ const LEGEND_TYPES = [
   'struct',
   'typeParameter',
   'namespace',
-  'operator',
+  'operator'
 ] as const
 
 function langFromPath(p: string): string | null {
@@ -238,6 +238,6 @@ export function createEmbeddedTokenizer(): EmbeddedTokenizer {
       loaded.clear()
       inflight.clear()
       failed.clear()
-    },
+    }
   }
 }

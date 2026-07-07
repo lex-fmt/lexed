@@ -56,14 +56,14 @@ export function mergeBounds(
       y: bounds.isMaximized ? undefined : bounds.y,
       width: bounds.width,
       height: bounds.height,
-      isMaximized: bounds.isMaximized,
+      isMaximized: bounds.isMaximized
     },
     {
       x: bounds.x,
       y: bounds.y,
       width: bounds.width,
       height: bounds.height,
-      isMaximized: bounds.isMaximized,
+      isMaximized: bounds.isMaximized
     }
   )
 }
@@ -81,7 +81,7 @@ export function setWindowFolder(
     {
       width: defaultBounds.width,
       height: defaultBounds.height,
-      lastFolder: folderPath,
+      lastFolder: folderPath
     }
   )
 }
@@ -103,7 +103,7 @@ export function setWindowPaneLayout(
       height: defaultBounds.height,
       paneLayout,
       paneRows,
-      activePaneId,
+      activePaneId
     }
   )
 }
@@ -134,11 +134,11 @@ export function appendFilesToWindowPaneLayout(state: WindowState, files: string[
         {
           id: paneId,
           tabs: dedupePreservingOrder(files),
-          activeTab: files[files.length - 1] ?? null,
-        },
+          activeTab: files[files.length - 1] ?? null
+        }
       ],
       paneRows: [{ id: rowId, paneIds: [paneId] }],
-      activePaneId: paneId,
+      activePaneId: paneId
     }
   }
 
@@ -169,7 +169,7 @@ export function appendFilesToWindowPaneLayout(state: WindowState, files: string[
     ...state,
     paneLayout: newPanes,
     paneRows: newRows,
-    activePaneId: targetPaneId,
+    activePaneId: targetPaneId
   }
 }
 

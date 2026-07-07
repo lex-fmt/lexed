@@ -3,7 +3,7 @@ import {
   AbstractMessageWriter,
   Message,
   Disposable,
-  DataCallback,
+  DataCallback
 } from 'vscode-jsonrpc'
 
 interface IpcRenderer {

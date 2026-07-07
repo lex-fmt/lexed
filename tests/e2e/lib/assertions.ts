@@ -43,7 +43,7 @@ export async function expectMarkers(page: Page, expected: MarkerMatch[], { timeo
         message: m.message,
         severity: m.severity,
         startLineNumber: m.startLineNumber,
-        source: m.source,
+        source: m.source
       }))
     })
 
@@ -89,7 +89,7 @@ export async function expectFormattingRequest(
   { timeout = 10000 } = {}
 ) {
   await page.waitForFunction(() => window.__e2e.bridge.getLastFormattingRequest?.() != null, null, {
-    timeout,
+    timeout
   })
   const request = (await page.evaluate(() => window.__e2e.bridge.getLastFormattingRequest?.())) as {
     type: 'document' | 'range'
@@ -117,21 +117,21 @@ export async function expectEditorValue(
     await expect
       .poll(() => page.evaluate(() => window.__e2e.bridge?.getActiveEditorValue() ?? ''), {
         timeout,
-        message: 'Waiting for editor value to match pattern',
+        message: 'Waiting for editor value to match pattern'
       })
       .toMatch(expected)
   } else if (exact) {
     await expect
       .poll(() => page.evaluate(() => window.__e2e.bridge?.getActiveEditorValue() ?? ''), {
         timeout,
-        message: 'Waiting for exact editor value',
+        message: 'Waiting for exact editor value'
       })
       .toBe(expected)
   } else {
     await expect
       .poll(() => page.evaluate(() => window.__e2e.bridge?.getActiveEditorValue() ?? ''), {
         timeout,
-        message: 'Waiting for editor value to contain text',
+        message: 'Waiting for editor value to contain text'
       })
       .toContain(expected)
   }

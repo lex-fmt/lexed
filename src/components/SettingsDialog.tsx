@@ -19,7 +19,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
   const tabs = [
     { id: 'ui' as const, label: 'UI' },
     { id: 'formatter' as const, label: 'Formatter' },
-    { id: 'spellcheck' as const, label: 'Spellcheck' },
+    { id: 'spellcheck' as const, label: 'Spellcheck' }
   ]
   const indentSpaces = Math.max(1, localFormatterSettings.indentString.length || 4)
 
@@ -68,7 +68,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
     await Promise.all([
       updateEditorSettings(localEditorSettings),
       updateFormatterSettings(localFormatterSettings),
-      updateSpellcheckSettings(localSpellcheckSettings),
+      updateSpellcheckSettings(localSpellcheckSettings)
     ])
     onClose()
   }
@@ -144,7 +144,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                       onChange={(e) =>
                         setLocalEditorSettings((prev) => ({
                           ...prev,
-                          rulerWidth: parseInt(e.target.value) || 0,
+                          rulerWidth: parseInt(e.target.value) || 0
                         }))
                       }
                       className="w-20 px-2 py-1 text-sm bg-input border border-border rounded focus:outline-none focus:border-primary disabled:opacity-50"
@@ -192,7 +192,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                         onChange={(e) =>
                           setLocalFormatterSettings((prev) => ({
                             ...prev,
-                            sessionBlankLinesBefore: Math.max(1, parseInt(e.target.value) || 1),
+                            sessionBlankLinesBefore: Math.max(1, parseInt(e.target.value) || 1)
                           }))
                         }
                         className="mt-1 w-full px-2 py-1 text-sm bg-input border border-border rounded focus:outline-none focus:border-primary"
@@ -213,7 +213,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                         onChange={(e) =>
                           setLocalFormatterSettings((prev) => ({
                             ...prev,
-                            sessionBlankLinesAfter: Math.max(1, parseInt(e.target.value) || 1),
+                            sessionBlankLinesAfter: Math.max(1, parseInt(e.target.value) || 1)
                           }))
                         }
                         className="mt-1 w-full px-2 py-1 text-sm bg-input border border-border rounded focus:outline-none focus:border-primary"
@@ -234,7 +234,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                         onChange={(e) =>
                           setLocalFormatterSettings((prev) => ({
                             ...prev,
-                            maxBlankLines: Math.max(1, parseInt(e.target.value) || 1),
+                            maxBlankLines: Math.max(1, parseInt(e.target.value) || 1)
                           }))
                         }
                         className="mt-1 w-full px-2 py-1 text-sm bg-input border border-border rounded focus:outline-none focus:border-primary"
@@ -256,7 +256,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                           const next = Math.max(1, parseInt(e.target.value) || 1)
                           setLocalFormatterSettings((prev) => ({
                             ...prev,
-                            indentString: ' '.repeat(next),
+                            indentString: ' '.repeat(next)
                           }))
                         }}
                         className="mt-1 w-full px-2 py-1 text-sm bg-input border border-border rounded focus:outline-none focus:border-primary"
@@ -285,7 +285,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                       onChange={(e) =>
                         setLocalFormatterSettings((prev) => ({
                           ...prev,
-                          unorderedSeqMarker: e.target.value.slice(0, 1),
+                          unorderedSeqMarker: e.target.value.slice(0, 1)
                         }))
                       }
                       className="mt-1 w-full px-2 py-1 text-sm bg-input border border-border rounded focus:outline-none focus:border-primary"
@@ -301,7 +301,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                         onChange={(e) =>
                           setLocalFormatterSettings((prev) => ({
                             ...prev,
-                            normalizeSeqMarkers: e.target.checked,
+                            normalizeSeqMarkers: e.target.checked
                           }))
                         }
                         className="accent-primary"
@@ -315,7 +315,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                         onChange={(e) =>
                           setLocalFormatterSettings((prev) => ({
                             ...prev,
-                            normalizeVerbatimMarkers: e.target.checked,
+                            normalizeVerbatimMarkers: e.target.checked
                           }))
                         }
                         className="accent-primary"
@@ -336,7 +336,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                       onChange={(e) =>
                         setLocalFormatterSettings((prev) => ({
                           ...prev,
-                          preserveTrailingBlanks: e.target.checked,
+                          preserveTrailingBlanks: e.target.checked
                         }))
                       }
                       className="accent-primary"
@@ -356,7 +356,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                       onChange={(e) =>
                         setLocalFormatterSettings((prev) => ({
                           ...prev,
-                          formatOnSave: e.target.checked,
+                          formatOnSave: e.target.checked
                         }))
                       }
                       className="accent-primary"
@@ -384,7 +384,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                       onChange={(e) =>
                         setLocalSpellcheckSettings((prev) => ({
                           ...prev,
-                          enabled: e.target.checked,
+                          enabled: e.target.checked
                         }))
                       }
                       className="accent-primary"
@@ -405,7 +405,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                       onChange={(e) =>
                         setLocalSpellcheckSettings((prev) => ({
                           ...prev,
-                          language: e.target.value,
+                          language: e.target.value
                         }))
                       }
                       className="w-40 px-2 py-1 text-sm bg-input border border-border rounded focus:outline-none focus:border-primary disabled:opacity-50"

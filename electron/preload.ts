@@ -211,5 +211,5 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
     ) => callback(type, message)
     ipcRenderer.on('show-toast', handler)
     return () => ipcRenderer.removeListener('show-toast', handler)
-  },
+  }
 })

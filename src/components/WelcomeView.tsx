@@ -33,7 +33,7 @@ export function WelcomeView() {
 function ShortcutRow({
   icon,
   label,
-  keys,
+  keys
 }: {
   icon: React.ReactNode
   label: string

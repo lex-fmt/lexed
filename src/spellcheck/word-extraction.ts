@@ -234,7 +234,7 @@ function computeSpellRanges(
           stack.push({
             spell: stackTopSpell(stack),
             openerIndent: c.indent,
-            bodyIndent: indentOf(lines[nextIdx]),
+            bodyIndent: indentOf(lines[nextIdx])
           })
         }
         // The opener line itself is just markers — skip words.
@@ -296,7 +296,7 @@ export function extractCheckableWords(text: string): CheckableWord[] {
           startLine: i + 1,
           startColumn: wordStart + 1,
           endLine: i + 1,
-          endColumn: wordStart + m[0].length + 1,
+          endColumn: wordStart + m[0].length + 1
         })
       }
     }

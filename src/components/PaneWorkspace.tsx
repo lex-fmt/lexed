@@ -5,7 +5,7 @@ import {
   useRef,
   useState,
   type Dispatch,
-  type SetStateAction,
+  type SetStateAction
 } from 'react'
 import type { PaneState, PaneRowState } from '@/panes/types'
 import {
@@ -14,7 +14,7 @@ import {
   MIN_PANE_SIZE,
   getPaneWeight,
   getRowSize,
-  normalizePaneSizes,
+  normalizePaneSizes
 } from '@/panes/layout'
 import { EditorPane, type EditorPaneHandle } from './EditorPane'
 import type { ExportStatus } from './StatusBar'
@@ -72,7 +72,7 @@ export function PaneWorkspace({
   onFileLoaded,
   onCursorChange,
   onPaneRowsChange,
-  fileContextMenuHandlers,
+  fileContextMenuHandlers
 }: PaneWorkspaceProps) {
   const workspaceRef = useRef<HTMLDivElement>(null)
   const rowRefs = useRef(new Map<string, HTMLDivElement | null>())
@@ -99,7 +99,7 @@ export function PaneWorkspace({
         initialFirstSize: getRowSize(row),
         initialSecondSize: getRowSize(nextRow),
         totalRowSize,
-        containerHeight,
+        containerHeight
       })
     },
     [paneRows]
@@ -119,7 +119,7 @@ export function PaneWorkspace({
         startX: clientX,
         rowWidth,
         initialLeftSize: paneSizes[leftPaneId] ?? DEFAULT_PANE_SIZE,
-        initialRightSize: paneSizes[rightPaneId] ?? DEFAULT_PANE_SIZE,
+        initialRightSize: paneSizes[rightPaneId] ?? DEFAULT_PANE_SIZE
       })
     },
     [paneRows]

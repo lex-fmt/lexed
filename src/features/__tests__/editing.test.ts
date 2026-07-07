@@ -3,7 +3,7 @@ import {
   calculateSnippetInsertion,
   isSnippetInsertionPayload,
   isPreparePasteResponse,
-  computePasteEndPosition,
+  computePasteEndPosition
 } from '@/lib/editing'
 
 describe('Editing Logic', () => {

@@ -178,7 +178,7 @@ describe('parseShortcut', () => {
         ['home', 'Home', 'Home'],
         ['end', 'End', 'End'],
         ['pageup', 'PageUp', 'PageUp'],
-        ['pagedown', 'PageDown', 'PageDown'],
+        ['pagedown', 'PageDown', 'PageDown']
       ]
       for (const [token, code, label] of cases) {
         const parsed = parseShortcut(`cmd+${token}`, 'mac')
@@ -288,7 +288,7 @@ describe('getShortcutVariants', () => {
       'cmd+a',
       { mac: 'cmd+b', windows: 'ctrl+b', linux: 'ctrl+b' },
       { mac: null, windows: 'ctrl+c', linux: 'ctrl+c' },
-      '',
+      ''
     ]
     expect(getShortcutVariants(shortcut, 'mac')).toEqual(['cmd+a', 'cmd+b'])
     expect(getShortcutVariants(shortcut, 'windows')).toEqual(['cmd+a', 'ctrl+b', 'ctrl+c'])

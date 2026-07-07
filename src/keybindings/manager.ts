@@ -5,7 +5,7 @@ import type {
   KeybindingEventInput,
   KeybindingMatch,
   KeybindingRuntimeOptions,
-  ParsedShortcut,
+  ParsedShortcut
 } from './types'
 import { getShortcutVariants, parseShortcut } from './parser'
 
@@ -99,7 +99,7 @@ export class KeybindingManager {
         title: definition.title,
         description: definition.description,
         category: definition.category,
-        shortcuts,
+        shortcuts
       }
       this.descriptors.set(definition.id, descriptor)
 
@@ -110,7 +110,7 @@ export class KeybindingManager {
         list.push({
           id: definition.id,
           contexts: definition.contexts?.length ? definition.contexts : ['global'],
-          shortcut,
+          shortcut
         })
         this.bindingsByCode.set(chord.code, list)
       }

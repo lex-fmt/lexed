@@ -6,7 +6,7 @@ test.describe('Split Panes', () => {
 
     const workspace = await openWorkspace(page, [
       { relativePath: 'general.lex', content: '# General\nContent' },
-      { relativePath: '20-ideas-naked.lex', content: '# Ideas, Naked\nContent' },
+      { relativePath: '20-ideas-naked.lex', content: '# Ideas, Naked\nContent' }
     ])
 
     try {

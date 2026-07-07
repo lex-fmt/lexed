@@ -13,7 +13,7 @@ function fakeParams(namespace = 'acme'): TrustRequestParams {
     command_string: '/bin/handler',
     source: { kind: 'lex_toml', name: namespace },
     capability: 'full',
-    transport: 'subprocess',
+    transport: 'subprocess'
   }
 }
 

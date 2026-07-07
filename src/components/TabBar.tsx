@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import {
   FileContextMenu,
   type FileContextMenuHandlers,
-  type FileContextMenuPosition,
+  type FileContextMenuPosition
 } from './FileContextMenu'
 
 export interface Tab {
@@ -48,7 +48,7 @@ export function TabBar({
   onTabSelect,
   onTabClose,
   onTabDrop,
-  contextMenuHandlers,
+  contextMenuHandlers
 }: TabBarProps) {
   const [isDragOver, setIsDragOver] = useState(false)
   const [contextMenu, setContextMenu] = useState<FileContextMenuPosition | null>(null)
@@ -70,7 +70,7 @@ export function TabBar({
       ...contextMenuHandlers,
       onRevealInFolder: (filePath: string) => {
         window.ipcRenderer.showItemInFolder(filePath)
-      },
+      }
     }),
     [contextMenuHandlers]
   )
@@ -81,7 +81,7 @@ export function TabBar({
         TAB_DRAG_TYPE,
         JSON.stringify({
           tabPath: tab.path,
-          sourcePaneId: paneId,
+          sourcePaneId: paneId
         })
       )
       e.dataTransfer.effectAllowed = 'copyMove'
@@ -118,7 +118,7 @@ export function TabBar({
         onTabDrop?.({
           tabPath: data.tabPath,
           sourcePaneId: data.sourcePaneId,
-          duplicate: e.altKey || e.metaKey,
+          duplicate: e.altKey || e.metaKey
         })
       } catch {
         // Invalid data, ignore

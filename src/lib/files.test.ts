@@ -4,7 +4,7 @@ import {
   isLexFile,
   isMarkdownFile,
   getFileActions,
-  type FileActionId,
+  type FileActionId
 } from '@/lib/files'
 
 describe('getLanguageForFile', () => {
@@ -98,7 +98,7 @@ describe('getFileActions', () => {
     'exportHtml',
     'preview',
     'format',
-    'shareWhatsApp',
+    'shareWhatsApp'
   ]
   const HAS_FILE: FileActionId[] = ['copyPath', 'copyRelativePath', 'revealInFolder']
 

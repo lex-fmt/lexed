@@ -5,7 +5,7 @@ import {
   useState,
   useCallback,
   useEffect,
-  useMemo,
+  useMemo
 } from 'react'
 import {
   Editor,
@@ -13,11 +13,11 @@ import {
   getOrCreateModel,
   disposeModel,
   applyTheme,
-  type ThemeMode,
+  type ThemeMode
 } from '@lex-fmt/lex-buffer'
 import {
   createMonacoInjectionHighlighter,
-  type MonacoInjectionHighlighterApi,
+  type MonacoInjectionHighlighterApi
 } from '@lex/monaco-inline-injections'
 import { PreviewPane } from './PreviewPane'
 import { WelcomeView } from './WelcomeView'
@@ -87,7 +87,7 @@ export const EditorPane = forwardRef<EditorPaneHandle, EditorPaneProps>(function
     onCursorChange,
     exportStatus,
     onActivate,
-    contextMenuHandlers,
+    contextMenuHandlers
   },
   ref
 ) {
@@ -412,7 +412,7 @@ export const EditorPane = forwardRef<EditorPaneHandle, EditorPaneProps>(function
       getEditor: () => editorRef.current?.getEditor() ?? null,
       getInjectionHighlighter: () => injectionHighlighterRef.current,
       find: handleFind,
-      replace: handleReplace,
+      replace: handleReplace
     }),
     [handleSave, handleFormat, handleFind, handleReplace, currentFile]
   )

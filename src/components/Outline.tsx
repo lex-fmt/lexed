@@ -13,7 +13,7 @@ import {
   AtSign,
   FileText,
   Code,
-  Circle,
+  Circle
 } from 'lucide-react'
 
 interface DocumentSymbol {
@@ -43,7 +43,7 @@ const SymbolKind = {
   ARRAY: 18, // List
   OBJECT: 19, // ListItem
   STRUCT: 23, // Definition
-  EVENT: 24, // Annotation
+  EVENT: 24 // Annotation
 } as const
 
 /** Get icon for LSP symbol kind */
@@ -132,7 +132,7 @@ export function Outline({ currentFile, editor, cursorLine }: OutlineProps) {
       try {
         const uri = Uri.file(currentFile).toString()
         const response = await lspClient.sendRequest('textDocument/documentSymbol', {
-          textDocument: { uri },
+          textDocument: { uri }
         })
 
         if (Array.isArray(response)) {
@@ -180,7 +180,7 @@ export function Outline({ currentFile, editor, cursorLine }: OutlineProps) {
     // Navigate to the symbol's selection range (more precise than range)
     const position = {
       lineNumber: symbol.selectionRange.start.line + 1, // Monaco uses 1-based lines
-      column: symbol.selectionRange.start.character + 1,
+      column: symbol.selectionRange.start.character + 1
     }
 
     editor.setPosition(position)
@@ -211,7 +211,7 @@ export function Outline({ currentFile, editor, cursorLine }: OutlineProps) {
               paddingLeft: `calc(var(--panel-item-padding) + ${depth * 12}px)`,
               paddingRight: 'var(--panel-item-padding)',
               paddingTop: '2px',
-              paddingBottom: '2px',
+              paddingBottom: '2px'
             }}
             title={item.name}
             onClick={() => handleSymbolClick(item)}
@@ -255,7 +255,7 @@ export function Outline({ currentFile, editor, cursorLine }: OutlineProps) {
         <div
           style={{
             paddingTop: 'var(--panel-item-padding)',
-            paddingBottom: 'var(--panel-item-padding)',
+            paddingBottom: 'var(--panel-item-padding)'
           }}
         >
           {renderSymbols(symbols)}

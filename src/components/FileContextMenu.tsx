@@ -42,8 +42,8 @@ export function FileContextMenu({ position, onClose, handlers }: FileContextMenu
       ...fileActions,
       revealInFolder: {
         ...fileActions.revealInFolder,
-        label: revealLabel,
-      },
+        label: revealLabel
+      }
     }
   }, [position, isMac, isWindows])
 
@@ -123,7 +123,7 @@ export function FileContextMenu({ position, onClose, handlers }: FileContextMenu
     { ...actions.shareWhatsApp, separator: true },
     { ...actions.copyPath, separator: false, shortcut: isMac ? '⌘P' : 'Ctrl+P' },
     { ...actions.copyRelativePath, separator: false, shortcut: isMac ? '⇧⌘P' : 'Ctrl+Shift+P' },
-    { ...actions.revealInFolder, separator: false },
+    { ...actions.revealInFolder, separator: false }
   ]
 
   return (

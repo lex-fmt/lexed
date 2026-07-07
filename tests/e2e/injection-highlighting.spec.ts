@@ -76,7 +76,7 @@ test.describe('Injection Highlighting', () => {
         },
         {
           timeout: 20_000,
-          message: 'Waiting for tree-sitter to detect every bundled-language zone',
+          message: 'Waiting for tree-sitter to detect every bundled-language zone'
         }
       )
       .toBe(BUNDLED_LANGUAGES.length)
@@ -103,7 +103,7 @@ test.describe('Injection Highlighting', () => {
           }),
         {
           timeout: 30_000,
-          message: 'Waiting for embedded-grammar:tokens signal from every bundled language',
+          message: 'Waiting for embedded-grammar:tokens signal from every bundled language'
         }
       )
       .toBe(BUNDLED_LANGUAGES.length)
@@ -113,7 +113,7 @@ test.describe('Injection Highlighting', () => {
       return {
         zones: api.getInjectionZones() as InjectionZone[],
         ranges: api.getInjectionRanges() as InjectionRange[],
-        byCategory: api.getInjectionRangesByCategory() as Record<string, InjectionRange[]>,
+        byCategory: api.getInjectionRangesByCategory() as Record<string, InjectionRange[]>
       }
     })
 

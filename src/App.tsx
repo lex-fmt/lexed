@@ -15,7 +15,7 @@ import {
   insertAsset,
   insertVerbatim,
   resolveAnnotation,
-  toggleAnnotations,
+  toggleAnnotations
 } from './features/editing'
 import { nextAnnotation, previousAnnotation } from './features/navigation'
 import { exportContent, importContent, convertToHtml } from './features/interop'
@@ -47,7 +47,7 @@ interface LspErrorInfo {
 const createTabFromPath = (path: string): Tab => ({
   id: path,
   path,
-  name: path.split('/').pop() || path,
+  name: path.split('/').pop() || path
 })
 
 function AppContent() {
@@ -58,13 +58,13 @@ function AppContent() {
     setPaneRows,
     setActivePaneId,
     resolvedActivePane,
-    resolvedActivePaneId,
+    resolvedActivePaneId
   } = usePersistedPaneLayout(createTabFromPath)
   const { settings, updateFileTreeSettings } = useSettings()
   const { rootPath, setRootPath } = useRootFolder()
   const [exportStatus, setExportStatus] = useState<ExportStatus>({
     isExporting: false,
-    format: null,
+    format: null
   })
   const paneHandles = useRef(new Map<string, EditorPaneHandle | null>())
   const panesRef = useRef(panes)
@@ -74,7 +74,7 @@ function AppContent() {
   if (!keybindingManagerRef.current) {
     keybindingManagerRef.current = new KeybindingManager(KEYBINDING_DEFINITIONS, {
       platform,
-      overrides: settings.keybindings,
+      overrides: settings.keybindings
     })
   }
 
@@ -151,19 +151,19 @@ function AppContent() {
               status.message ??
               `Lex LSP binary was not found${status.path ? ` at ${status.path}` : ''}.`,
             suggestion:
-              'Run "bash scripts/fetch-deps.sh" to download lexd-lsp, or use "npm run dev" which fetches it automatically.',
+              'Run "bash scripts/fetch-deps.sh" to download lexd-lsp, or use "npm run dev" which fetches it automatically.'
           })
         } else if (status.status === 'error') {
           setLspError({
             title: 'Lex Language Server Error',
             message: status.message ?? 'Unable to launch the Lex language server.',
-            suggestion: 'Check the terminal output for more information.',
+            suggestion: 'Check the terminal output for more information.'
           })
         } else if (status.status === 'stopped') {
           setLspError({
             title: 'Lex Language Server Stopped',
             message: 'The language server exited unexpectedly.',
-            suggestion: 'Restart LexEd or rebuild lexd-lsp to continue.',
+            suggestion: 'Restart LexEd or rebuild lexd-lsp to continue.'
           })
         }
       }) ?? (() => {})
@@ -174,7 +174,7 @@ function AppContent() {
       setLspError({
         title: 'Lex Language Server Unavailable',
         message: detail?.message ?? 'The language server is not responding.',
-        suggestion: 'Restart LexEd or rebuild lexd-lsp to continue.',
+        suggestion: 'Restart LexEd or rebuild lexd-lsp to continue.'
       })
     }
 
@@ -243,13 +243,13 @@ function AppContent() {
     handleTabClose,
     handleTabDrop,
     handlePaneFileLoaded,
-    handlePaneCursorChange,
+    handlePaneCursorChange
   } = usePaneManager({
     activePaneId: activePaneIdValue,
     setActivePaneId,
     setPanes,
     setPaneRows,
-    createTabFromPath,
+    createTabFromPath
   })
 
   useLexTestBridge({
@@ -258,7 +258,7 @@ function AppContent() {
     panesRef,
     panes,
     openFileInPane,
-    setRootPath,
+    setRootPath
   })
 
   const handleNewFile = useCallback(async () => {
@@ -360,8 +360,8 @@ function AppContent() {
       toast.success(`Converted to ${fileName}`, {
         action: {
           label: 'Show',
-          onClick: () => window.ipcRenderer.showItemInFolder(outputPath),
-        },
+          onClick: () => window.ipcRenderer.showItemInFolder(outputPath)
+        }
       })
       openFileInPane(activePaneIdValue, outputPath)
     } catch (error) {
@@ -413,8 +413,8 @@ function AppContent() {
         toast.success(`Exported to ${fileName}`, {
           action: {
             label: 'Show',
-            onClick: () => window.ipcRenderer.showItemInFolder(outputPath),
-          },
+            onClick: () => window.ipcRenderer.showItemInFolder(outputPath)
+          }
         })
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Export failed'
@@ -457,7 +457,7 @@ function AppContent() {
         previewTab,
         setPanes,
         setPaneRows,
-        setActivePaneId,
+        setActivePaneId
       })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Preview failed'
@@ -470,7 +470,7 @@ function AppContent() {
     setActivePaneId,
     setPaneRows,
     setPanes,
-    ensureLspAvailable,
+    ensureLspAvailable
   ])
 
   const handleFileSelect = useCallback(
@@ -491,7 +491,7 @@ function AppContent() {
     }
     const path = (await window.ipcRenderer.invoke('file-pick', {
       title: 'Select Asset',
-      filters: [{ name: 'All Files', extensions: ['*'] }],
+      filters: [{ name: 'All Files', extensions: ['*'] }]
     })) as string | null
     console.log('handleInsertAsset: path selected', path)
     if (path) {
@@ -504,7 +504,7 @@ function AppContent() {
     if (!activeEditor) return
     const path = (await window.ipcRenderer.invoke('file-pick', {
       title: 'Select File for Verbatim Block',
-      filters: [{ name: 'All Files', extensions: ['*'] }],
+      filters: [{ name: 'All Files', extensions: ['*'] }]
     })) as string | null
     if (path) {
       await insertVerbatim(activeEditor, path)
@@ -783,7 +783,7 @@ function AppContent() {
       handleSplitVertical,
       selectRelativeTab,
       setCommandPaletteOpen,
-      setShortcutsOpen,
+      setShortcutsOpen
     ]
   )
 
@@ -797,7 +797,7 @@ function AppContent() {
         ctrlKey: event.ctrlKey,
         altKey: event.altKey,
         shiftKey: event.shiftKey,
-        targetTagName: (event.target as HTMLElement | null)?.tagName,
+        targetTagName: (event.target as HTMLElement | null)?.tagName
       })
       if (!match) {
         return
@@ -835,7 +835,7 @@ function AppContent() {
     onToggleHiddenFiles: handleToggleHiddenFiles,
     onReorderFootnotes: handleReorderFootnotes,
     onOpenFilePath: handleOpenFilePath,
-    onShowShortcuts: () => setShortcutsOpen(true),
+    onShowShortcuts: () => setShortcutsOpen(true)
   })
 
   // File context menu handlers - these operate on a file path directly (e.g., from right-click menu)
@@ -894,7 +894,7 @@ function AppContent() {
             previewTab,
             setPanes,
             setPaneRows,
-            setActivePaneId,
+            setActivePaneId
           })
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Preview failed'
@@ -956,7 +956,7 @@ function AppContent() {
         }
       },
       onCopyPath: handleCopyPath,
-      onCopyRelativePath: handleCopyRelativePath,
+      onCopyRelativePath: handleCopyRelativePath
     }),
     [
       activePaneIdValue,
@@ -967,7 +967,7 @@ function AppContent() {
       panes,
       setActivePaneId,
       setPaneRows,
-      setPanes,
+      setPanes
     ]
   )
 

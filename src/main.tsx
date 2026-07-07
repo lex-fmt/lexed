@@ -12,7 +12,7 @@ window.__e2e = {
     if (this.events.length > MAX_E2E_EVENTS) {
       this.events.splice(0, this.events.length - MAX_E2E_EVENTS)
     }
-  },
+  }
 }
 
 import React from 'react'
@@ -24,7 +24,7 @@ import {
   initializeMonaco,
   lspClient,
   setLspTransportFactory,
-  configureHost,
+  configureHost
 } from '@lex-fmt/lex-buffer'
 import { trustPromptCoordinator } from './lsp/trustPromptCoordinator'
 import { PlatformProvider } from './contexts/PlatformContext'
@@ -46,10 +46,10 @@ configureHost({
   logger: log,
   e2e: {
     signal: (name, payload) => window.__e2e.signal(name, payload),
-    notifyFormattingRequest: (payload) => window.__e2e.bridge.notifyFormattingRequest?.(payload),
+    notifyFormattingRequest: (payload) => window.__e2e.bridge.notifyFormattingRequest?.(payload)
   },
   onLexModelReady: (model) => spellcheckService.scheduleCheck(model),
-  onLexModelChange: (model) => spellcheckService.scheduleCheck(model),
+  onLexModelChange: (model) => spellcheckService.scheduleCheck(model)
 })
 
 // Update the e2e ready flag when the LSP signals readiness — the

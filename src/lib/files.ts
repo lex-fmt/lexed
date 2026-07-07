@@ -72,47 +72,47 @@ export function getFileActions(path: string | null | undefined): FileActions {
     exportMarkdown: {
       id: 'exportMarkdown',
       label: 'Export to Markdown',
-      enabled: isLex,
+      enabled: isLex
     },
     exportHtml: {
       id: 'exportHtml',
       label: 'Export to HTML',
-      enabled: isLex,
+      enabled: isLex
     },
     preview: {
       id: 'preview',
       label: 'Preview',
-      enabled: isLex,
+      enabled: isLex
     },
     convertToLex: {
       id: 'convertToLex',
       label: 'Convert to Lex',
-      enabled: isMd,
+      enabled: isMd
     },
     format: {
       id: 'format',
       label: 'Format Document',
-      enabled: isLex,
+      enabled: isLex
     },
     shareWhatsApp: {
       id: 'shareWhatsApp',
       label: 'Share via WhatsApp',
-      enabled: isLex,
+      enabled: isLex
     },
     copyPath: {
       id: 'copyPath',
       label: 'Copy Path',
-      enabled: hasFile,
+      enabled: hasFile
     },
     copyRelativePath: {
       id: 'copyRelativePath',
       label: 'Copy Relative Path',
-      enabled: hasFile,
+      enabled: hasFile
     },
     revealInFolder: {
       id: 'revealInFolder',
       label: 'Reveal in Finder',
-      enabled: hasFile,
-    },
+      enabled: hasFile
+    }
   }
 }

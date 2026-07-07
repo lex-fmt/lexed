@@ -16,7 +16,7 @@ test.describe('Settings', () => {
       indentString: ' '.repeat(6),
       preserveTrailingBlanks: true,
       normalizeVerbatimMarkers: false,
-      formatOnSave: true,
+      formatOnSave: true
     }
 
     await page.evaluate(async (formatter) => {

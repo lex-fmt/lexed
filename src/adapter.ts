@@ -11,7 +11,7 @@ export class MonacoEditorAdapter implements EditorAdapter {
     const op = {
       range: selection,
       text: text,
-      forceMoveMarkers: true,
+      forceMoveMarkers: true
     }
     this.editor.executeEdits('lex-adapter', [op])
   }

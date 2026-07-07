@@ -25,7 +25,7 @@ export const createEmptyPane = (id?: string): PaneState => ({
   tabs: [],
   activeTabId: null,
   currentFile: null,
-  cursorLine: 0,
+  cursorLine: 0
 })
 
 interface DefaultLayout {
@@ -61,7 +61,7 @@ const hydrateSavedRows = (savedRows: SavedPaneRow[], paneIdSet: Set<string>): Pa
         ? row.paneIds.filter((id: string) => paneIdSet.has(id))
         : [],
       size: typeof row.size === 'number' ? row.size : undefined,
-      paneSizes: row.paneSizes && typeof row.paneSizes === 'object' ? row.paneSizes : undefined,
+      paneSizes: row.paneSizes && typeof row.paneSizes === 'object' ? row.paneSizes : undefined
     }))
     .filter((row) => row.paneIds.length > 0)
 
@@ -81,11 +81,11 @@ const buildDefaultLayout = (): DefaultLayout => {
         size: DEFAULT_ROW_SIZE,
         paneSizes: {
           [first.id]: DEFAULT_PANE_SIZE,
-          [second.id]: DEFAULT_PANE_SIZE,
-        },
-      },
+          [second.id]: DEFAULT_PANE_SIZE
+        }
+      }
     ],
-    activePaneId: first.id,
+    activePaneId: first.id
   }
 }
 
@@ -119,7 +119,7 @@ export function usePersistedPaneLayout(
                 ? pane.activeTab
                 : pane.tabs[0] || null,
             currentFile: null,
-            cursorLine: 0,
+            cursorLine: 0
           }))
 
           if (hydrated.length === 1) {
@@ -138,7 +138,7 @@ export function usePersistedPaneLayout(
           } else if (unreferenced.length > 0) {
             rows[0] = {
               ...rows[0],
-              paneIds: [...rows[0].paneIds, ...unreferenced],
+              paneIds: [...rows[0].paneIds, ...unreferenced]
             }
           }
 
@@ -176,13 +176,13 @@ export function usePersistedPaneLayout(
         const payload = panes.map((pane) => ({
           id: pane.id,
           tabs: pane.tabs.map((tab) => tab.path),
-          activeTab: pane.activeTabId,
+          activeTab: pane.activeTabId
         }))
         const rowsPayload = paneRows.map((row) => ({
           id: row.id,
           paneIds: row.paneIds.filter((id) => panes.some((p) => p.id === id)),
           size: row.size,
-          paneSizes: row.paneSizes,
+          paneSizes: row.paneSizes
         }))
         await window.ipcRenderer.setOpenTabs(payload, rowsPayload, resolvedActivePaneId)
       } catch (error) {
@@ -208,6 +208,6 @@ export function usePersistedPaneLayout(
     setActivePaneId,
     layoutInitialized,
     resolvedActivePane,
-    resolvedActivePaneId,
+    resolvedActivePaneId
   }
 }

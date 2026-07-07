@@ -3,7 +3,7 @@ import {
   waitForEditorContent,
   focusEditor,
   expectEditorValue,
-  triggerCompletion,
+  triggerCompletion
 } from './lib'
 import { openFixture } from './helpers'
 
