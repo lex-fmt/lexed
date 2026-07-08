@@ -19,8 +19,8 @@ async function invokeNavigationCommand(
       command,
       arguments: [
         model.uri.toString(),
-        { line: position.lineNumber - 1, character: position.column - 1 },
-      ],
+        { line: position.lineNumber - 1, character: position.column - 1 }
+      ]
     })
 
     if (isLocation(response)) {

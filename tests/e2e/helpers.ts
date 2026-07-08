@@ -43,7 +43,7 @@ export async function launchApp(options: AppLaunchOptions = {}) {
     NODE_ENV: useBuiltRenderer ? 'production' : 'development',
     E2E_DISABLE_SINGLE_INSTANCE_LOCK: '1',
     ...envOverrides,
-    E2E_USER_DATA_DIR: callerProvidedDir ?? autoCreatedDir,
+    E2E_USER_DATA_DIR: callerProvidedDir ?? autoCreatedDir
   }
 
   if (!env.E2E_HIDE_WINDOW) {
@@ -63,7 +63,7 @@ export async function launchApp(options: AppLaunchOptions = {}) {
 
   const app = await electron.launch({
     args: ['.', ...extraArgs],
-    env,
+    env
   })
   app.process().stdout?.on('data', (data) => console.log(`Electron stdout: ${data}`))
   app.process().stderr?.on('data', (data) => console.log(`Electron stderr: ${data}`))

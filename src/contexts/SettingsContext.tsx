@@ -5,7 +5,7 @@ import {
   EditorSettings,
   FormatterSettings,
   defaultAppSettings,
-  defaultFileTreeSettings,
+  defaultFileTreeSettings
 } from '@/settings/types'
 import { setSettingsSnapshot } from '@/settings/snapshot'
 
@@ -65,21 +65,21 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           fileTree: {
             ...defaultFileTreeSettings,
             ...prev.fileTree,
-            ...(loadedSettings?.fileTree ?? {}),
+            ...(loadedSettings?.fileTree ?? {})
           },
           keybindings: {
             overrides: {
               ...prev.keybindings.overrides,
-              ...(loadedSettings?.keybindings?.overrides ?? {}),
-            },
+              ...(loadedSettings?.keybindings?.overrides ?? {})
+            }
           },
-          lastFolder: loadedSettings?.lastFolder,
+          lastFolder: loadedSettings?.lastFolder
         } satisfies AppSettings
         setSettingsSnapshot(next)
 
         // Disable LSP-side spellcheck (now handled client-side)
         lspClient.sendNotification('workspace/didChangeConfiguration', {
-          settings: { spellcheck: { enabled: false } },
+          settings: { spellcheck: { enabled: false } }
         })
 
         // Initialize client-side spellcheck
@@ -99,15 +99,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           fileTree: {
             ...defaultFileTreeSettings,
             ...prev.fileTree,
-            ...(newSettings?.fileTree ?? {}),
+            ...(newSettings?.fileTree ?? {})
           },
           keybindings: {
             overrides: {
               ...prev.keybindings.overrides,
-              ...(newSettings?.keybindings?.overrides ?? {}),
-            },
+              ...(newSettings?.keybindings?.overrides ?? {})
+            }
           },
-          lastFolder: newSettings?.lastFolder,
+          lastFolder: newSettings?.lastFolder
         } satisfies AppSettings
         setSettingsSnapshot(next)
 
@@ -167,7 +167,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         updateEditorSettings,
         updateFormatterSettings,
         updateSpellcheckSettings,
-        updateFileTreeSettings,
+        updateFileTreeSettings
       }}
     >
       {children}

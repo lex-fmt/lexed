@@ -50,5 +50,5 @@ export const withRowDefaults = (row: PaneRowState): PaneRowState => ({
   id: row.id,
   paneIds: [...row.paneIds],
   size: row.size && row.size > 0 ? row.size : DEFAULT_ROW_SIZE,
-  paneSizes: normalizePaneSizes(row),
+  paneSizes: normalizePaneSizes(row)
 })

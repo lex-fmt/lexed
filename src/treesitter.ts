@@ -57,7 +57,7 @@ export function initTreeSitter(): Promise<LexTreeSitter | null> {
 async function loadTreeSitter(): Promise<LexTreeSitter | null> {
   try {
     await Parser.init({
-      locateFile: () => runtimeWasmUrl,
+      locateFile: () => runtimeWasmUrl
     })
 
     const language = await Language.load(grammarWasmUrl)
@@ -90,7 +90,7 @@ async function loadTreeSitter(): Promise<LexTreeSitter | null> {
           startCol: c.node.startPosition.column,
           endRow: c.node.endPosition.row,
           endCol: c.node.endPosition.column,
-          text: c.node.text,
+          text: c.node.text
         }))
       },
 
@@ -121,9 +121,9 @@ async function loadTreeSitter(): Promise<LexTreeSitter | null> {
                 startCol: capture.node.startPosition.column,
                 endRow: capture.node.endPosition.row,
                 endCol: capture.node.endPosition.column,
-                text: capture.node.text,
+                text: capture.node.text
               },
-              parentId,
+              parentId
             })
           } else if (capture.name === 'injection.language') {
             const raw = capture.node.text.trim()
@@ -146,7 +146,7 @@ async function loadTreeSitter(): Promise<LexTreeSitter | null> {
               startCol: cc.node.startCol,
               endRow: cc.node.endRow,
               endCol: cc.node.endCol,
-              text: cc.node.text,
+              text: cc.node.text
             })
           }
         }
@@ -158,7 +158,7 @@ async function loadTreeSitter(): Promise<LexTreeSitter | null> {
         parser.delete()
         highlightsQuery.delete()
         injectionsQuery?.delete()
-      },
+      }
     }
   } catch (err) {
     console.warn('[lex] Failed to initialize tree-sitter:', err)
@@ -181,6 +181,6 @@ export function createLexZoneProvider(ts: LexTreeSitter): InjectionZoneProvider 
       } finally {
         tree.delete()
       }
-    },
+    }
   }
 }

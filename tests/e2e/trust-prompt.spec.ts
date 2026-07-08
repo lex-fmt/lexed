@@ -29,7 +29,7 @@ const sampleParams: TrustRequestParams = {
   command_string: '/usr/local/bin/acme-handler --serve',
   source: { kind: 'lex_toml', name: 'acme' },
   capability: 'full',
-  transport: 'subprocess',
+  transport: 'subprocess'
 }
 
 test.describe('lex/trustRequest modal', () => {
@@ -84,7 +84,7 @@ test.describe('lex/trustRequest modal', () => {
 
     // Modal closes after the click resolves the Promise.
     await expect(page.getByText('Lex extension trust required')).not.toBeVisible({
-      timeout: 5000,
+      timeout: 5000
     })
     // Poll for the .then() callback to have populated __trustResp.
     // The microtask scheduling of Promise resolution doesn't
@@ -118,7 +118,7 @@ test.describe('lex/trustRequest modal', () => {
     await page.getByRole('button', { name: 'Deny' }).click()
 
     await expect(page.getByText('Lex extension trust required')).not.toBeVisible({
-      timeout: 5000,
+      timeout: 5000
     })
     await page.waitForFunction(
       () =>
@@ -152,7 +152,7 @@ test.describe('lex/trustRequest modal', () => {
     await page.keyboard.press('Escape')
 
     await expect(page.getByText('Lex extension trust required')).not.toBeVisible({
-      timeout: 5000,
+      timeout: 5000
     })
     await page.waitForFunction(
       () =>

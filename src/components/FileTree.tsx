@@ -9,14 +9,14 @@ import {
   FileCode,
   File,
   ChevronRight,
-  ChevronDown,
+  ChevronDown
 } from 'lucide-react'
 import { FILE_TREE_REFRESH_EVENT } from '@/lib/events'
 import { useSettings } from '@/contexts/SettingsContext'
 import {
   FileContextMenu,
   type FileContextMenuHandlers,
-  type FileContextMenuPosition,
+  type FileContextMenuPosition
 } from './FileContextMenu'
 
 interface FileEntry {
@@ -74,7 +74,7 @@ export function FileTree({
   rootPath,
   selectedFile,
   onFileSelect,
-  contextMenuHandlers,
+  contextMenuHandlers
 }: FileTreeProps) {
   const [files, setFiles] = useState<FileEntry[]>([])
   const [contextMenu, setContextMenu] = useState<FileContextMenuPosition | null>(null)
@@ -235,7 +235,7 @@ export function FileTree({
       ...contextMenuHandlers,
       onRevealInFolder: (filePath: string) => {
         window.ipcRenderer.showItemInFolder(filePath)
-      },
+      }
     }),
     [contextMenuHandlers]
   )
@@ -265,7 +265,7 @@ export function FileTree({
             data-selected={isSelected}
             style={{
               paddingLeft: `calc(var(--panel-item-padding) + ${depth * 12}px)`,
-              paddingRight: 'var(--panel-item-padding)',
+              paddingRight: 'var(--panel-item-padding)'
             }}
             onClick={(e) => {
               e.stopPropagation()
@@ -314,7 +314,7 @@ export function FileTree({
         <div
           style={{
             paddingTop: 'var(--panel-item-padding)',
-            paddingBottom: 'var(--panel-item-padding)',
+            paddingBottom: 'var(--panel-item-padding)'
           }}
         >
           {renderTree(files)}

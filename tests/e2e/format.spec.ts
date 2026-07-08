@@ -10,7 +10,7 @@ const FORMATTER_SETTINGS = {
   indentString: '    ',
   preserveTrailingBlanks: false,
   normalizeVerbatimMarkers: true,
-  formatOnSave: false,
+  formatOnSave: false
 }
 
 const EXPECTED_PROPERTIES = {
@@ -21,7 +21,7 @@ const EXPECTED_PROPERTIES = {
   'lex.max_blank_lines': 2,
   'lex.indent_string': '    ',
   'lex.preserve_trailing_blanks': false,
-  'lex.normalize_verbatim_markers': true,
+  'lex.normalize_verbatim_markers': true
 }
 
 test.describe('Format Document', () => {
@@ -43,8 +43,8 @@ test.describe('Format Document', () => {
       options: {
         tabSize: 4,
         insertSpaces: true,
-        ...EXPECTED_PROPERTIES,
-      },
+        ...EXPECTED_PROPERTIES
+      }
     })
     expect(request?.type).toBe('document')
   })

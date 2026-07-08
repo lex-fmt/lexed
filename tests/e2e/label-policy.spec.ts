@@ -65,20 +65,20 @@ test.describe('Label policy', () => {
         message: 'doc.table',
         severity: 'error',
         startLineNumber: DOC_TABLE_LINE,
-        source: 'lex',
+        source: 'lex'
       },
       {
         message: 'doc.unknownthing',
         severity: 'error',
         startLineNumber: DOC_UNKNOWNTHING_LINE,
-        source: 'lex',
+        source: 'lex'
       },
       {
         message: 'lex.notarealsemantic',
         severity: 'error',
         startLineNumber: LEX_NOTREAL_LINE,
-        source: 'lex',
-      },
+        source: 'lex'
+      }
     ])
   })
 
@@ -113,12 +113,12 @@ test.describe('Label policy', () => {
       return {
         range: {
           start: { line: marker.startLineNumber - 1, character: marker.startColumn - 1 },
-          end: { line: marker.endLineNumber - 1, character: marker.endColumn - 1 },
+          end: { line: marker.endLineNumber - 1, character: marker.endColumn - 1 }
         },
         severity: marker.severity,
         code: marker.code,
         source: marker.source,
-        message: marker.message,
+        message: marker.message
       }
     }, DOC_TABLE_LINE)
 
@@ -169,7 +169,7 @@ test.describe('Label policy', () => {
       // Position just inside the label token (after `:: `, which is 3 chars).
       { line: 15, column: 4, expect: 'Shortcut for' }, // :: title ::
       { line: 17, column: 4, expect: 'Prefix-stripped form' }, // :: metadata.author ::
-      { line: 19, column: 4, expect: 'Community label' }, // :: acme.task ::
+      { line: 19, column: 4, expect: 'Community label' } // :: acme.task ::
     ]
 
     for (const c of cases) {

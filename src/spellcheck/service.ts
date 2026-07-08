@@ -140,7 +140,7 @@ export class SpellcheckService {
           startColumn: word.startColumn,
           endLineNumber: word.endLine,
           endColumn: word.endColumn,
-          source: MARKER_OWNER,
+          source: MARKER_OWNER
         })
       }
     }
@@ -238,14 +238,14 @@ export class SpellcheckService {
                         startLineNumber: marker.startLineNumber,
                         startColumn: marker.startColumn,
                         endLineNumber: marker.endLineNumber,
-                        endColumn: marker.endColumn,
+                        endColumn: marker.endColumn
                       },
-                      text: suggestion,
+                      text: suggestion
                     },
-                    versionId: undefined,
-                  },
-                ],
-              },
+                    versionId: undefined
+                  }
+                ]
+              }
             })
           }
 
@@ -257,13 +257,13 @@ export class SpellcheckService {
             command: {
               id: 'lexed.spellcheck.addToDictionary',
               title: 'Add to dictionary',
-              arguments: [word, model.uri.toString()],
-            },
+              arguments: [word, model.uri.toString()]
+            }
           })
         }
 
         return { actions, dispose: () => {} }
-      },
+      }
     })
 
     // Register the "add to dictionary" command

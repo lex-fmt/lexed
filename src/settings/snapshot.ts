@@ -4,7 +4,7 @@ import type {
   FormatterSettings,
   KeybindingSettings,
   SpellcheckSettings,
-  FileTreeSettings,
+  FileTreeSettings
 } from './types'
 import { defaultAppSettings } from './types'
 
@@ -15,15 +15,15 @@ let currentSettings: AppSettings = {
   fileTree: { ...defaultAppSettings.fileTree },
   keybindings: {
     ...defaultAppSettings.keybindings,
-    overrides: { ...defaultAppSettings.keybindings.overrides },
+    overrides: { ...defaultAppSettings.keybindings.overrides }
   },
-  lastFolder: defaultAppSettings.lastFolder,
+  lastFolder: defaultAppSettings.lastFolder
 }
 
 const cloneEditor = (editor: EditorSettings): EditorSettings => ({
   showRuler: editor.showRuler,
   rulerWidth: editor.rulerWidth,
-  vimMode: editor.vimMode,
+  vimMode: editor.vimMode
 })
 
 const cloneFormatter = (formatter: FormatterSettings): FormatterSettings => ({
@@ -35,20 +35,20 @@ const cloneFormatter = (formatter: FormatterSettings): FormatterSettings => ({
   indentString: formatter.indentString,
   preserveTrailingBlanks: formatter.preserveTrailingBlanks,
   normalizeVerbatimMarkers: formatter.normalizeVerbatimMarkers,
-  formatOnSave: formatter.formatOnSave,
+  formatOnSave: formatter.formatOnSave
 })
 
 const cloneSpellcheck = (spellcheck: SpellcheckSettings): SpellcheckSettings => ({
   enabled: spellcheck.enabled,
-  language: spellcheck.language,
+  language: spellcheck.language
 })
 
 const cloneKeybindings = (keybindings: KeybindingSettings): KeybindingSettings => ({
-  overrides: { ...keybindings.overrides },
+  overrides: { ...keybindings.overrides }
 })
 
 const cloneFileTree = (fileTree: FileTreeSettings): FileTreeSettings => ({
-  showHiddenFiles: fileTree.showHiddenFiles,
+  showHiddenFiles: fileTree.showHiddenFiles
 })
 
 const cloneSettings = (settings: AppSettings): AppSettings => ({
@@ -57,7 +57,7 @@ const cloneSettings = (settings: AppSettings): AppSettings => ({
   spellcheck: cloneSpellcheck(settings.spellcheck),
   fileTree: cloneFileTree(settings.fileTree),
   keybindings: cloneKeybindings(settings.keybindings),
-  lastFolder: settings.lastFolder,
+  lastFolder: settings.lastFolder
 })
 
 export function setSettingsSnapshot(settings: AppSettings): void {

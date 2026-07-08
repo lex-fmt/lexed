@@ -8,7 +8,7 @@ import {
   MIN_ROW_SIZE,
   getRowSize,
   normalizePaneSizes,
-  withRowDefaults,
+  withRowDefaults
 } from './layout'
 import type { Tab, TabDropData } from '@/components/TabBar'
 
@@ -25,7 +25,7 @@ export function usePaneManager({
   setActivePaneId,
   setPanes,
   setPaneRows,
-  createTabFromPath,
+  createTabFromPath
 }: UsePaneManagerOptions) {
   const focusPane = useCallback(
     (paneId: string) => {
@@ -124,7 +124,7 @@ export function usePaneManager({
       if (prevRows.length === 0) {
         return [
           withRowDefaults({ id: createRowId(), paneIds: [activePaneId] }),
-          withRowDefaults({ id: createRowId(), paneIds: [newPane.id] }),
+          withRowDefaults({ id: createRowId(), paneIds: [newPane.id] })
         ]
       }
       let handled = false
@@ -143,7 +143,7 @@ export function usePaneManager({
             id: createRowId(),
             paneIds: [newPane.id],
             size: rowSize,
-            paneSizes: { [newPane.id]: DEFAULT_PANE_SIZE },
+            paneSizes: { [newPane.id]: DEFAULT_PANE_SIZE }
           })
         )
       })
@@ -237,7 +237,7 @@ export function usePaneManager({
             tabs: remainingTabs,
             activeTabId: nextActiveId,
             currentFile: remainingTabs.length === 0 ? null : pane.currentFile,
-            cursorLine: remainingTabs.length === 0 ? 0 : pane.cursorLine,
+            cursorLine: remainingTabs.length === 0 ? 0 : pane.cursorLine
           }
           if (remainingTabs.length === 0 && prev.length > 1) {
             removePane = true
@@ -281,7 +281,7 @@ export function usePaneManager({
             return {
               ...pane,
               tabs: [...pane.tabs, newTab],
-              activeTabId: newTab.id,
+              activeTabId: newTab.id
             }
           }
           if (pane.id === sourcePaneId && !duplicate) {
@@ -299,7 +299,7 @@ export function usePaneManager({
               tabs: remainingTabs,
               activeTabId: nextActiveId,
               currentFile: remainingTabs.length === 0 ? null : pane.currentFile,
-              cursorLine: remainingTabs.length === 0 ? 0 : pane.cursorLine,
+              cursorLine: remainingTabs.length === 0 ? 0 : pane.cursorLine
             }
           }
           return pane
@@ -352,6 +352,6 @@ export function usePaneManager({
     handleTabClose,
     handleTabDrop,
     handlePaneFileLoaded,
-    handlePaneCursorChange,
+    handlePaneCursorChange
   }
 }

@@ -24,7 +24,7 @@ export async function exportContent(
 
   const result = await lspClient.sendRequest<string>('workspace/executeCommand', {
     command: 'lex.export',
-    arguments: args,
+    arguments: args
   })
 
   if (typeof result !== 'string') {
@@ -40,7 +40,7 @@ export async function exportContent(
 export async function importContent(content: string, format: ImportFormat): Promise<string> {
   const result = await lspClient.sendRequest<string>('workspace/executeCommand', {
     command: 'lex.import',
-    arguments: [format, content],
+    arguments: [format, content]
   })
 
   if (typeof result !== 'string') {

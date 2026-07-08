@@ -19,7 +19,7 @@ function resolveLspBinary(binaryName: string): { path: string; source: string; w
     return {
       path: resolved,
       source: 'env',
-      warning: `LEX_LSP_PATH set but binary not found: ${resolved}`,
+      warning: `LEX_LSP_PATH set but binary not found: ${resolved}`
     }
   }
 
@@ -152,7 +152,7 @@ export class LspManager {
 
     this.lspProcess = spawn(lspPath, [], {
       env,
-      cwd: lspCwd,
+      cwd: lspCwd
     })
 
     this.lspProcess.stdout?.on('data', (data: Buffer) => {

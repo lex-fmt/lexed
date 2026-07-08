@@ -19,7 +19,7 @@ import { focusEditor } from './lib/actions'
 test.describe('Runtime error sentinel', () => {
   test('opening a .lex document produces no pageerror or console.error', async ({
     page,
-    runtimeErrors,
+    runtimeErrors
   }) => {
     await openFixture(page, 'semantic-basic.lex')
     await focusEditor(page)

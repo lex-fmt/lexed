@@ -10,7 +10,7 @@ test.describe('Semantic Tokens', () => {
     await expect
       .poll(() => page.evaluate(() => (window as any).__lexSemanticTokenCount ?? 0), {
         timeout: 15000,
-        message: 'Waiting for semantic tokens from LSP',
+        message: 'Waiting for semantic tokens from LSP'
       })
       .toBeGreaterThan(0)
   })

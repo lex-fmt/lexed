@@ -17,20 +17,20 @@ import {
   PaneRowLayout,
   EditorSettings,
   FormatterSettings,
-  FileTreeSettings,
+  FileTreeSettings
 } from './window-manager'
 import {
   routeOpenFile,
   updateRecentRoots,
   type OpenWindowState,
-  type RecentRoot,
+  type RecentRoot
 } from './file-routing'
 import {
   appendFilesToWindowPaneLayout,
   dedupePreservingOrder,
   setWindowFolder,
   setWindowPaneLayout,
-  upsertWindowState,
+  upsertWindowState
 } from './window-state'
 import { randomUUID } from 'crypto'
 
@@ -93,7 +93,7 @@ log.info('Logging initialised', {
   file: log.transports.file.getFile()?.path,
   fileLevel: fileLogLevel,
   consoleLevel: consoleLogLevel,
-  nodeEnv: process.env.NODE_ENV,
+  nodeEnv: process.env.NODE_ENV
 })
 
 // Optional: Catch all unhandled errors
@@ -170,8 +170,8 @@ const store = new Store<AppSettings>({
         y: { type: 'number' },
         width: { type: 'number' },
         height: { type: 'number' },
-        isMaximized: { type: 'boolean' },
-      },
+        isMaximized: { type: 'boolean' }
+      }
     },
     openWindows: {
       type: 'array',
@@ -187,9 +187,9 @@ const store = new Store<AppSettings>({
           lastFolder: { type: 'string' },
           paneLayout: { type: 'array' },
           paneRows: { type: 'array' },
-          activePaneId: { type: 'string' },
-        },
-      },
+          activePaneId: { type: 'string' }
+        }
+      }
     },
     recentRoots: {
       type: 'array',
@@ -197,18 +197,18 @@ const store = new Store<AppSettings>({
         type: 'object',
         properties: {
           path: { type: 'string' },
-          lastUsedAt: { type: 'number' },
-        },
-      },
+          lastUsedAt: { type: 'number' }
+        }
+      }
     },
     editor: {
       type: 'object',
       properties: {
         showRuler: { type: 'boolean', default: false },
         rulerWidth: { type: 'number', default: 100 },
-        vimMode: { type: 'boolean', default: false },
+        vimMode: { type: 'boolean', default: false }
       },
-      default: {},
+      default: {}
     },
     formatter: {
       type: 'object',
@@ -221,24 +221,24 @@ const store = new Store<AppSettings>({
         indentString: { type: 'string', default: '    ' },
         preserveTrailingBlanks: { type: 'boolean', default: false },
         normalizeVerbatimMarkers: { type: 'boolean', default: true },
-        formatOnSave: { type: 'boolean', default: false },
+        formatOnSave: { type: 'boolean', default: false }
       },
-      default: {},
+      default: {}
     },
     spellcheck: {
       type: 'object',
       properties: {
         enabled: { type: 'boolean', default: true },
-        language: { type: 'string', default: 'en_US' },
+        language: { type: 'string', default: 'en_US' }
       },
-      default: {},
+      default: {}
     },
     fileTree: {
       type: 'object',
       properties: {
-        showHiddenFiles: { type: 'boolean', default: false },
+        showHiddenFiles: { type: 'boolean', default: false }
       },
-      default: {},
+      default: {}
     },
     keybindings: {
       type: 'object',
@@ -250,14 +250,14 @@ const store = new Store<AppSettings>({
             properties: {
               mac: { type: ['string', 'null'] },
               windows: { type: ['string', 'null'] },
-              linux: { type: ['string', 'null'] },
-            },
-          },
-        },
+              linux: { type: ['string', 'null'] }
+            }
+          }
+        }
       },
-      default: {},
-    },
-  },
+      default: {}
+    }
+  }
 })
 
 // Initialize WindowManager after store is created
@@ -292,7 +292,7 @@ function collectOpenWindowStates(): OpenWindowState[] {
       windowId: win.id,
       root: state?.lastFolder ?? null,
       isFocused: focused?.id === win.id,
-      lastFocusedAt: windowManager.getLastFocusedAt(win.id),
+      lastFocusedAt: windowManager.getLastFocusedAt(win.id)
     }
   })
 }
@@ -386,7 +386,7 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
 let applicationMenu: Electron.Menu | null = null
 let currentMenuState: MenuState = {
   hasOpenFile: false,
-  isLexFile: false,
+  isLexFile: false
 }
 
 interface CliPaths {
@@ -528,7 +528,7 @@ async function openFilesViaRouter(filePaths: string[]): Promise<FileRouteDestina
         id: newStateId,
         width: DEFAULT_WINDOW_BOUNDS.width,
         height: DEFAULT_WINDOW_BOUNDS.height,
-        lastFolder: root,
+        lastFolder: root
       },
       { showSplash: true }
     )
@@ -545,7 +545,7 @@ async function openFilesViaRouter(filePaths: string[]): Promise<FileRouteDestina
       {
         id: newStateId,
         width: DEFAULT_WINDOW_BOUNDS.width,
-        height: DEFAULT_WINDOW_BOUNDS.height,
+        height: DEFAULT_WINDOW_BOUNDS.height
       },
       { showSplash: true }
     )
@@ -577,14 +577,14 @@ function seedNewWindowState(stateId: string, files: string[], root: string | nul
     {
       id: paneId,
       tabs,
-      activeTab: tabs[tabs.length - 1] ?? null,
-    },
+      activeTab: tabs[tabs.length - 1] ?? null
+    }
   ]
   const paneRows = [{ id: rowId, paneIds: [paneId] }]
   const patch: Partial<import('./window-manager').WindowState> = {
     paneLayout,
     paneRows,
-    activePaneId: paneId,
+    activePaneId: paneId
   }
   if (root) patch.lastFolder = root
   const openWindows = store.store.openWindows || []
@@ -592,7 +592,7 @@ function seedNewWindowState(stateId: string, files: string[], root: string | nul
     'openWindows',
     upsertWindowState(openWindows, stateId, patch, {
       width: DEFAULT_WINDOW_BOUNDS.width,
-      height: DEFAULT_WINDOW_BOUNDS.height,
+      height: DEFAULT_WINDOW_BOUNDS.height
     })
   )
 }
@@ -666,7 +666,7 @@ function openCliPaths(cliPaths: CliPaths) {
         id: newStateId,
         width: DEFAULT_WINDOW_BOUNDS.width,
         height: DEFAULT_WINDOW_BOUNDS.height,
-        ...(folder ? { lastFolder: folder } : {}),
+        ...(folder ? { lastFolder: folder } : {})
       },
       { showSplash: true }
     )
@@ -711,7 +711,7 @@ ipcMain.handle('file-new', async (event, defaultPath?: string) => {
   if (!win) return null
   const { canceled, filePath } = await dialog.showSaveDialog(win, {
     defaultPath: defaultPath || undefined,
-    filters: [{ name: 'Lex Files', extensions: ['lex'] }],
+    filters: [{ name: 'Lex Files', extensions: ['lex'] }]
   })
   if (canceled || !filePath) {
     return null
@@ -726,7 +726,7 @@ ipcMain.handle('file-open', async (event) => {
   if (!win) return null
   const { canceled, filePaths } = await dialog.showOpenDialog(win, {
     properties: ['openFile'],
-    filters: [{ name: 'Lex Files', extensions: ['lex'] }],
+    filters: [{ name: 'Lex Files', extensions: ['lex'] }]
   })
   if (canceled || filePaths.length === 0) {
     return null
@@ -746,7 +746,7 @@ ipcMain.handle(
     const { canceled, filePaths } = await dialog.showOpenDialog(win, {
       title: options.title,
       properties: ['openFile'],
-      filters: options.filters,
+      filters: options.filters
     })
     if (canceled || filePaths.length === 0) {
       return null
@@ -799,7 +799,7 @@ ipcMain.handle('file-read-dir', async (_, dirPath: string) => {
     return entries.map((entry) => ({
       name: entry.name,
       isDirectory: entry.isDirectory(),
-      path: path.join(dirPath, entry.name),
+      path: path.join(dirPath, entry.name)
     }))
   } catch (error) {
     console.error('Failed to read directory:', error)
@@ -859,7 +859,7 @@ ipcMain.handle('folder-open', async (event) => {
   const win = BrowserWindow.fromWebContents(event.sender)
   if (!win) return null
   const { canceled, filePaths } = await dialog.showOpenDialog(win, {
-    properties: ['openDirectory'],
+    properties: ['openDirectory']
   })
   if (canceled || filePaths.length === 0) {
     return null
@@ -940,7 +940,7 @@ ipcMain.handle('get-open-tabs', async (event) => {
     return {
       panes: [{ id: randomUUID(), tabs: [], activeTab: null }],
       activePaneId: null,
-      rows: [],
+      rows: []
     }
   }
 
@@ -951,8 +951,8 @@ ipcMain.handle('get-open-tabs', async (event) => {
           {
             id: winState.activePaneId || randomUUID(),
             tabs: [], // Don't restore tabs from global settings to avoid confusion? Or should we?
-            activeTab: null,
-          },
+            activeTab: null
+          }
         ]
 
   const panes: PaneLayoutSettings[] = []
@@ -974,7 +974,7 @@ ipcMain.handle('get-open-tabs', async (event) => {
       activeTab:
         pane.activeTab && filteredTabs.includes(pane.activeTab)
           ? pane.activeTab
-          : filteredTabs[0] || null,
+          : filteredTabs[0] || null
     })
   }
 
@@ -999,7 +999,7 @@ ipcMain.handle('get-open-tabs', async (event) => {
               id: row.id || randomUUID(),
               paneIds,
               size: typeof row.size === 'number' ? row.size : undefined,
-              paneSizes,
+              paneSizes
             }
           })
           .filter((row) => row.paneIds.length > 0)
@@ -1011,8 +1011,8 @@ ipcMain.handle('get-open-tabs', async (event) => {
         id: randomUUID(),
         paneIds: panes.map((p) => p.id),
         size: undefined,
-        paneSizes: {},
-      },
+        paneSizes: {}
+      }
     ]
   } else {
     const referenced = new Set(rows.flatMap((row) => row.paneIds))
@@ -1030,7 +1030,7 @@ ipcMain.handle('get-open-tabs', async (event) => {
   return {
     panes,
     activePaneId,
-    rows,
+    rows
   }
 })
 
@@ -1051,13 +1051,13 @@ ipcMain.handle(
     const normalizedPanes: PaneLayoutSettings[] = panes.map((pane) => ({
       id: pane.id || randomUUID(),
       tabs: pane.tabs || [],
-      activeTab: pane.activeTab ?? null,
+      activeTab: pane.activeTab ?? null
     }))
     const normalizedRows: PaneRowLayout[] = rows.map((row) => ({
       id: row.id || randomUUID(),
       paneIds: row.paneIds || [],
       size: row.size,
-      paneSizes: row.paneSizes,
+      paneSizes: row.paneSizes
     }))
 
     const openWindows = store.store.openWindows || []
@@ -1230,7 +1230,7 @@ ipcMain.on('get-native-theme-sync', (event) => {
 ipcMain.on('update-menu-state', (_event, state: MenuState) => {
   applyMenuState({
     hasOpenFile: !!state?.hasOpenFile,
-    isLexFile: !!state?.isLexFile,
+    isLexFile: !!state?.isLexFile
   })
 })
 
@@ -1299,7 +1299,7 @@ function createMenu() {
                 label: 'Settings...',
                 accelerator: 'CmdOrCtrl+,' as const,
                 click: (_: Electron.MenuItem, focusedWindow: BaseWindow | undefined) =>
-                  getTargetWindow(focusedWindow)?.webContents.send('menu-show-settings'),
+                  getTargetWindow(focusedWindow)?.webContents.send('menu-show-settings')
               },
               { type: 'separator' as const },
               { role: 'services' as const },
@@ -1308,9 +1308,9 @@ function createMenu() {
               { role: 'hideOthers' as const },
               { role: 'unhide' as const },
               { type: 'separator' as const },
-              { role: 'quit' as const },
-            ],
-          },
+              { role: 'quit' as const }
+            ]
+          }
         ]
       : []),
     {
@@ -1319,25 +1319,25 @@ function createMenu() {
         {
           label: 'New Window',
           accelerator: 'CmdOrCtrl+Shift+N',
-          click: () => windowManager.createWindow(),
+          click: () => windowManager.createWindow()
         },
         {
           label: 'New File',
           accelerator: 'CmdOrCtrl+N',
           click: (_, focusedWindow) =>
-            getTargetWindow(focusedWindow)?.webContents.send('menu-new-file'),
+            getTargetWindow(focusedWindow)?.webContents.send('menu-new-file')
         },
         {
           label: 'Open File...',
           accelerator: 'CmdOrCtrl+O',
           click: (_, focusedWindow) =>
-            getTargetWindow(focusedWindow)?.webContents.send('menu-open-file'),
+            getTargetWindow(focusedWindow)?.webContents.send('menu-open-file')
         },
         {
           label: 'Open Folder...',
           accelerator: 'CmdOrCtrl+Shift+O',
           click: (_, focusedWindow) =>
-            getTargetWindow(focusedWindow)?.webContents.send('menu-open-folder'),
+            getTargetWindow(focusedWindow)?.webContents.send('menu-open-folder')
         },
         { type: 'separator' },
         {
@@ -1345,8 +1345,7 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+S',
           id: 'menu-save',
           enabled: false,
-          click: (_, focusedWindow) =>
-            getTargetWindow(focusedWindow)?.webContents.send('menu-save'),
+          click: (_, focusedWindow) => getTargetWindow(focusedWindow)?.webContents.send('menu-save')
         },
         { type: 'separator' },
         {
@@ -1357,27 +1356,27 @@ function createMenu() {
               id: 'menu-export-markdown',
               enabled: false,
               click: (_, focusedWindow) =>
-                getTargetWindow(focusedWindow)?.webContents.send('menu-export', 'markdown'),
+                getTargetWindow(focusedWindow)?.webContents.send('menu-export', 'markdown')
             },
             {
               label: 'Export to HTML',
               id: 'menu-export-html',
               enabled: false,
               click: (_, focusedWindow) =>
-                getTargetWindow(focusedWindow)?.webContents.send('menu-export', 'html'),
+                getTargetWindow(focusedWindow)?.webContents.send('menu-export', 'html')
             },
             {
               label: 'Export to PDF',
               id: 'menu-export-pdf',
               enabled: false,
               click: (_, focusedWindow) =>
-                getTargetWindow(focusedWindow)?.webContents.send('menu-export', 'pdf'),
-            },
-          ],
+                getTargetWindow(focusedWindow)?.webContents.send('menu-export', 'pdf')
+            }
+          ]
         },
         { type: 'separator' },
-        isMac ? { role: 'close' } : { role: 'quit' },
-      ],
+        isMac ? { role: 'close' } : { role: 'quit' }
+      ]
     },
     {
       label: 'Edit',
@@ -1395,8 +1394,7 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+F',
           id: 'menu-find',
           enabled: false,
-          click: (_, focusedWindow) =>
-            getTargetWindow(focusedWindow)?.webContents.send('menu-find'),
+          click: (_, focusedWindow) => getTargetWindow(focusedWindow)?.webContents.send('menu-find')
         },
         {
           label: 'Replace',
@@ -1404,7 +1402,7 @@ function createMenu() {
           id: 'menu-replace',
           enabled: false,
           click: (_, focusedWindow) =>
-            getTargetWindow(focusedWindow)?.webContents.send('menu-replace'),
+            getTargetWindow(focusedWindow)?.webContents.send('menu-replace')
         },
         { type: 'separator' },
         {
@@ -1413,7 +1411,7 @@ function createMenu() {
           id: 'menu-format',
           enabled: false,
           click: (_, focusedWindow) =>
-            getTargetWindow(focusedWindow)?.webContents.send('menu-format'),
+            getTargetWindow(focusedWindow)?.webContents.send('menu-format')
         },
         {
           label: 'Insert Asset',
@@ -1421,7 +1419,7 @@ function createMenu() {
           id: 'menu-insert-asset',
           enabled: false,
           click: (_, focusedWindow) =>
-            getTargetWindow(focusedWindow)?.webContents.send('menu-insert-asset'),
+            getTargetWindow(focusedWindow)?.webContents.send('menu-insert-asset')
         },
         {
           label: 'Insert Verbatim',
@@ -1429,7 +1427,7 @@ function createMenu() {
           id: 'menu-insert-verbatim',
           enabled: false,
           click: (_, focusedWindow) =>
-            getTargetWindow(focusedWindow)?.webContents.send('menu-insert-verbatim'),
+            getTargetWindow(focusedWindow)?.webContents.send('menu-insert-verbatim')
         },
         { type: 'separator' },
         {
@@ -1437,7 +1435,7 @@ function createMenu() {
           id: 'menu-reorder-footnotes',
           enabled: false,
           click: (_, focusedWindow) =>
-            getTargetWindow(focusedWindow)?.webContents.send('menu-reorder-footnotes'),
+            getTargetWindow(focusedWindow)?.webContents.send('menu-reorder-footnotes')
         },
         { type: 'separator' },
         {
@@ -1446,7 +1444,7 @@ function createMenu() {
           id: 'menu-resolve-annotation',
           enabled: false,
           click: (_, focusedWindow) =>
-            getTargetWindow(focusedWindow)?.webContents.send('menu-resolve-annotation'),
+            getTargetWindow(focusedWindow)?.webContents.send('menu-resolve-annotation')
         },
         {
           label: 'Next Annotation',
@@ -1454,7 +1452,7 @@ function createMenu() {
           id: 'menu-next-annotation',
           enabled: false,
           click: (_, focusedWindow) =>
-            getTargetWindow(focusedWindow)?.webContents.send('menu-next-annotation'),
+            getTargetWindow(focusedWindow)?.webContents.send('menu-next-annotation')
         },
         {
           label: 'Previous Annotation',
@@ -1462,7 +1460,7 @@ function createMenu() {
           id: 'menu-prev-annotation',
           enabled: false,
           click: (_, focusedWindow) =>
-            getTargetWindow(focusedWindow)?.webContents.send('menu-prev-annotation'),
+            getTargetWindow(focusedWindow)?.webContents.send('menu-prev-annotation')
         },
         // Settings in Edit menu for non-macOS platforms
         ...(!isMac
@@ -1472,11 +1470,11 @@ function createMenu() {
                 label: 'Settings',
                 accelerator: 'CmdOrCtrl+,' as const,
                 click: (_: Electron.MenuItem, focusedWindow: BaseWindow | undefined) =>
-                  getTargetWindow(focusedWindow)?.webContents.send('menu-show-settings'),
-              },
+                  getTargetWindow(focusedWindow)?.webContents.send('menu-show-settings')
+              }
             ]
-          : []),
-      ],
+          : [])
+      ]
     },
     {
       label: 'View',
@@ -1487,27 +1485,27 @@ function createMenu() {
           id: 'menu-preview',
           enabled: false,
           click: (_, focusedWindow) =>
-            getTargetWindow(focusedWindow)?.webContents.send('menu-preview'),
+            getTargetWindow(focusedWindow)?.webContents.send('menu-preview')
         },
         {
           label: 'Toggle Annotations',
           id: 'menu-toggle-annotations',
           enabled: false,
           click: (_, focusedWindow) =>
-            getTargetWindow(focusedWindow)?.webContents.send('menu-toggle-annotations'),
+            getTargetWindow(focusedWindow)?.webContents.send('menu-toggle-annotations')
         },
         {
           label: 'Toggle Hidden Files',
           id: 'menu-toggle-hidden-files',
           click: (_, focusedWindow) =>
-            getTargetWindow(focusedWindow)?.webContents.send('menu-toggle-hidden-files'),
+            getTargetWindow(focusedWindow)?.webContents.send('menu-toggle-hidden-files')
         },
         { type: 'separator' },
         {
           label: 'Show Keyboard Shortcuts',
           accelerator: 'CmdOrCtrl+Shift+/',
           click: (_, focusedWindow) =>
-            getTargetWindow(focusedWindow)?.webContents.send('menu-show-shortcuts'),
+            getTargetWindow(focusedWindow)?.webContents.send('menu-show-shortcuts')
         },
         { type: 'separator' },
         { role: 'reload', accelerator: 'CmdOrCtrl+Alt+R' },
@@ -1518,8 +1516,8 @@ function createMenu() {
         { role: 'zoomIn' },
         { role: 'zoomOut' },
         { type: 'separator' },
-        { role: 'togglefullscreen' },
-      ],
+        { role: 'togglefullscreen' }
+      ]
     },
     // Shell menu (macOS only) - CLI installation
     ...(isMac
@@ -1543,7 +1541,7 @@ function createMenu() {
                       result.message
                     )
                   }
-                },
+                }
               },
               {
                 id: 'menu-uninstall-cli',
@@ -1561,10 +1559,10 @@ function createMenu() {
                       result.message
                     )
                   }
-                },
-              },
-            ],
-          },
+                }
+              }
+            ]
+          }
         ]
       : []),
     {
@@ -1574,9 +1572,9 @@ function createMenu() {
         { role: 'zoom' },
         ...(isMac
           ? [{ type: 'separator' as const }, { role: 'front' as const }]
-          : [{ role: 'close' as const }]),
-      ],
-    },
+          : [{ role: 'close' as const }])
+      ]
+    }
   ]
 
   applicationMenu = Menu.buildFromTemplate(template)
@@ -1657,7 +1655,7 @@ async function installCliCommand(): Promise<{ success: boolean; message: string 
     await execAsync(`osascript -e '${script}'`)
     return {
       success: true,
-      message: `Successfully installed 'lexed' command.\n\nYou can now open files with:\n  lexed /path/to/file.lex`,
+      message: `Successfully installed 'lexed' command.\n\nYou can now open files with:\n  lexed /path/to/file.lex`
     }
   } catch (error) {
     const err = error as Error & { code?: number }
@@ -1759,7 +1757,7 @@ if (!gotTheLock) {
       applicationName: 'LexEd',
       applicationVersion: app.getVersion(),
       copyright: 'Copyright © 2024 Lex',
-      credits: 'Developed by the Lex Team',
+      credits: 'Developed by the Lex Team'
     })
     createMenu()
 
@@ -1825,7 +1823,7 @@ if (!gotTheLock) {
         paneLayout: settings.paneLayout,
         paneRows: settings.paneRows,
         activePaneId: settings.activePaneId,
-        lastFolder: settings.lastFolder,
+        lastFolder: settings.lastFolder
       }
 
       store.set('openWindows', [legacyState])
@@ -1853,7 +1851,7 @@ if (!gotTheLock) {
           id: newStateId,
           width: DEFAULT_WINDOW_BOUNDS.width,
           height: DEFAULT_WINDOW_BOUNDS.height,
-          ...(cliPaths.folder ? { lastFolder: cliPaths.folder } : {}),
+          ...(cliPaths.folder ? { lastFolder: cliPaths.folder } : {})
         },
         { showSplash: true }
       )
@@ -1869,7 +1867,7 @@ if (!gotTheLock) {
           id: newStateId,
           width: DEFAULT_WINDOW_BOUNDS.width,
           height: DEFAULT_WINDOW_BOUNDS.height,
-          lastFolder: projectPath,
+          lastFolder: projectPath
         },
         { showSplash: true }
       )

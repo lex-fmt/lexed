@@ -5,7 +5,7 @@ export {
   waitForLsp,
   waitForEditor,
   waitForEditorContent,
-  waitForSpellcheck,
+  waitForSpellcheck
 } from './wait'
 export * as loc from './locators'
 export {
@@ -14,7 +14,7 @@ export {
   expectFormattingRequest,
   expectEditorValue,
   expectToast,
-  assertNoRuntimeErrors,
+  assertNoRuntimeErrors
 } from './assertions'
 export {
   focusEditor,
@@ -22,12 +22,12 @@ export {
   openSettings,
   closeSettings,
   resetSettings,
-  openWorkspace,
+  openWorkspace
 } from './actions'
 export {
   triggerCompletion,
   getCompletionItems,
   expectCompletionItem,
   expectNoCompletionItem,
-  acceptCompletion,
+  acceptCompletion
 } from './completion'

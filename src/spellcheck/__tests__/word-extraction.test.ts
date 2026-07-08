@@ -14,14 +14,14 @@ describe('extractCheckableWords', () => {
       startLine: 1,
       startColumn: 1,
       endLine: 1,
-      endColumn: 6,
+      endColumn: 6
     })
     expect(words[1]).toEqual({
       text: 'world',
       startLine: 1,
       startColumn: 7,
       endLine: 1,
-      endColumn: 12,
+      endColumn: 12
     })
   })
 
@@ -42,7 +42,7 @@ describe('extractCheckableWords', () => {
       '\tlet x = 42;',
       ':: rust ::',
       '',
-      'After',
+      'After'
     ].join('\n')
     const words = extractCheckableWords(text)
     expect(words.map((w) => w.text)).toEqual(['Before', 'Pythn', 'code', 'example', 'After'])
@@ -135,7 +135,7 @@ describe('extractCheckableWords', () => {
       '    let x = 42;',
       ':: rust ::',
       '',
-      'After',
+      'After'
     ].join('\n')
     const words = extractCheckableWords(text)
     expect(words.map((w) => w.text)).toEqual(['Before', 'Pythn', 'code', 'example', 'After'])
@@ -153,7 +153,7 @@ describe('extractCheckableWords', () => {
       'body',
       'This',
       'is',
-      'outside',
+      'outside'
     ])
   })
 })

@@ -34,7 +34,7 @@ describe('spellcheck-fixture e2e', () => {
       ['Mispelled', 'list item / definition subject'],
       ['Brokn', 'table caption'],
       ['Coloumn', 'table header cell'],
-      ['Pythn', 'verbatim subject (prose per policy)'],
+      ['Pythn', 'verbatim subject (prose per policy)']
     ])('flags %s (%s)', (typo) => {
       expect(wordSet.has(typo)).toBe(true)
     })

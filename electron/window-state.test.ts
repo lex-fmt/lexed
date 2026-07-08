@@ -5,7 +5,7 @@ import {
   upsertWindowState,
   mergeBounds,
   setWindowFolder,
-  setWindowPaneLayout,
+  setWindowPaneLayout
 } from './window-state'
 import type { WindowState } from './window-manager'
 
@@ -31,8 +31,8 @@ describe('upsertWindowState', () => {
         width: 800,
         height: 600,
         isMaximized: false,
-        lastFolder: '/old',
-      },
+        lastFolder: '/old'
+      }
     ]
     const result = upsertWindowState(
       existing,
@@ -48,8 +48,8 @@ describe('upsertWindowState', () => {
         width: 800,
         height: 600,
         isMaximized: false,
-        lastFolder: '/new',
-      },
+        lastFolder: '/new'
+      }
     ])
   })
 
@@ -70,15 +70,15 @@ describe('mergeBounds', () => {
         width: 800,
         height: 600,
         isMaximized: false,
-        lastFolder: '/docs',
-      },
+        lastFolder: '/docs'
+      }
     ]
     const result = mergeBounds(existing, 'abc', {
       x: 200,
       y: 100,
       width: 1400,
       height: 900,
-      isMaximized: false,
+      isMaximized: false
     })
     expect(result[0]).toEqual({
       id: 'abc',
@@ -87,7 +87,7 @@ describe('mergeBounds', () => {
       width: 1400,
       height: 900,
       isMaximized: false,
-      lastFolder: '/docs',
+      lastFolder: '/docs'
     })
   })
 
@@ -100,15 +100,15 @@ describe('mergeBounds', () => {
         width: 800,
         height: 600,
         isMaximized: false,
-        lastFolder: '/docs',
-      },
+        lastFolder: '/docs'
+      }
     ]
     const result = mergeBounds(existing, 'abc', {
       x: 200,
       y: 100,
       width: 1400,
       height: 900,
-      isMaximized: true,
+      isMaximized: true
     })
     expect(result[0].x).toBeUndefined()
     expect(result[0].y).toBeUndefined()
@@ -122,7 +122,7 @@ describe('mergeBounds', () => {
       y: 100,
       width: 1400,
       height: 900,
-      isMaximized: false,
+      isMaximized: false
     })
     expect(result).toEqual([
       {
@@ -131,8 +131,8 @@ describe('mergeBounds', () => {
         y: 100,
         width: 1400,
         height: 900,
-        isMaximized: false,
-      },
+        isMaximized: false
+      }
     ])
   })
 })
@@ -153,7 +153,7 @@ describe('setWindowFolder', () => {
   it('does not touch unrelated entries', () => {
     const existing: WindowState[] = [
       { id: 'abc', width: 800, height: 600, lastFolder: '/a' },
-      { id: 'xyz', width: 1200, height: 800, lastFolder: '/b' },
+      { id: 'xyz', width: 1200, height: 800, lastFolder: '/b' }
     ]
     const result = setWindowFolder(existing, 'abc', '/new', defaultBounds)
     expect(result[1]).toEqual(existing[1])
@@ -184,8 +184,8 @@ describe('setWindowPaneLayout', () => {
         lastFolder: '/docs',
         paneLayout: [{ id: 'old', tabs: [] }],
         paneRows: [],
-        activePaneId: 'old',
-      },
+        activePaneId: 'old'
+      }
     ]
     const result = setWindowPaneLayout(
       existing,
@@ -206,7 +206,7 @@ describe('appendFilesToWindowPaneLayout', () => {
     id: 'abc',
     width: 1200,
     height: 800,
-    lastFolder: '/docs',
+    lastFolder: '/docs'
   })
 
   it('returns the state unchanged when given no files', () => {
@@ -229,7 +229,7 @@ describe('appendFilesToWindowPaneLayout', () => {
     const result = appendFilesToWindowPaneLayout(baseState(), [
       '/docs/a.lex',
       '/docs/a.lex',
-      '/docs/b.lex',
+      '/docs/b.lex'
     ])
     expect(result.paneLayout?.[0].tabs).toEqual(['/docs/a.lex', '/docs/b.lex'])
     expect(result.paneLayout?.[0].activeTab).toBe('/docs/b.lex')
@@ -240,10 +240,10 @@ describe('appendFilesToWindowPaneLayout', () => {
       ...baseState(),
       paneLayout: [
         { id: 'p1', tabs: ['/docs/old.lex'], activeTab: '/docs/old.lex' },
-        { id: 'p2', tabs: [], activeTab: null },
+        { id: 'p2', tabs: [], activeTab: null }
       ],
       paneRows: [{ id: 'r1', paneIds: ['p1', 'p2'] }],
-      activePaneId: 'p1',
+      activePaneId: 'p1'
     }
     const result = appendFilesToWindowPaneLayout(state, ['/docs/new.lex'])
     expect(result.paneLayout?.[0].tabs).toEqual(['/docs/old.lex', '/docs/new.lex'])
@@ -257,7 +257,7 @@ describe('appendFilesToWindowPaneLayout', () => {
       ...baseState(),
       paneLayout: [{ id: 'p1', tabs: ['/docs/old.lex'], activeTab: '/docs/old.lex' }],
       paneRows: [{ id: 'r1', paneIds: ['p1'] }],
-      activePaneId: 'gone',
+      activePaneId: 'gone'
     }
     const result = appendFilesToWindowPaneLayout(state, ['/docs/new.lex'])
     expect(result.paneLayout?.[0].tabs).toEqual(['/docs/old.lex', '/docs/new.lex'])
@@ -269,7 +269,7 @@ describe('appendFilesToWindowPaneLayout', () => {
       ...baseState(),
       paneLayout: [{ id: 'p1', tabs: ['/docs/a.lex', '/docs/b.lex'], activeTab: '/docs/a.lex' }],
       paneRows: [{ id: 'r1', paneIds: ['p1'] }],
-      activePaneId: 'p1',
+      activePaneId: 'p1'
     }
     const result = appendFilesToWindowPaneLayout(state, ['/docs/b.lex'])
     expect(result.paneLayout?.[0].tabs).toEqual(['/docs/a.lex', '/docs/b.lex'])
@@ -290,7 +290,7 @@ describe('appendFilesToWindowPaneLayout', () => {
       ...baseState(),
       paneLayout: [{ id: 'p1', tabs: [], activeTab: null }],
       paneRows: [],
-      activePaneId: 'p1',
+      activePaneId: 'p1'
     }
     const result = appendFilesToWindowPaneLayout(state, ['/docs/a.lex'])
     expect(result.paneRows).toHaveLength(1)
@@ -302,7 +302,7 @@ describe('appendFilesToWindowPaneLayout', () => {
       ...baseState(),
       paneLayout: [{ id: 'p1', tabs: [], activeTab: null }],
       paneRows: [{ id: 'r1', paneIds: ['p1'] }],
-      activePaneId: 'p1',
+      activePaneId: 'p1'
     }
     const result = appendFilesToWindowPaneLayout(state, ['/docs/a.lex'])
     expect(result.paneRows).toHaveLength(1)
@@ -317,7 +317,7 @@ describe('appendFilesToWindowPaneLayout', () => {
       width: 1024,
       height: 768,
       isMaximized: true,
-      lastFolder: '/projects/x',
+      lastFolder: '/projects/x'
     }
     const result = appendFilesToWindowPaneLayout(state, ['/projects/x/a.lex'])
     expect(result.x).toBe(100)

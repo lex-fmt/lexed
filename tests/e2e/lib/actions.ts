@@ -74,7 +74,7 @@ const DEFAULT_FORMATTER = {
   indentString: '    ',
   preserveTrailingBlanks: false,
   normalizeVerbatimMarkers: true,
-  formatOnSave: false,
+  formatOnSave: false
 }
 const DEFAULT_SPELLCHECK = { enabled: true, language: 'en_US' }
 
@@ -140,6 +140,6 @@ export async function openWorkspace(
       } catch {
         // Ignore cleanup failures
       }
-    },
+    }
   }
 }

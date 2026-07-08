@@ -47,7 +47,7 @@ export function useMenuHandlers(handlers: MenuHandlers) {
     onReorderFootnotes,
     onToggleHiddenFiles,
     onOpenFilePath,
-    onShowShortcuts,
+    onShowShortcuts
   } = handlers
 
   useEffect(() => {
@@ -225,6 +225,6 @@ export function useMenuHandlers(handlers: MenuHandlers) {
     onReorderFootnotes,
     onOpenFilePath,
     onShowShortcuts,
-    onToggleHiddenFiles,
+    onToggleHiddenFiles
   ])
 }

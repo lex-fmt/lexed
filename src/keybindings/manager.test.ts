@@ -8,15 +8,15 @@ const definitions: KeybindingDefinition[] = [
     title: 'Workspace Action',
     category: 'Test',
     contexts: ['workspace'],
-    shortcut: 'cmd+1',
+    shortcut: 'cmd+1'
   },
   {
     id: 'modal.only',
     title: 'Modal Only',
     category: 'Test',
     contexts: ['modal'],
-    shortcut: 'cmd+k',
-  },
+    shortcut: 'cmd+k'
+  }
 ]
 
 describe('KeybindingManager', () => {
@@ -33,7 +33,7 @@ describe('KeybindingManager', () => {
       metaKey: true,
       ctrlKey: false,
       altKey: false,
-      shiftKey: false,
+      shiftKey: false
     }
     expect(manager.handleEvent(event)).toBeNull()
     manager.setContext('workspace', true)
@@ -50,7 +50,7 @@ describe('KeybindingManager', () => {
       metaKey: false,
       ctrlKey: true,
       altKey: false,
-      shiftKey: false,
+      shiftKey: false
     })
     expect(match?.id).toBe('workspace.action')
     expect(match?.shortcut.display).toBe('Ctrl+1')
@@ -65,7 +65,7 @@ describe('KeybindingManager', () => {
       metaKey: true,
       ctrlKey: false,
       altKey: false,
-      shiftKey: false,
+      shiftKey: false
     })
     expect(match).toBeNull()
   })
@@ -79,7 +79,7 @@ describe('KeybindingManager', () => {
       metaKey: true,
       ctrlKey: false,
       altKey: false,
-      shiftKey: false,
+      shiftKey: false
     }
     expect(manager.handleEvent(workspaceEvent)).toBeNull()
 
@@ -89,7 +89,7 @@ describe('KeybindingManager', () => {
       metaKey: true,
       ctrlKey: false,
       altKey: false,
-      shiftKey: false,
+      shiftKey: false
     }
     const match = manager.handleEvent(modalEvent)
     expect(match?.id).toBe('modal.only')

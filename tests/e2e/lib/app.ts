@@ -33,7 +33,7 @@ export type AppFixtures = {
 }
 
 const defaultAppLaunchOptions: AppLaunchOptions = {
-  env: { E2E_DISABLE_PERSISTENCE: '1' },
+  env: { E2E_DISABLE_PERSISTENCE: '1' }
 }
 
 /**
@@ -60,7 +60,7 @@ const IGNORED_ERROR_PATTERNS: ReadonlyArray<string> = [
   //   asset that doesn't ship. Pre-existing; allowlisted so the
   //   harness lands. Track as its own bug once we've narrowed the
   //   missing resource.
-  'Failed to load resource: net::ERR_FILE_NOT_FOUND',
+  'Failed to load resource: net::ERR_FILE_NOT_FOUND'
 ]
 
 function shouldIgnore(message: string): boolean {
@@ -147,8 +147,8 @@ export const test = base.extend<AppFixtures>({
         )
       }
     },
-    { auto: true },
-  ],
+    { auto: true }
+  ]
 })
 
 export { expect } from '@playwright/test'

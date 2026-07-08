@@ -3,7 +3,7 @@ import { openFixture } from './helpers'
 
 test.describe('Spellcheck', () => {
   test('should show diagnostics for misspelled words and support language switching', async ({
-    page,
+    page
   }) => {
     test.setTimeout(90000)
 

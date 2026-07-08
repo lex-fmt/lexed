@@ -23,7 +23,7 @@ import {
   AlignLeft,
   Lightbulb,
   Image,
-  FileCode2,
+  FileCode2
 } from 'lucide-react'
 import { isLexFile } from '@/lib/files'
 import type { FileContextMenuHandlers } from './FileContextMenu'
@@ -81,7 +81,7 @@ export function Layout({
   onInsertAsset,
   onInsertVerbatim,
   onTriggerAction,
-  fileContextMenuHandlers,
+  fileContextMenuHandlers
 }: LayoutProps) {
   const isCurrentFileLex = isLexFile(currentFile ?? null)
   const hasCurrentFile = Boolean(currentFile)

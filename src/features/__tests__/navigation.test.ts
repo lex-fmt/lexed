@@ -8,8 +8,8 @@ describe('Navigation Logic', () => {
         uri: 'file:///tmp/foo.lex',
         range: {
           start: { line: 1, character: 1 },
-          end: { line: 1, character: 5 },
-        },
+          end: { line: 1, character: 5 }
+        }
       }
       expect(isLocation(valid)).toBe(true)
     })

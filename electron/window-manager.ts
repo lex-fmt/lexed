@@ -106,7 +106,7 @@ export interface AppSettings {
 
 const DEFAULT_WINDOW_STATE = {
   width: 1200,
-  height: 800,
+  height: 800
 }
 
 // Cap the number of windows we restore on launch. Entries accumulate in the
@@ -162,8 +162,8 @@ export class WindowManager {
       show: false,
       webPreferences: {
         nodeIntegration: false,
-        contextIsolation: true,
-      },
+        contextIsolation: true
+      }
     })
 
     // Read logo and embed as base64 to avoid file:// URL issues
@@ -276,8 +276,8 @@ export class WindowManager {
         backgroundColor: bgColor,
         webPreferences: {
           preload: path.join(__dirname, 'preload.mjs'),
-          backgroundThrottling: false,
-        },
+          backgroundThrottling: false
+        }
       })
 
       if (restoreState?.isMaximized) {
@@ -361,7 +361,7 @@ export class WindowManager {
       y: bounds.y,
       width: isMaximized ? DEFAULT_WINDOW_STATE.width : bounds.width,
       height: isMaximized ? DEFAULT_WINDOW_STATE.height : bounds.height,
-      isMaximized,
+      isMaximized
     })
 
     this.store.set('openWindows', updated)

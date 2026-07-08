@@ -34,7 +34,7 @@ export function calculateSnippetInsertion(
     textToInsert,
     prefix,
     suffix,
-    newCursorOffset,
+    newCursorOffset
   }
 }
 
@@ -58,7 +58,7 @@ const PREPARE_PASTE_MODES: ReadonlySet<string> = new Set<PreparePasteMode>([
   're-anchor',
   'passthrough-verbatim',
   'passthrough-table',
-  'passthrough-single-line',
+  'passthrough-single-line'
 ])
 
 /**

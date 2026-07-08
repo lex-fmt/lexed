@@ -36,14 +36,14 @@ const SPECIAL_KEY_CODES: Record<string, { code: string; label: string }> = {
   home: { code: 'Home', label: 'Home' },
   end: { code: 'End', label: 'End' },
   pageup: { code: 'PageUp', label: 'PageUp' },
-  pagedown: { code: 'PageDown', label: 'PageDown' },
+  pagedown: { code: 'PageDown', label: 'PageDown' }
 }
 
 const MODIFIER_ORDER: Array<keyof NormalizedKeyChord['modifiers']> = [
   'meta',
   'ctrl',
   'alt',
-  'shift',
+  'shift'
 ]
 
 const MODIFIER_LABELS: Record<
@@ -54,20 +54,20 @@ const MODIFIER_LABELS: Record<
     meta: 'Cmd',
     ctrl: 'Ctrl',
     alt: 'Option',
-    shift: 'Shift',
+    shift: 'Shift'
   },
   windows: {
     meta: 'Win',
     ctrl: 'Ctrl',
     alt: 'Alt',
-    shift: 'Shift',
+    shift: 'Shift'
   },
   linux: {
     meta: 'Super',
     ctrl: 'Ctrl',
     alt: 'Alt',
-    shift: 'Shift',
-  },
+    shift: 'Shift'
+  }
 }
 
 function normalizeToken(token: string): string {
@@ -152,7 +152,7 @@ export function parseShortcut(
     meta: false,
     ctrl: false,
     alt: false,
-    shift: false,
+    shift: false
   }
   let keyToken: string | null = null
 
@@ -202,11 +202,11 @@ export function parseShortcut(
   const chord: NormalizedKeyChord = {
     code: resolvedKey.code,
     keyLabel: resolvedKey.label,
-    modifiers,
+    modifiers
   }
 
   return {
     chords: [chord],
-    display: buildDisplayLabel(chord, platform),
+    display: buildDisplayLabel(chord, platform)
   }
 }

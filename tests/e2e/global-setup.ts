@@ -12,6 +12,6 @@ export default async function globalSetup() {
 
   execSync('npm run build', {
     cwd: ROOT,
-    stdio: 'inherit',
+    stdio: 'inherit'
   })
 }

@@ -5,7 +5,7 @@ import {
   calculateSnippetInsertion,
   isPreparePasteResponse,
   computePasteEndPosition,
-  type SnippetInsertionPayload,
+  type SnippetInsertionPayload
 } from '@/lib/editing'
 
 async function invokeInsertCommand(
@@ -27,8 +27,8 @@ async function invokeInsertCommand(
         arguments: [
           model.uri.toString(),
           { line: position.lineNumber - 1, character: position.column - 1 },
-          ...args,
-        ],
+          ...args
+        ]
       }
     )
 
@@ -70,8 +70,8 @@ function insertSnippet(
         position.column
       ),
       text: textToInsert,
-      forceMoveMarkers: true,
-    },
+      forceMoveMarkers: true
+    }
   ])
 
   const newPosition = model.getPositionAt(newCursorOffset)
@@ -208,7 +208,7 @@ async function applyExtractWorkspaceEdit(
           e.range.end.character + 1
         ),
         text: e.newText,
-        forceMoveMarkers: true,
+        forceMoveMarkers: true
       }))
       editor.executeEdits('lex-extract-to-include', monacoEdits)
       continue
@@ -261,19 +261,19 @@ export async function extractToInclude(
   const range: LspRange = {
     start: {
       line: selection.startLineNumber - 1,
-      character: selection.startColumn - 1,
+      character: selection.startColumn - 1
     },
     end: {
       line: selection.endLineNumber - 1,
-      character: selection.endColumn - 1,
-    },
+      character: selection.endColumn - 1
+    }
   }
 
   const response = await lspClient.sendRequest<LspWorkspaceEdit | null>(
     'workspace/executeCommand',
     {
       command: 'lex.extractToInclude',
-      arguments: [model.uri.toString(), range, src],
+      arguments: [model.uri.toString(), range, src]
     }
   )
   if (!response) throw new Error('Extract returned an empty response')
@@ -321,12 +321,12 @@ export async function applySmartPaste(
   const range: LspRange = {
     start: {
       line: pasteRange.startLineNumber - 1,
-      character: pasteRange.startColumn - 1,
+      character: pasteRange.startColumn - 1
     },
     end: {
       line: pasteRange.endLineNumber - 1,
-      character: pasteRange.endColumn - 1,
-    },
+      character: pasteRange.endColumn - 1
+    }
   }
 
   let response: unknown
@@ -334,7 +334,7 @@ export async function applySmartPaste(
     response = await lspClient.sendRequest<unknown>('lex/preparePaste', {
       textDocument: { uri: model.uri.toString() },
       range,
-      pastedText,
+      pastedText
     })
   } catch (error) {
     console.error('lex/preparePaste failed; falling back to native paste', error)
@@ -376,8 +376,8 @@ export async function applySmartPaste(
             pasteRange.endColumn
           ),
           text: response.text,
-          forceMoveMarkers: true,
-        },
+          forceMoveMarkers: true
+        }
       ],
       [new monaco.Selection(end.lineNumber, end.column, end.lineNumber, end.column)]
     )
@@ -432,7 +432,7 @@ export function installSmartPasteInterceptor(
       startLineNumber: selection.startLineNumber,
       startColumn: selection.startColumn,
       endLineNumber: selection.endLineNumber,
-      endColumn: selection.endColumn,
+      endColumn: selection.endColumn
     }
 
     void applySmartPaste(editor, pasteRange, pastedText).then((handled) => {
@@ -458,8 +458,8 @@ export function installSmartPasteInterceptor(
                 live.endColumn
               ),
               text: pastedText,
-              forceMoveMarkers: true,
-            },
+              forceMoveMarkers: true
+            }
           ],
           [new monaco.Selection(end.lineNumber, end.column, end.lineNumber, end.column)]
         )

@@ -38,7 +38,7 @@ import {
   test,
   type ConsoleMessage,
   type ElectronApplication,
-  type Page,
+  type Page
 } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -103,7 +103,7 @@ async function waitForEditorWindow(
   while (Date.now() - start < timeoutMs) {
     const remaining = timeoutMs - (Date.now() - start)
     const next = await application.waitForEvent('window', {
-      timeout: Math.max(remaining, 1000),
+      timeout: Math.max(remaining, 1000)
     })
     if (isEditor(next)) {
       await next.waitForLoadState('domcontentloaded')
@@ -136,8 +136,8 @@ test.beforeAll(async () => {
       ...process.env,
       LEX_LSP_PATH: '',
       E2E_HIDE_WINDOW: '',
-      E2E_DISABLE_PERSISTENCE: '',
-    },
+      E2E_DISABLE_PERSISTENCE: ''
+    }
   })
   page = await waitForEditorWindow(app)
   // Surface browser-side logs to the test runner's output so a CI
@@ -177,6 +177,6 @@ test('packaged app captures a screenshot of its initial state', async () => {
   const platform = process.env.PACKAGED_PLATFORM_LABEL ?? process.platform
   await page.screenshot({
     path: path.join(outDir, `${platform}-initial.png`),
-    fullPage: true,
+    fullPage: true
   })
 })

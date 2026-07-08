@@ -15,7 +15,7 @@ export function LspErrorModal({
   message,
   suggestion,
   onClose,
-  autoDismissMs = 15000,
+  autoDismissMs = 15000
 }: LspErrorModalProps) {
   useEffect(() => {
     if (!isOpen) return

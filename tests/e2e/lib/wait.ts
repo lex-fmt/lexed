@@ -47,6 +47,6 @@ export async function waitForEditorContent(page: Page, text: string, { timeout =
  */
 export async function waitForSpellcheck(page: Page, timeout = 20000) {
   await page.waitForFunction(() => Boolean(window.__e2e.bridge.isSpellcheckReady?.()), null, {
-    timeout,
+    timeout
   })
 }
