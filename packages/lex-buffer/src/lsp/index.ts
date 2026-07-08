@@ -3,7 +3,7 @@ export {
   setLspTransportFactory,
   ensureLspInitialized,
   hasCustomTransport,
-  notifyWorkspaceFoldersChanged,
+  notifyWorkspaceFoldersChanged
 } from './init'
 export type {
   LspPosition,
@@ -19,7 +19,7 @@ export type {
   LspHover,
   LspSemanticTokens,
   LspDiagnostic,
-  LspPublishDiagnosticsParams,
+  LspPublishDiagnosticsParams
 } from './types'
 export { navigateTableCell, formatTableAtCursor } from './table_commands'
 export { buildFormattingOptions } from './providers/formatting'
@@ -27,6 +27,6 @@ export {
   formatPromptHeadline,
   describeSource,
   describeCapability,
-  describeTransport,
+  describeTransport
 } from './trustPromptFormat'
 export type { TrustRequestSource, TrustRequestParams, TrustResponse } from './trustPromptFormat'

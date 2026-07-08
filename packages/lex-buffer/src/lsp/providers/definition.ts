@@ -11,7 +11,7 @@ export function registerDefinitionProvider(
       if (!connection) return null
       const params = {
         textDocument: { uri: model.uri.toString() },
-        position: { line: position.lineNumber - 1, character: position.column - 1 },
+        position: { line: position.lineNumber - 1, character: position.column - 1 }
       }
       try {
         const result = (await connection.sendRequest('textDocument/definition', params)) as
@@ -26,13 +26,13 @@ export function registerDefinitionProvider(
             startLineNumber: loc.range.start.line + 1,
             startColumn: loc.range.start.character + 1,
             endLineNumber: loc.range.end.line + 1,
-            endColumn: loc.range.end.character + 1,
-          },
+            endColumn: loc.range.end.character + 1
+          }
         }))
       } catch (e) {
         console.error('[LSP] Definition failed:', e)
         return null
       }
-    },
+    }
   })
 }

@@ -68,7 +68,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     const insertSpaces = modelOptions.insertSpaces ?? true
     const params = {
       textDocument: { uri: m.uri.toString() },
-      options: buildFormattingOptions(tabSize, insertSpaces),
+      options: buildFormattingOptions(tabSize, insertSpaces)
     }
     notifyLexTest({ type: 'document', params })
 
@@ -91,7 +91,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         edit.range.end.line + 1,
         edit.range.end.character + 1
       ),
-      text: edit.newText,
+      text: edit.newText
     }))
 
     editor.pushUndoStop()
@@ -108,7 +108,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     },
     replace: () => {
       editorRef.current?.trigger('menu', 'editor.action.startFindReplaceAction', null)
-    },
+    }
   }))
 
   // Push a new model into the existing Monaco instance whenever the
@@ -177,7 +177,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       rulers: rulerWidth && rulerWidth > 0 ? [rulerWidth] : [],
       // The lightbulb gutter icon is visual noise in a prose editor;
       // Cmd+. still opens the quick-fix menu with the icon off.
-      lightbulb: { enabled: monaco.editor.ShowLightbulbIconMode.Off },
+      lightbulb: { enabled: monaco.editor.ShowLightbulbIconMode.Off }
     } satisfies monaco.editor.IStandaloneEditorConstructionOptions)
     editorRef.current = editor
 
@@ -222,7 +222,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       contextMenuGroupId: 'modification',
       run: async () => {
         await formatTableAtCursor(editor)
-      },
+      }
     })
 
     if (theme) applyTheme(theme)

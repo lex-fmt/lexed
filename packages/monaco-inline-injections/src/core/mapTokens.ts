@@ -55,7 +55,7 @@ export function mapTokensToDecorations(
       startLine: realLine,
       startCol: realStartChar,
       endLine: realLine,
-      endCol: realStartChar + length,
+      endCol: realStartChar + length
     })
   }
 }

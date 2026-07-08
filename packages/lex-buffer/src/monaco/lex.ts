@@ -14,9 +14,9 @@ export function registerLexLanguage() {
     monaco.languages.setLanguageConfiguration('lex', {
       comments: {
         lineComment: ':: note :: ',
-        blockComment: [':: note ::\n  ', '\n::'],
+        blockComment: [':: note ::\n  ', '\n::']
       },
-      wordPattern: /[-#]+|[^\s]+/,
+      wordPattern: /[-#]+|[^\s]+/
     })
   }
 

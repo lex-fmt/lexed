@@ -15,7 +15,7 @@ export function registerHoverProvider(
       if (!connection) return null
       const params = {
         textDocument: { uri: model.uri.toString() },
-        position: { line: position.lineNumber - 1, character: position.column - 1 },
+        position: { line: position.lineNumber - 1, character: position.column - 1 }
       }
       try {
         const result = (await connection.sendRequest(
@@ -26,12 +26,12 @@ export function registerHoverProvider(
         return {
           contents: Array.isArray(result.contents)
             ? result.contents.map((c) => ({ value: extractValue(c) }))
-            : [{ value: extractValue(result.contents) }],
+            : [{ value: extractValue(result.contents) }]
         }
       } catch (e) {
         console.error('[LSP] Hover failed:', e)
         return null
       }
-    },
+    }
   })
 }

@@ -28,7 +28,7 @@ export function configureMonacoEnvironment() {
         return new tsWorker()
       }
       return new editorWorker()
-    },
+    }
   } satisfies MonacoEnvironmentConfig
 }
 

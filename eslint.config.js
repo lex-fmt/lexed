@@ -184,6 +184,7 @@ export default [
       'release/**',
       'node_modules/**',
       'build/**',
+      '.pixi/**',
       'shared/**',
       'packages/**',
       '*.config.js',

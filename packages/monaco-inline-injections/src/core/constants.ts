@@ -39,7 +39,7 @@ export const LANGUAGE_ALIASES: Readonly<Record<string, string>> = {
   cxx: 'cpp',
   cc: 'cpp',
   htm: 'html',
-  golang: 'go',
+  golang: 'go'
 }
 
 /**
@@ -65,7 +65,7 @@ export const SEMANTIC_TOKEN_MAP: Readonly<Record<string, DecorationCategory>> = 
   struct: 'type',
   typeParameter: 'type',
   namespace: 'type',
-  operator: 'operator',
+  operator: 'operator'
 }
 
 /**
@@ -79,7 +79,7 @@ export const CATEGORY_COLORS: Readonly<Record<DecorationCategory, string>> = {
   number: 'inline-injection.number',
   type: 'inline-injection.type',
   function: 'inline-injection.function',
-  operator: 'inline-injection.operator',
+  operator: 'inline-injection.operator'
 }
 
 /**
@@ -88,5 +88,5 @@ export const CATEGORY_COLORS: Readonly<Record<DecorationCategory, string>> = {
  */
 export const CATEGORY_STYLES: Readonly<Partial<Record<DecorationCategory, string>>> = {
   comment: 'italic',
-  keyword: 'bold',
+  keyword: 'bold'
 }

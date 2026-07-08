@@ -10,5 +10,5 @@ export const InsertVerbatimCommand: Command<InsertVerbatimArgs> = {
   execute: async (editor: EditorAdapter, args: InsertVerbatimArgs) => {
     const text = `:: ${args.language} ::\n${args.content}\n`
     await editor.insertText(text)
-  },
+  }
 }

@@ -10,12 +10,12 @@ export type ThemeMode = 'dark' | 'light'
 const CHROME: Record<ThemeMode, { background: string; lineHighlight: string }> = {
   light: {
     background: '#ffffff',
-    lineHighlight: '#f6f6f6',
+    lineHighlight: '#f6f6f6'
   },
   dark: {
     background: '#0c0c0cec',
-    lineHighlight: '#181818ff',
-  },
+    lineHighlight: '#181818ff'
+  }
 }
 
 const THEME_NAME = 'lex-monochrome'
@@ -35,8 +35,8 @@ function defineTheme(mode: ThemeMode) {
       'editor.background': chrome.background,
       'editor.lineHighlightBackground': chrome.lineHighlight,
       'editorLineNumber.foreground': palette.faint,
-      'editorLineNumber.activeForeground': palette.normal,
-    },
+      'editorLineNumber.activeForeground': palette.normal
+    }
   })
 
   return themeName

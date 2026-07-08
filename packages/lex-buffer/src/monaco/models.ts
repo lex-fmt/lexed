@@ -54,8 +54,8 @@ export function getOrCreateModel(path: string, content: string): monaco.editor.I
         uri: uri.toString(),
         languageId: 'lex',
         version: 1,
-        text: content,
-      },
+        text: content
+      }
     })
 
     const uriString = uri.toString()
@@ -74,9 +74,9 @@ export function getOrCreateModel(path: string, content: string): monaco.editor.I
           lspClient.sendNotification('textDocument/didChange', {
             textDocument: {
               uri: uriString,
-              version: model.getVersionId(),
+              version: model.getVersionId()
             },
-            contentChanges: [{ text: model.getValue() }],
+            contentChanges: [{ text: model.getValue() }]
           })
           notifyLexModelChange(model)
         }
@@ -109,7 +109,7 @@ export function disposeModel(path: string) {
 
   if (isLexFile(path)) {
     lspClient.sendNotification('textDocument/didClose', {
-      textDocument: { uri: uriString },
+      textDocument: { uri: uriString }
     })
   }
 

@@ -124,7 +124,7 @@ if (typeof window !== 'undefined') {
       __lexPathTestHelpers?: { computeRelativeInsertText: typeof computeRelativeInsertText }
     }
   ).__lexPathTestHelpers = {
-    computeRelativeInsertText,
+    computeRelativeInsertText
   }
 }
 
@@ -169,8 +169,8 @@ export function registerCompletionProvider(
         context: {
           triggerKind:
             context.triggerKind === monaco.languages.CompletionTriggerKind.TriggerCharacter ? 2 : 1,
-          triggerCharacter: context.triggerCharacter,
-        },
+          triggerCharacter: context.triggerCharacter
+        }
       }
 
       try {
@@ -195,7 +195,7 @@ export function registerCompletionProvider(
           startLineNumber: position.lineNumber,
           startColumn: word.startColumn,
           endLineNumber: position.lineNumber,
-          endColumn: word.endColumn,
+          endColumn: word.endColumn
         }
         return {
           suggestions: filteredItems.map((item) => {
@@ -227,16 +227,16 @@ export function registerCompletionProvider(
                     startLineNumber: item.textEdit.range.start.line + 1,
                     startColumn: item.textEdit.range.start.character + 1,
                     endLineNumber: item.textEdit.range.end.line + 1,
-                    endColumn: item.textEdit.range.end.character + 1,
+                    endColumn: item.textEdit.range.end.character + 1
                   }
-                : defaultRange,
+                : defaultRange
             }
-          }),
+          })
         }
       } catch (e) {
         console.error('[LSP] Completion failed:', e)
         return { suggestions: [] }
       }
-    },
+    }
   })
 }

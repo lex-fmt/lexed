@@ -87,7 +87,7 @@ export async function navigateTableCell(
   try {
     outcome = await lspClient.sendRequest<TableNavOutcome | null>('workspace/executeCommand', {
       command,
-      arguments: [model.getValue(), position.lineNumber - 1, position.column - 1],
+      arguments: [model.getValue(), position.lineNumber - 1, position.column - 1]
     })
   } catch (err) {
     console.error(`[LSP] ${command} failed:`, err)
@@ -103,7 +103,7 @@ export async function navigateTableCell(
   if (outcome.position) {
     editor.setPosition({
       lineNumber: outcome.position.line + 1,
-      column: outcome.position.column + 1,
+      column: outcome.position.column + 1
     })
   }
   return true
@@ -130,7 +130,7 @@ export async function formatTableAtCursor(
   try {
     result = await lspClient.sendRequest<TableFormatResult | null>('workspace/executeCommand', {
       command: 'lex.table.format',
-      arguments: [model.getValue(), position.lineNumber - 1, position.column - 1],
+      arguments: [model.getValue(), position.lineNumber - 1, position.column - 1]
     })
   } catch (err) {
     console.error('[LSP] lex.table.format failed:', err)

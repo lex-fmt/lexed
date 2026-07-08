@@ -71,7 +71,7 @@ const DEFAULT_FORMATTER_SETTINGS: FormatterSettings = {
   maxBlankLines: 2,
   indentString: '    ',
   preserveTrailingBlanks: false,
-  normalizeVerbatimMarkers: true,
+  normalizeVerbatimMarkers: true
 }
 
 let host: HostBindings = {}
@@ -104,7 +104,7 @@ const consoleLogger: Logger = {
   debug: (...args) => console.debug(...args),
   info: (...args) => console.info(...args),
   warn: (...args) => console.warn(...args),
-  error: (...args) => console.error(...args),
+  error: (...args) => console.error(...args)
 }
 
 /**
@@ -115,5 +115,5 @@ export const log: Logger = {
   debug: (...args) => (host.logger ?? consoleLogger).debug(...args),
   info: (...args) => (host.logger ?? consoleLogger).info(...args),
   warn: (...args) => (host.logger ?? consoleLogger).warn(...args),
-  error: (...args) => (host.logger ?? consoleLogger).error(...args),
+  error: (...args) => (host.logger ?? consoleLogger).error(...args)
 }

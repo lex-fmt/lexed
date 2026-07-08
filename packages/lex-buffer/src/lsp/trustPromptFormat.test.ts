@@ -4,7 +4,7 @@ import {
   describeSource,
   describeTransport,
   formatPromptHeadline,
-  type TrustRequestParams,
+  type TrustRequestParams
 } from './trustPromptFormat'
 
 function lexTomlParams(): TrustRequestParams {
@@ -13,7 +13,7 @@ function lexTomlParams(): TrustRequestParams {
     command_string: '/usr/local/bin/acme-handler --serve',
     source: { kind: 'lex_toml', name: 'acme' },
     capability: 'full',
-    transport: 'subprocess',
+    transport: 'subprocess'
   }
 }
 

@@ -3,7 +3,7 @@ import {
   mapTokensToDecorations,
   type DecorationCategory,
   type InjectionRange,
-  type InjectionZone,
+  type InjectionZone
 } from '../src/core'
 
 function emptyRanges(): Map<DecorationCategory, InjectionRange[]> {
@@ -14,7 +14,7 @@ function emptyRanges(): Map<DecorationCategory, InjectionRange[]> {
     ['number', []],
     ['type', []],
     ['function', []],
-    ['operator', []],
+    ['operator', []]
   ])
 }
 
@@ -24,11 +24,11 @@ const ZONE: InjectionZone = {
   startRow: 10,
   startCol: 4,
   endRow: 20,
-  endCol: 0,
+  endCol: 0
 }
 
 const LEGEND = {
-  tokenTypes: ['keyword', 'string', 'comment', 'number', 'operator', 'variable'],
+  tokenTypes: ['keyword', 'string', 'comment', 'number', 'operator', 'variable']
 }
 
 describe('mapTokensToDecorations', () => {
@@ -43,7 +43,7 @@ describe('mapTokensToDecorations', () => {
       startLine: 10,
       startCol: 6,
       endLine: 10,
-      endCol: 9,
+      endCol: 9
     })
   })
 
@@ -59,14 +59,14 @@ describe('mapTokensToDecorations', () => {
       startLine: 10,
       startCol: 4,
       endLine: 10,
-      endCol: 7,
+      endCol: 7
     })
     expect(str).toHaveLength(1)
     expect(str[0]).toEqual({
       startLine: 12,
       startCol: 4,
       endLine: 12,
-      endCol: 9,
+      endCol: 9
     })
   })
 
@@ -82,14 +82,14 @@ describe('mapTokensToDecorations', () => {
       startLine: 10,
       startCol: 4,
       endLine: 10,
-      endCol: 7,
+      endCol: 7
     })
     expect(str).toHaveLength(1)
     expect(str[0]).toEqual({
       startLine: 10,
       startCol: 9,
       endLine: 10,
-      endCol: 13,
+      endCol: 13
     })
   })
 
@@ -116,10 +116,10 @@ describe('mapTokensToDecorations', () => {
   it('routes aliased token types to the right category', () => {
     const ranges = emptyRanges()
     const legend = {
-      tokenTypes: ['class', 'method', 'regexp', 'modifier', 'macro', 'namespace'],
+      tokenTypes: ['class', 'method', 'regexp', 'modifier', 'macro', 'namespace']
     }
     const data = new Uint32Array([
-      0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 2, 0, 1, 0, 1, 3, 0, 1, 0, 1, 4, 0, 1, 0, 1, 5, 0,
+      0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 2, 0, 1, 0, 1, 3, 0, 1, 0, 1, 4, 0, 1, 0, 1, 5, 0
     ])
     mapTokensToDecorations({ legend, data }, ZONE, ranges)
 
@@ -145,7 +145,7 @@ describe('mapTokensToDecorations', () => {
       startRow: 0,
       startCol: 8,
       endRow: 2,
-      endCol: 0,
+      endCol: 0
     }
     const data = new Uint32Array([0, 1, 2, 0, 0])
     mapTokensToDecorations({ legend: LEGEND, data }, zone, ranges)
@@ -155,7 +155,7 @@ describe('mapTokensToDecorations', () => {
       startLine: 0,
       startCol: 9,
       endLine: 0,
-      endCol: 11,
+      endCol: 11
     })
   })
 })

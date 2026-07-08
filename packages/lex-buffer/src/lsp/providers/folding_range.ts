@@ -31,7 +31,7 @@ export function registerFoldingRangeProvider(
     provideFoldingRanges: async (model) => {
       if (!connection) return null
       const params = {
-        textDocument: { uri: model.uri.toString() },
+        textDocument: { uri: model.uri.toString() }
       }
       try {
         const result = (await connection.sendRequest('textDocument/foldingRange', params)) as
@@ -42,12 +42,12 @@ export function registerFoldingRangeProvider(
         return result.map((range) => ({
           start: range.startLine + 1,
           end: range.endLine + 1,
-          kind: mapKind(range.kind),
+          kind: mapKind(range.kind)
         }))
       } catch (e) {
         console.error('[LSP] Folding range failed:', e)
         return null
       }
-    },
+    }
   })
 }

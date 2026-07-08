@@ -12,7 +12,7 @@ export function registerReferencesProvider(
       const params = {
         textDocument: { uri: model.uri.toString() },
         position: { line: position.lineNumber - 1, character: position.column - 1 },
-        context: { includeDeclaration: context.includeDeclaration ?? true },
+        context: { includeDeclaration: context.includeDeclaration ?? true }
       }
       try {
         const result = (await connection.sendRequest('textDocument/references', params)) as
@@ -25,13 +25,13 @@ export function registerReferencesProvider(
             startLineNumber: loc.range.start.line + 1,
             startColumn: loc.range.start.character + 1,
             endLineNumber: loc.range.end.line + 1,
-            endColumn: loc.range.end.character + 1,
-          },
+            endColumn: loc.range.end.character + 1
+          }
         }))
       } catch (e) {
         console.error('[LSP] References failed:', e)
         return null
       }
-    },
+    }
   })
 }

@@ -3,7 +3,7 @@ import {
   computeInjectionDecorations,
   type InjectionHostAdapter,
   type InjectionZone,
-  type SemanticTokens,
+  type SemanticTokens
 } from '../src/core'
 
 function makeZone(lang: string, text: string, row: number, col: number): InjectionZone {
@@ -13,7 +13,7 @@ function makeZone(lang: string, text: string, row: number, col: number): Injecti
     startRow: row,
     startCol: col,
     endRow: row + 3,
-    endCol: 0,
+    endCol: 0
   }
 }
 
@@ -27,12 +27,12 @@ describe('computeInjectionDecorations', () => {
   it('aggregates ranges across multiple zones', async () => {
     const zones = [
       makeZone('python', 'def x: pass', 10, 2),
-      makeZone('javascript', 'const y = 1', 20, 0),
+      makeZone('javascript', 'const y = 1', 20, 0)
     ]
 
     const host: InjectionHostAdapter = {
       getRegisteredLanguages: () => Promise.resolve(new Set(['python', 'javascript'])),
-      getSemanticTokens: () => Promise.resolve(tokensPayload(new Uint32Array([0, 0, 3, 0, 0]))),
+      getSemanticTokens: () => Promise.resolve(tokensPayload(new Uint32Array([0, 0, 3, 0, 0])))
     }
 
     const ranges = await computeInjectionDecorations(zones, host)
@@ -47,7 +47,7 @@ describe('computeInjectionDecorations', () => {
       'number',
       'type',
       'function',
-      'operator',
+      'operator'
     ] as const) {
       expect(ranges.get(category)).toEqual([])
     }
@@ -61,7 +61,7 @@ describe('computeInjectionDecorations', () => {
       getSemanticTokens: () => {
         calls++
         return Promise.resolve(tokensPayload(new Uint32Array([0, 0, 3, 0, 0])))
-      },
+      }
     }
 
     const ranges = await computeInjectionDecorations(zones, host)
@@ -74,7 +74,7 @@ describe('computeInjectionDecorations', () => {
     const host: InjectionHostAdapter = {
       getRegisteredLanguages: () => Promise.resolve(new Set(['python', 'rust'])),
       getSemanticTokens: (zoneIndex) =>
-        Promise.resolve(zoneIndex === 0 ? tokensPayload(new Uint32Array([0, 0, 1, 0, 0])) : null),
+        Promise.resolve(zoneIndex === 0 ? tokensPayload(new Uint32Array([0, 0, 1, 0, 0])) : null)
     }
 
     const ranges = await computeInjectionDecorations(zones, host)
@@ -88,7 +88,7 @@ describe('computeInjectionDecorations', () => {
       getSemanticTokens: (zoneIndex) => {
         if (zoneIndex === 1) return Promise.reject(new Error('provider boom'))
         return Promise.resolve(tokensPayload(new Uint32Array([0, 0, 1, 0, 0])))
-      },
+      }
     }
 
     const ranges = await computeInjectionDecorations(zones, host)
@@ -102,7 +102,7 @@ describe('computeInjectionDecorations', () => {
       getSemanticTokens: (zoneIndex) => {
         if (zoneIndex === 1) throw new Error('sync boom')
         return Promise.resolve(tokensPayload(new Uint32Array([0, 0, 1, 0, 0])))
-      },
+      }
     }
 
     const ranges = await computeInjectionDecorations(zones, host)
@@ -113,8 +113,7 @@ describe('computeInjectionDecorations', () => {
     const host: InjectionHostAdapter = {
       getRegisteredLanguages: () =>
         Promise.reject(new Error('should not be called when zones is empty')),
-      getSemanticTokens: () =>
-        Promise.reject(new Error('should not be called when zones is empty')),
+      getSemanticTokens: () => Promise.reject(new Error('should not be called when zones is empty'))
     }
     const ranges = await computeInjectionDecorations([], host)
     expect(ranges.size).toBe(7)
@@ -127,7 +126,7 @@ describe('computeInjectionDecorations', () => {
     const zones = [
       makeZone('python', 'a', 0, 0),
       makeZone('python', 'b', 5, 0),
-      makeZone('javascript', 'c', 10, 0),
+      makeZone('javascript', 'c', 10, 0)
     ]
     let registeredCalls = 0
     const host: InjectionHostAdapter = {
@@ -135,7 +134,7 @@ describe('computeInjectionDecorations', () => {
         registeredCalls++
         return Promise.resolve(new Set(['python', 'javascript']))
       },
-      getSemanticTokens: () => Promise.resolve(tokensPayload(new Uint32Array([]))),
+      getSemanticTokens: () => Promise.resolve(tokensPayload(new Uint32Array([])))
     }
 
     await computeInjectionDecorations(zones, host)
@@ -146,7 +145,7 @@ describe('computeInjectionDecorations', () => {
     const zones = [
       makeZone('python', 'first', 0, 0),
       makeZone('python', 'second', 5, 0),
-      makeZone('python', 'third', 10, 0),
+      makeZone('python', 'third', 10, 0)
     ]
     const seen: Array<{ idx: number; content: string; lang: string }> = []
     const host: InjectionHostAdapter = {
@@ -154,14 +153,14 @@ describe('computeInjectionDecorations', () => {
       getSemanticTokens: (zoneIndex, content, langId) => {
         seen.push({ idx: zoneIndex, content, lang: langId })
         return Promise.resolve(tokensPayload(new Uint32Array([])))
-      },
+      }
     }
 
     await computeInjectionDecorations(zones, host)
     expect(seen).toEqual([
       { idx: 0, content: 'first', lang: 'python' },
       { idx: 1, content: 'second', lang: 'python' },
-      { idx: 2, content: 'third', lang: 'python' },
+      { idx: 2, content: 'third', lang: 'python' }
     ])
   })
 })

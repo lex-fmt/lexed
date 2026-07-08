@@ -6,7 +6,7 @@ import {
   CodeAction as LspCodeAction,
   Command,
   TextEdit,
-  Diagnostic,
+  Diagnostic
 } from 'vscode-languageserver-protocol/browser'
 import { lspClient } from '../client'
 
@@ -26,7 +26,7 @@ function registerLspCommand(commandId: string) {
     lspClient
       .sendRequest('workspace/executeCommand', {
         command: commandId,
-        arguments: args,
+        arguments: args
       })
       .catch((err: unknown) => {
         console.error(`[LSP] Failed to execute command ${commandId}:`, err)
@@ -55,13 +55,13 @@ export function registerCodeActionProvider(
         textDocument: { uri: model.uri.toString() },
         range: {
           start: { line: range.startLineNumber - 1, character: range.startColumn - 1 },
-          end: { line: range.endLineNumber - 1, character: range.endColumn - 1 },
+          end: { line: range.endLineNumber - 1, character: range.endColumn - 1 }
         },
         context: {
           diagnostics: lspMarkers.map((marker: monaco.editor.IMarkerData) => ({
             range: {
               start: { line: marker.startLineNumber - 1, character: marker.startColumn - 1 },
-              end: { line: marker.endLineNumber - 1, character: marker.endColumn - 1 },
+              end: { line: marker.endLineNumber - 1, character: marker.endColumn - 1 }
             },
             message: marker.message,
             severity:
@@ -73,9 +73,9 @@ export function registerCodeActionProvider(
                     ? 3
                     : 4,
             code: typeof marker.code === 'string' ? marker.code : undefined,
-            source: marker.source,
-          })),
-        },
+            source: marker.source
+          }))
+        }
       }
 
       try {
@@ -91,9 +91,9 @@ export function registerCodeActionProvider(
               command: {
                 id: item.command,
                 title: item.title,
-                arguments: item.arguments,
+                arguments: item.arguments
               },
-              kind: 'quickfix',
+              kind: 'quickfix'
             })
           } else {
             const action = item as LspCodeAction
@@ -107,16 +107,16 @@ export function registerCodeActionProvider(
                     endLineNumber: d.range.end.line + 1,
                     endColumn: d.range.end.character + 1,
                     message: d.message,
-                    severity: monaco.MarkerSeverity.Error,
+                    severity: monaco.MarkerSeverity.Error
                   }))
                 : undefined,
               isPreferred: action.isPreferred,
-              disabled: action.disabled ? action.disabled.reason : undefined,
+              disabled: action.disabled ? action.disabled.reason : undefined
             }
 
             if (action.edit) {
               monacoAction.edit = {
-                edits: [],
+                edits: []
               }
               if (action.edit.changes) {
                 for (const [uri, edits] of Object.entries(action.edit.changes)) {
@@ -129,11 +129,11 @@ export function registerCodeActionProvider(
                           startLineNumber: edit.range.start.line + 1,
                           startColumn: edit.range.start.character + 1,
                           endLineNumber: edit.range.end.line + 1,
-                          endColumn: edit.range.end.character + 1,
+                          endColumn: edit.range.end.character + 1
                         },
-                        text: edit.newText,
+                        text: edit.newText
                       },
-                      versionId: undefined,
+                      versionId: undefined
                     })
                   }
                 }
@@ -146,7 +146,7 @@ export function registerCodeActionProvider(
               monacoAction.command = {
                 id: action.command.command,
                 title: action.command.title,
-                arguments: action.command.arguments,
+                arguments: action.command.arguments
               }
             }
 
@@ -156,12 +156,12 @@ export function registerCodeActionProvider(
 
         return {
           actions: actions,
-          dispose: () => {},
+          dispose: () => {}
         }
       } catch (e) {
         console.error('[LSP] CodeAction failed:', e)
         return { actions: [], dispose: () => {} }
       }
-    },
+    }
   })
 }

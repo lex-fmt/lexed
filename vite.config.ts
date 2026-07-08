@@ -35,14 +35,14 @@ export default defineConfig({
             lib: {
               entry: 'electron/main.ts',
               formats: ['cjs'],
-              fileName: () => '[name].cjs',
-            },
-          },
-        },
+              fileName: () => '[name].cjs'
+            }
+          }
+        }
       },
       preload: {
         // Shortcut of `build.rollupOptions.input`.
-        input: 'electron/preload.ts',
+        input: 'electron/preload.ts'
         // Preload runs in the renderer's preload context; ESM is fine
         // there and there are no problematic CJS deps to bundle. Leave
         // it as the default (.mjs).
@@ -54,8 +54,8 @@ export default defineConfig({
         process.env.NODE_ENV === 'test'
           ? // https://github.com/electron-vite/vite-plugin-electron-renderer/issues/78#issuecomment-2053600808
             undefined
-          : {},
-    }),
+          : {}
+    })
   ],
   resolve: {
     alias: {
@@ -65,20 +65,20 @@ export default defineConfig({
         __dirname,
         './packages/monaco-inline-injections/src/index.ts'
       ),
-      '@lex-fmt/lex-buffer': path.resolve(__dirname, './packages/lex-buffer/src/index.ts'),
-    },
+      '@lex-fmt/lex-buffer': path.resolve(__dirname, './packages/lex-buffer/src/index.ts')
+    }
   },
   server: {
     watch: {
       // Ignore user documents and dictionaries - not source code
-      ignored: ['**/*.lex', '**/welcome/**', '**/dictionaries/**'],
-    },
+      ignored: ['**/*.lex', '**/welcome/**', '**/dictionaries/**']
+    }
   },
   test: {
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
     css: true,
-    exclude: ['**/node_modules/**', '**/dist/**', '**/tests/e2e/**'],
-  },
+    exclude: ['**/node_modules/**', '**/dist/**', '**/tests/e2e/**']
+  }
 })

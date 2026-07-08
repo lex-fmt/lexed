@@ -61,7 +61,7 @@ export function registerSemanticTokensProvider(
         'variable',
         'parameter',
         'property',
-        'label',
+        'label'
       ],
       tokenModifiers: [
         'declaration',
@@ -73,14 +73,14 @@ export function registerSemanticTokensProvider(
         'async',
         'modification',
         'documentation',
-        'defaultLibrary',
-      ],
+        'defaultLibrary'
+      ]
     }),
     provideDocumentSemanticTokens: async (model) => {
       console.log('[SemanticTokens] Provider triggered')
       if (!connection) return null
       const params = {
-        textDocument: { uri: model.uri.toString() },
+        textDocument: { uri: model.uri.toString() }
       }
       try {
         const result = (await connection.sendRequest(
@@ -93,13 +93,13 @@ export function registerSemanticTokensProvider(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ;(window as any).__lexSemanticTokenCount = tokenCount
         return {
-          data: new Uint32Array(result.data),
+          data: new Uint32Array(result.data)
         }
       } catch (e) {
         console.error('[LSP] Semantic Tokens failed:', e)
         return null
       }
     },
-    releaseDocumentSemanticTokens: () => {},
+    releaseDocumentSemanticTokens: () => {}
   })
 }

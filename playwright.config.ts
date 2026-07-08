@@ -25,18 +25,18 @@ export default defineConfig({
   workers: 1, // Electron doesn't support parallel execution well
   globalSetup: './tests/e2e/global-setup.ts',
   use: {
-    trace: 'on-first-retry',
+    trace: 'on-first-retry'
   },
   projects: [
     {
       name: 'dev',
       testIgnore: [/packaged\.spec\.ts$/],
-      timeout: 60000,
+      timeout: 60000
     },
     {
       name: 'packaged',
       testMatch: [/packaged\.spec\.ts$/],
-      timeout: 90000,
-    },
-  ],
+      timeout: 90000
+    }
+  ]
 })

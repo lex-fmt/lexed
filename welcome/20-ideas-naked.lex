@@ -1,4 +1,3 @@
-:: author :: Arthur Debert  
 :: publishing-date :: 2025/10/12 20:23:23, São Paulo, Brazil
 Ideas, Naked
 
@@ -105,7 +104,6 @@ Ideas, Naked
 
             The Tower of Babel: 
                 With its epic proportions the tower of Babel is, although a gloomy one, a unequivocal recognition that human communication takes all sorts of forms.
-            :: image  ref=towerofbabel.jpg ::
 
 
         3.3.5. Annotations
@@ -120,7 +118,7 @@ Ideas, Naked
 
         3.3.6. References
 
-            Ideas, without connections are not ideas. That's why Lex includes a rich set of reference targets, for urls [http://example.com] to files [./hi-mom.txt], sections in the same document [#3.2], placeholders [TK-betterimage], citations [@john-2023, p.43] and last but never least footnotes[1]
+            Ideas, without connections are not ideas. That's why Lex includes a rich set of reference targets, for urls [http://example.com] to files [./hi-mom.txt], sections in the same document [#3.2], placeholders [TK-betterimage], citations [@john-2023, p.43] and last but never least footnotes
 
 
         3.3.7. Inlines

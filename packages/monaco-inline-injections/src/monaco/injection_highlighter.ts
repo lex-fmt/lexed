@@ -24,7 +24,7 @@ import {
   type InjectionRange,
   type InjectionZone,
   type InjectionZoneProvider,
-  type SemanticTokens,
+  type SemanticTokens
 } from '../core'
 import './injection_highlighter.css'
 
@@ -145,7 +145,7 @@ export function createMonacoInjectionHighlighter(
     }
 
     const legend = {
-      tokenTypes: Object.keys(SEMANTIC_TOKEN_MAP),
+      tokenTypes: Object.keys(SEMANTIC_TOKEN_MAP)
     }
     const typeIndex = new Map<string, number>()
     for (let i = 0; i < legend.tokenTypes.length; i++) {
@@ -194,7 +194,7 @@ export function createMonacoInjectionHighlighter(
 
   const hostAdapter: InjectionHostAdapter = {
     getRegisteredLanguages,
-    getSemanticTokens: getSemanticTokensForZone,
+    getSemanticTokens: getSemanticTokensForZone
   }
 
   function clearDecorations(): void {
@@ -257,8 +257,8 @@ export function createMonacoInjectionHighlighter(
             // Ensure we render alongside (not over) the LSP semantic
             // tokens — `inlineClassName` layers over the existing syntax
             // colouring, it does not replace it.
-            shouldFillLineOnLineBreak: false,
-          },
+            shouldFillLineOnLineBreak: false
+          }
         })
       }
     }
@@ -332,6 +332,6 @@ export function createMonacoInjectionHighlighter(
       enabled = next
       void highlight()
     },
-    dispose,
+    dispose
   }
 }

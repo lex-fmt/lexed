@@ -27,15 +27,15 @@ export const PALETTE: { light: ColorPalette; dark: ColorPalette } = {
     muted: '#808080',
     faint: '#b3b3b3',
     faintest: '#cacaca',
-    code_bg: '#f5f5f5',
+    code_bg: '#f5f5f5'
   },
   dark: {
     normal: '#e0e0e0',
     muted: '#888888',
     faint: '#666666',
     faintest: '#555555',
-    code_bg: '#2a2a2a',
-  },
+    code_bg: '#2a2a2a'
+  }
 }
 
 export const RULES: { light: TokenRule[]; dark: TokenRule[] } = {
@@ -72,7 +72,7 @@ export const RULES: { light: TokenRule[]; dark: TokenRule[] } = {
     { token: 'InlineMarker_math_start', foreground: 'cacaca', fontStyle: 'italic' },
     { token: 'InlineMarker_math_end', foreground: 'cacaca', fontStyle: 'italic' },
     { token: 'InlineMarker_ref_start', foreground: 'cacaca', fontStyle: 'italic' },
-    { token: 'InlineMarker_ref_end', foreground: 'cacaca', fontStyle: 'italic' },
+    { token: 'InlineMarker_ref_end', foreground: 'cacaca', fontStyle: 'italic' }
   ],
   dark: [
     { token: 'DocumentTitle', foreground: 'e0e0e0', fontStyle: 'bold underline' },
@@ -107,6 +107,6 @@ export const RULES: { light: TokenRule[]; dark: TokenRule[] } = {
     { token: 'InlineMarker_math_start', foreground: '555555', fontStyle: 'italic' },
     { token: 'InlineMarker_math_end', foreground: '555555', fontStyle: 'italic' },
     { token: 'InlineMarker_ref_start', foreground: '555555', fontStyle: 'italic' },
-    { token: 'InlineMarker_ref_end', foreground: '555555', fontStyle: 'italic' },
-  ],
+    { token: 'InlineMarker_ref_end', foreground: '555555', fontStyle: 'italic' }
+  ]
 }

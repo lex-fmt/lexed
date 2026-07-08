@@ -35,18 +35,18 @@ export const TOKEN_TYPES = [
   'InlineMarker_math_start',
   'InlineMarker_math_end',
   'InlineMarker_ref_start',
-  'InlineMarker_ref_end',
+  'InlineMarker_ref_end'
 ]
 
 export const TOKEN_MODIFIERS: string[] = []
 
 export const LEGEND = {
   tokenTypes: TOKEN_TYPES,
-  tokenModifiers: TOKEN_MODIFIERS,
+  tokenModifiers: TOKEN_MODIFIERS
 }
 
 export const FORMAT_EXTENSIONS: Record<string, string> = {
   lex: '.lex',
   markdown: '.md',
-  html: '.html',
+  html: '.html'
 }

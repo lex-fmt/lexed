@@ -13,7 +13,7 @@ const buildLexFormattingProperties = (settings: FormatterSettings): LexFormattin
   'lex.max_blank_lines': settings.maxBlankLines,
   'lex.indent_string': settings.indentString,
   'lex.preserve_trailing_blanks': settings.preserveTrailingBlanks,
-  'lex.normalize_verbatim_markers': settings.normalizeVerbatimMarkers,
+  'lex.normalize_verbatim_markers': settings.normalizeVerbatimMarkers
 })
 
 export const buildFormattingOptions = (tabSize: number, insertSpaces: boolean) => {
@@ -21,7 +21,7 @@ export const buildFormattingOptions = (tabSize: number, insertSpaces: boolean) =
   return {
     tabSize,
     insertSpaces,
-    ...buildLexFormattingProperties(formatterSettings),
+    ...buildLexFormattingProperties(formatterSettings)
   }
 }
 
@@ -42,7 +42,7 @@ export function registerFormattingProvider(
       if (!connection) return []
       const params = {
         textDocument: { uri: model.uri.toString() },
-        options: buildFormattingOptions(options.tabSize, options.insertSpaces),
+        options: buildFormattingOptions(options.tabSize, options.insertSpaces)
       }
       notifyLexTest({ type: 'document', params })
       try {
@@ -55,15 +55,15 @@ export function registerFormattingProvider(
             startLineNumber: edit.range.start.line + 1,
             startColumn: edit.range.start.character + 1,
             endLineNumber: edit.range.end.line + 1,
-            endColumn: edit.range.end.character + 1,
+            endColumn: edit.range.end.character + 1
           },
-          text: edit.newText,
+          text: edit.newText
         }))
       } catch (e) {
         console.error('[LSP] Formatting failed:', e)
         return []
       }
-    },
+    }
   })
 
   // Range Formatting
@@ -74,9 +74,9 @@ export function registerFormattingProvider(
         textDocument: { uri: model.uri.toString() },
         range: {
           start: { line: range.startLineNumber - 1, character: range.startColumn - 1 },
-          end: { line: range.endLineNumber - 1, character: range.endColumn - 1 },
+          end: { line: range.endLineNumber - 1, character: range.endColumn - 1 }
         },
-        options: buildFormattingOptions(options.tabSize, options.insertSpaces),
+        options: buildFormattingOptions(options.tabSize, options.insertSpaces)
       }
       notifyLexTest({ type: 'range', params })
       try {
@@ -89,21 +89,21 @@ export function registerFormattingProvider(
             startLineNumber: edit.range.start.line + 1,
             startColumn: edit.range.start.character + 1,
             endLineNumber: edit.range.end.line + 1,
-            endColumn: edit.range.end.character + 1,
+            endColumn: edit.range.end.character + 1
           },
-          text: edit.newText,
+          text: edit.newText
         }))
       } catch (e) {
         console.error('[LSP] Range Formatting failed:', e)
         return []
       }
-    },
+    }
   })
 
   return {
     dispose() {
       docDisposable.dispose()
       rangeDisposable.dispose()
-    },
+    }
   }
 }

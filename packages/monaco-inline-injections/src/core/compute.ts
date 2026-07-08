@@ -5,7 +5,7 @@ import type {
   DecorationCategory,
   InjectionHostAdapter,
   InjectionRange,
-  InjectionZone,
+  InjectionZone
 } from './types'
 
 /**

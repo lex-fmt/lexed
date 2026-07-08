@@ -7,7 +7,7 @@ import {
   InitializedNotification,
   DidChangeWorkspaceFoldersNotification,
   MessageReader,
-  MessageWriter,
+  MessageWriter
 } from 'vscode-languageserver-protocol/browser'
 import * as monaco from 'monaco-editor'
 import { LspPublishDiagnosticsParams } from './types'
@@ -113,7 +113,7 @@ export class LspClient {
         error: (message) => log.error('[LSP]', message),
         warn: (message) => log.warn('[LSP]', message),
         info: (message) => log.info('[LSP]', message),
-        log: (message) => log.debug('[LSP]', message),
+        log: (message) => log.debug('[LSP]', message)
       }
 
       this.connection = createProtocolConnection(reader, writer, logger)
@@ -153,7 +153,7 @@ export class LspClient {
               dynamicRegistration: true,
               willSave: false,
               willSaveWaitUntil: false,
-              didSave: false,
+              didSave: false
             },
             completion: {
               dynamicRegistration: true,
@@ -162,19 +162,19 @@ export class LspClient {
                 commitCharactersSupport: true,
                 documentationFormat: ['markdown', 'plaintext'],
                 deprecatedSupport: true,
-                preselectSupport: true,
+                preselectSupport: true
               },
-              contextSupport: true,
+              contextSupport: true
             },
             hover: {
               dynamicRegistration: true,
-              contentFormat: ['markdown', 'plaintext'],
+              contentFormat: ['markdown', 'plaintext']
             },
             signatureHelp: {
               dynamicRegistration: true,
               signatureInformation: {
-                documentationFormat: ['markdown', 'plaintext'],
-              },
+                documentationFormat: ['markdown', 'plaintext']
+              }
             },
             definition: { dynamicRegistration: true },
             references: { dynamicRegistration: true },
@@ -184,9 +184,9 @@ export class LspClient {
               symbolKind: {
                 valueSet: [
                   1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
-                  24, 25, 26,
-                ],
-              },
+                  24, 25, 26
+                ]
+              }
             },
             codeAction: {
               dynamicRegistration: true,
@@ -200,10 +200,10 @@ export class LspClient {
                     'refactor.inline',
                     'refactor.rewrite',
                     'source',
-                    'source.organizeImports',
-                  ],
-                },
-              },
+                    'source.organizeImports'
+                  ]
+                }
+              }
             },
             codeLens: { dynamicRegistration: true },
             formatting: { dynamicRegistration: true },
@@ -272,7 +272,7 @@ export class LspClient {
                 'variable',
                 'parameter',
                 'property',
-                'label',
+                'label'
               ],
               tokenModifiers: [
                 'declaration',
@@ -284,29 +284,29 @@ export class LspClient {
                 'async',
                 'modification',
                 'documentation',
-                'defaultLibrary',
+                'defaultLibrary'
               ],
               formats: ['relative'],
               requests: {
                 range: true,
                 full: {
-                  delta: true,
-                },
-              },
-            },
+                  delta: true
+                }
+              }
+            }
           },
           workspace: {
             applyEdit: true,
             workspaceEdit: {
-              documentChanges: true,
+              documentChanges: true
             },
             workspaceFolders: true,
             didChangeConfiguration: { dynamicRegistration: true },
             didChangeWatchedFiles: { dynamicRegistration: true },
             symbol: { dynamicRegistration: true },
-            executeCommand: { dynamicRegistration: true },
-          },
-        },
+            executeCommand: { dynamicRegistration: true }
+          }
+        }
       }
 
       log.debug('[LspClient] Sending initialize request...')
@@ -358,7 +358,7 @@ export class LspClient {
               endLineNumber: d.range.end.line + 1,
               endColumn: d.range.end.character + 1,
               code: d.code ? String(d.code) : undefined,
-              source: d.source,
+              source: d.source
             }))
             monaco.editor.setModelMarkers(model, 'lex', markers)
           }
@@ -540,7 +540,7 @@ export class LspClient {
         'folding_range',
         () => import('./providers/folding_range'),
         (m) => m.registerFoldingRangeProvider(languageId, connection)
-      ),
+      )
     ]
   }
 
@@ -624,14 +624,14 @@ export class LspClient {
 
     const toFolder = (p: string) => ({
       uri: monaco.Uri.file(p).toString(),
-      name: p.split('/').pop() || p,
+      name: p.split('/').pop() || p
     })
 
     this.connection.sendNotification(DidChangeWorkspaceFoldersNotification.type, {
       event: {
         added: added.map(toFolder),
-        removed: removed.map(toFolder),
-      },
+        removed: removed.map(toFolder)
+      }
     })
     log.debug(
       `[LspClient] Sent workspace/didChangeWorkspaceFolders (added=${added}, removed=${removed})`

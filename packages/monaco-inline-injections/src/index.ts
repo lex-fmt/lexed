@@ -11,7 +11,7 @@ export {
   createMonacoInjectionHighlighter,
   type HighlighterOptions,
   type InjectionTokenizer,
-  type MonacoInjectionHighlighterApi,
+  type MonacoInjectionHighlighterApi
 } from './monaco/injection_highlighter'
 
 export type {
@@ -20,7 +20,7 @@ export type {
   InjectionRange,
   InjectionZone,
   InjectionZoneProvider,
-  SemanticTokens,
+  SemanticTokens
 } from './core/types'
 
 export {
@@ -29,7 +29,7 @@ export {
   DEBOUNCE_MS,
   LANGUAGE_ALIASES,
   SEMANTIC_TOKEN_MAP,
-  VIRTUAL_DOC_SCHEME,
+  VIRTUAL_DOC_SCHEME
 } from './core/constants'
 
 export { resolveLanguageId } from './core/resolve'

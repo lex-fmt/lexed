@@ -48,3 +48,8 @@ test.lex
 
 # OS-specific artifacts
 .DS_Store
+
+# pixi's in-tree environment dir, created by the managed lint task (`./bin/shipit
+# lint` runs under `pixi run -e lint`). Never committed; also keeps `eslint .` and
+# the prettier gate from descending into pixi's vendored env internals.
+.pixi/

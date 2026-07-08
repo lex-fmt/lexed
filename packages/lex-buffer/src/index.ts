@@ -35,7 +35,7 @@ export {
   type LspHover,
   type LspSemanticTokens,
   type LspDiagnostic,
-  type LspPublishDiagnosticsParams,
+  type LspPublishDiagnosticsParams
 } from './lsp'
 export { initializeMonaco, applyTheme, type ThemeMode } from './monaco'
 export { getOrCreateModel, disposeModel } from './monaco/models'
@@ -44,6 +44,6 @@ export {
   type HostBindings,
   type FormatterSettings,
   type Logger,
-  type E2EBridge,
+  type E2EBridge
 } from './host'
 export { Editor, type EditorProps, type EditorHandle } from './Editor'
