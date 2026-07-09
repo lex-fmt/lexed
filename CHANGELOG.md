@@ -1,4 +1,4 @@
-<!-- generated - do not edit. See CHANGELOG/README.txt -->
+<!-- generated - do not edit; fragments live in CHANGELOG/ (`shipit changelog render` regenerates this file) -->
 
 # Changelog
 
@@ -24,6 +24,7 @@ Smart paste: route pastes into .lex buffers through the language server's lex/pr
 - Migrate changelog handling to the fragment-directory model
   (arthur-debert/release#201). Future entries go in
   CHANGELOG/unreleased-`<slug>`.md fragments via `bin/changelog add`.
+
 
 ## v0.10.7 (2026-05-24)
 
