@@ -17,9 +17,9 @@ runtime resolves) matches how every other editor in the workspace
 ships their theme: canonical → absolute hex at generate time.
 
 Output style matches lexed's prettier config (no semicolons, single
-quotes, tabWidth=2). Run after editing the canonical file. The npm
-`theme:check` script runs `gen-theme.py --check`; pre-commit and
-CI fail on stale output.
+quotes, tabWidth=2, trailingComma=none). Run after editing the canonical
+file. The npm `theme:check` script runs `gen-theme.py --check`;
+pre-commit and CI fail on stale output.
 """
 
 from __future__ import annotations
@@ -92,19 +92,24 @@ def validate_canonical(canonical: dict) -> None:
 def render_palette_block(canonical: dict, mode: str) -> str:
     intensities = canonical["intensities"]
     backgrounds = canonical["backgrounds"]
-    lines = []
+    # Join with ",\n" (rather than a trailing comma per line) so the last
+    # entry carries none — prettier's trailingComma=none, which theme-data.ts
+    # is held to by the managed lint gate.
+    entries = []
     for name in EXPECTED_INTENSITIES:
-        lines.append(f"    {name}: {s(intensities[name][mode])},")
+        entries.append(f"    {name}: {s(intensities[name][mode])}")
     for bg_name in EXPECTED_BACKGROUNDS:
-        lines.append(f"    {bg_name}: {s(backgrounds[bg_name][mode])},")
-    return "\n".join(lines)
+        entries.append(f"    {bg_name}: {s(backgrounds[bg_name][mode])}")
+    return ",\n".join(entries)
 
 
 def render_rules_block(canonical: dict, mode: str) -> str:
     intensities = canonical["intensities"]
     backgrounds = canonical["backgrounds"]
     tokens = canonical["tokens"]
-    lines: list[str] = []
+    # Join with ",\n" so the last rule carries no trailing comma
+    # (prettier trailingComma=none — see render_palette_block).
+    entries: list[str] = []
     for token_id, token in tokens.items():
         # Monaco token rules want hex without the leading '#'.
         fg = strip_hash(intensities[token["intensity"]][mode])
@@ -115,8 +120,8 @@ def render_rules_block(canonical: dict, mode: str) -> str:
         if "background" in token:
             bg = strip_hash(backgrounds[token["background"]][mode])
             fields.append(f"background: {s(bg)}")
-        lines.append("    { " + ", ".join(fields) + " },")
-    return "\n".join(lines)
+        entries.append("    { " + ", ".join(fields) + " }")
+    return ",\n".join(entries)
 
 
 def render(canonical: dict) -> str:
@@ -151,7 +156,7 @@ def render(canonical: dict) -> str:
         "  },\n"
         "  dark: {\n"
         f"{render_palette_block(canonical, 'dark')}\n"
-        "  },\n"
+        "  }\n"
         "}\n"
         "\n"
         "export const RULES: { light: TokenRule[]; dark: TokenRule[] } = {\n"
@@ -160,7 +165,7 @@ def render(canonical: dict) -> str:
         "  ],\n"
         "  dark: [\n"
         f"{render_rules_block(canonical, 'dark')}\n"
-        "  ],\n"
+        "  ]\n"
         "}\n"
     )
 
