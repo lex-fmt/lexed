@@ -46,9 +46,10 @@ ignore = [
 # (`pixi run --locked <run>` per job). Both lanes' tasks SELF-PROVISION,
 # because on a hosted runner nothing outside pixi is provisioned:
 #   - `lint-full` (NOT the managed bare `lint` task, which runs in the default
-#     env where no lint tool exists) resolves into the pixi lint env and
-#     provisions lexd inline — see its definition in pixi.toml
-#     [feature.lint.tasks].
+#     env where no lint tool exists) resolves into the pixi lint env, inits
+#     the comms submodule (two lexd-checked fixtures are symlinks into it;
+#     shipit#759) and provisions lexd inline — see its definition in
+#     pixi.toml [feature.lint.tasks].
 #   - `test-full` provisions node_modules (`npm ci`, root + shared/) inline
 #     before dispatching to `./bin/shipit test` (-> vitest); node/npm and uv
 #     (for bin/shipit) ride pixi's default env ([dependencies] in pixi.toml).

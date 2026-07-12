@@ -66,11 +66,15 @@ lefthook = "2.1.*"
 # runs in the default env (where none of those tools exist on a hosted
 # runner) and cannot provision the lex leg's lexd. `provision lexd` inline
 # lands lexd in this env's prefix (this repo tracks .lex files — README.lex,
-# test fixtures — so the lex Lang of `shipit lint` runs), idempotent. Defined
-# ONLY in this feature, so it exists in EXACTLY ONE env (lint) and bare
-# `pixi run lint-full` resolves unambiguously — the wf-checks matrix job's
-# `pixi run --locked lint-full` and a laptop run are identical.
-lint-full = { cmd = "./bin/shipit provision lexd && ./bin/shipit lint" }
+# test fixtures — so the lex Lang of `shipit lint` runs), idempotent. The
+# comms submodule is inited inline (the shipit#759 pattern, lex's test-full):
+# two tracked fixtures (tests/fixtures/benchmark.lex, empty.lex) are SYMLINKS
+# into comms/, and the wf-checks checkout has no submodule support — without
+# it, `lexd check` fails on the dangling links (proven on this PR's first
+# remote run). Defined ONLY in this feature, so it exists in EXACTLY ONE env
+# (lint) and bare `pixi run lint-full` resolves unambiguously — the wf-checks
+# matrix job's `pixi run --locked lint-full` and a laptop run are identical.
+lint-full = { cmd = "git submodule update --init comms && ./bin/shipit provision lexd && ./bin/shipit lint" }
 
 [environments]
 # >>> shipit-managed environments (do not edit; regenerate via `shipit install`) >>>
