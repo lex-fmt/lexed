@@ -16,6 +16,29 @@ logs = "./bin/shipit logs"
 provision-lexd = "./bin/shipit provision lexd"
 # <<< shipit-managed tasks <<<
 
+# Consumer-owned tasks (outside the shipit-managed blocks above).
+# The wf-checks TEST LANE's run (ADP02-WS03, #168; modeled on lex's test-full):
+# the wf-checks block's checkout provisions nothing beyond pixi, so the lane
+# task SELF-PROVISIONS everything the unit suite needs before dispatching to
+# the managed `test` task's implementation (`./bin/shipit test` -> `npm test`
+# -> vitest):
+#   - `npm ci` — the repo's node_modules (node/npm ride pixi's managed node
+#     deps block below).
+#   - `npm ci --prefix shared` — `@lex/shared` is a `file:./shared` dep whose
+#     runtime deps (vscode-jsonrpc) live in its own lockfile.
+# Deliberately NOT run: `npm run build --prefix shared` (shared/dist is
+# COMMITTED and the suite is green on it; a tsc rebuild rewrites the
+# prettier-formatted committed dist in place, dirtying the tree and failing
+# the web lint gate), the comms submodule, and the fetch-deps artifacts
+# (resources/lexd-lsp, grammar WASM) — those are the e2e/build surface, which
+# stays on the companion e2e.yml workflow.
+# Each `npm ci` is a clean, lockfile-exact reinstall that WIPES any existing
+# node_modules — deliberately, so this run mirrors the CI test lane
+# byte-for-byte (reproducible, not incremental; it does not reuse an already-
+# installed tree). For fast local iteration run the `test` task
+# (`./bin/shipit test`) directly against a tree you have already installed.
+test-full = "npm ci && npm ci --prefix shared && ./bin/shipit test"
+
 [feature.lint.dependencies]
 # >>> shipit-managed lint deps (do not edit; regenerate via `shipit install`) >>>
 # The fleet-pinned lint toolchain (docs/prd/adoption.md: the managed set owns
@@ -39,6 +62,24 @@ actionlint = "1.7.*"
 lefthook = "2.1.*"
 # <<< shipit-managed lint deps <<<
 
+[feature.lint.tasks]
+# The wf-checks LINT LANE's run (ADP02-WS03, #168), byte-modeled on lex's /
+# shipit's own: the lint toolchain (ruff/shfmt/prettier/markdownlint/
+# actionlint) lives in THIS feature's env, so the lane task must resolve into
+# the lint env — the managed bare `lint` task is a fixed plain string that
+# runs in the default env (where none of those tools exist on a hosted
+# runner) and cannot provision the lex leg's lexd. `provision lexd` inline
+# lands lexd in this env's prefix (this repo tracks .lex files — README.lex,
+# test fixtures — so the lex Lang of `shipit lint` runs), idempotent. The
+# comms submodule is inited inline (the shipit#759 pattern, lex's test-full):
+# two tracked fixtures (tests/fixtures/benchmark.lex, empty.lex) are SYMLINKS
+# into comms/, and the wf-checks checkout has no submodule support — without
+# it, `lexd check` fails on the dangling links (proven on this PR's first
+# remote run). Defined ONLY in this feature, so it exists in EXACTLY ONE env
+# (lint) and bare `pixi run lint-full` resolves unambiguously — the wf-checks
+# matrix job's `pixi run --locked lint-full` and a laptop run are identical.
+lint-full = { cmd = "git submodule update --init comms && ./bin/shipit provision lexd && ./bin/shipit lint" }
+
 [environments]
 # >>> shipit-managed environments (do not edit; regenerate via `shipit install`) >>>
 lint = ["lint"]
@@ -57,3 +98,11 @@ lint = ["lint"]
 nodejs = "26.*"
 pnpm = "11.*"
 # <<< shipit-managed node deps <<<
+# Consumer-owned dependencies (outside the shipit-managed block above).
+# uv backs the pinned bin/shipit launcher (ADR-0033: it provisions the repo's
+# pinned shipit via uv, PATH-independent). Both wf-checks lanes run
+# `pixi run --locked <task>` -> ./bin/shipit on a hosted runner where uv is
+# not otherwise present, so the launcher's one prerequisite must ride the env
+# too. (Known upstream gap — the block/managed set should own this: shipit#758,
+# first flagged by lex#828/#829.)
+uv = ">=0.5"

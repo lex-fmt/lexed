@@ -1,0 +1,70 @@
+name: E2E
+
+# Companion e2e workflow (ADP02-WS03, #168) — the decision the cutover issue
+# asked for: the e2e suite STAYS a caller of release's reusable
+# electron-ci.yml block rather than becoming a declared shipit lane, the same
+# way lex#829 kept its Documentation / WASM build companions. The packaged
+# Playwright run needs what the wf-checks block deliberately doesn't carry:
+# the comms submodule (icon assets), the fetch-deps artifacts (lexd-lsp +
+# grammar WASM), Playwright browser system deps, xvfb, and the
+# playwright-report artifact upload on failure. This file is the slimmed
+# remainder of the legacy test.yml, whose quality-check half now lives in
+# checks.yml (the wf-checks lanes).
+#
+# The job id stays `check` ON PURPOSE: the ruleset-required context is
+# `check / e2e`, and keeping the caller job name keeps that context stable
+# across the cutover — no window where a required check is unreportable. The
+# block's internal `check` job (`check / check`, bin/check) still runs as the
+# e2e job's prerequisite — the reusable workflow hard-wires `e2e: needs:
+# check`, deliberately: a 15-25min e2e run should not start on a build the
+# cheap checks already condemn. Its verdict is NO LONGER ruleset-required
+# (the wf-checks lanes carry the required quality verdict); the overlap with
+# the lanes is an acknowledged prerequisite cost, not a second gate.
+#
+# See docs/per-stack/electron-ci.md in arthur-debert/release for the full
+# input reference.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+# Superseded-run hygiene, same shape as checks.yml (shipit#645): per-event,
+# per-ref/PR group; a new push cancels the superseded in-flight run.
+concurrency:
+  group: e2e-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    uses: arthur-debert/release/.github/workflows/electron-ci.yml@v3
+    with:
+      node-version: '22.18.0'
+      shared-build-dir: shared
+      submodules: 'true'
+      e2e: true
+      e2e-script: test:e2e:ci
+      # Bootstrap the canonical fetch-deps from release@main (not on
+      # PATH in CI), then fetch every dep in deps.json — including the
+      # embedded-grammars iteration that used to live in a separate
+      # app-bin script.
+      pre-test: |
+        if command -v fetch-deps &>/dev/null; then
+          FETCH_DEPS_BIN="fetch-deps"
+        else
+          FETCH_DEPS_BIN="$(mktemp)"
+          trap 'rm -f "$FETCH_DEPS_BIN"' EXIT
+          curl -fsSL -o "$FETCH_DEPS_BIN" \
+            "https://raw.githubusercontent.com/arthur-debert/release/main/bin/fetch-deps"
+          chmod +x "$FETCH_DEPS_BIN"
+        fi
+        "$FETCH_DEPS_BIN" --if-missing
+      # lexed's e2e suite (full dev + packaged smoke) regularly takes
+      # 15-25min on ubuntu-latest; bump from the canonical's 30min
+      # default to give headroom without blanket-extending the check
+      # job.
+      timeout: 45
