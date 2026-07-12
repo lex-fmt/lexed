@@ -32,7 +32,11 @@ provision-lexd = "./bin/shipit provision lexd"
 # the web lint gate), the comms submodule, and the fetch-deps artifacts
 # (resources/lexd-lsp, grammar WASM) — those are the e2e/build surface, which
 # stays on the companion e2e.yml workflow.
-# Idempotent and fast on a laptop where node_modules is already installed.
+# Each `npm ci` is a clean, lockfile-exact reinstall that WIPES any existing
+# node_modules — deliberately, so this run mirrors the CI test lane
+# byte-for-byte (reproducible, not incremental; it does not reuse an already-
+# installed tree). For fast local iteration run the `test` task
+# (`./bin/shipit test`) directly against a tree you have already installed.
 test-full = "npm ci && npm ci --prefix shared && ./bin/shipit test"
 
 [feature.lint.dependencies]
