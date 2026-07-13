@@ -28,7 +28,14 @@ git submodule update --init --recursive comms
 npm ci
 npm ci --prefix shared
 
+# main, not a pinned ref, deliberately (mirrors the legacy electron-app.yml
+# provision step verbatim): consumers track release@main for fetch-deps by
+# design — upstream's CI `guards` job keeps main's bin/fetch-deps a real,
+# working file (arthur-debert/release#317), and upstream fixes (e.g. the
+# CRLF fetch bug, release#507) flow to every consumer without a per-repo
+# pin bump this repo has no mechanism for.
 bin_dir="node_modules/.bin"
+mkdir -p "$bin_dir"
 curl -fsSL -o "$bin_dir/fetch-deps" \
 	"https://raw.githubusercontent.com/arthur-debert/release/main/bin/fetch-deps"
 chmod +x "$bin_dir/fetch-deps"

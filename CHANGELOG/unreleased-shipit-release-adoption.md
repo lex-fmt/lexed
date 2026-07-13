@@ -1,4 +1,4 @@
-# CI: adopt shipit's composed release pipeline (ADP02-WS09)
+### CI: adopt shipit's composed release pipeline (ADP02-WS09)
 
 The release surface is now declared in `.shipit.toml` (`[artifacts.lexed]`:
 the electron composition — dmg + AppImage + windows Setup.exe, legacy asset
