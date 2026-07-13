@@ -1,0 +1,10 @@
+### CI: adopt shipit's composed release pipeline (ADP02-WS09)
+
+The release surface is now declared in `.shipit.toml` (`[artifacts.lexed]`:
+the electron composition — dmg + AppImage + windows Setup.exe, legacy asset
+parity) and dispatched through the blessed `shipit-release.yml` stage-choice
+caller. The darwin leg builds unsigned and is signed/notarized by shipit's
+standalone mac-sign stage (per-code-role JIT entitlements). The upstream
+cascade listener now also accepts shipit's `upstream-release` dispatch type
+alongside the legacy `upstream-released`. The legacy `release.yml` stays
+untouched until the rc proof.

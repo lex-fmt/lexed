@@ -68,7 +68,51 @@ required = true
 local = true
 
 [toolchains]
-"." = "npm"
+# Per-path build override (ADP02-WS09, #172): the registry default (`npm run
+# build`) assumes a provisioned tree, but the wf-build block's checkout
+# provisions nothing beyond pixi (no node_modules, no comms submodule, no
+# fetch-deps artifacts — the same bare-runner premise the WS03 lanes
+# self-provision around). `build:release` (package.json) chains the
+# self-provisioning script (app-bin/release-provision.sh: comms submodule,
+# npm ci root + shared/, fetch-deps onto node_modules/.bin) into the ordinary
+# `npm run build`. A local `shipit build` runs the same path — reproducible,
+# lockfile-exact, like the test-full lane.
+"." = { toolchain = "npm", build = ["npm", "run", "build:release"] }
+
+# [artifacts] — the declared release surface (ADP02-WS09, #172; workstream of
+# arthur-debert/shipit#842). ONE electron artifact, the legacy v0.11.0 asset
+# set re-declared on shipit's electron composition (shipit#823 decision
+# record):
+#   - darwin-arm64: LexEd-<v>-arm64.dmg (+ .dmg.blockmap) — built UNSIGNED
+#     (electron-builder's own codesign/notarize stay OFF: no CSC_* env rides
+#     the build leg, package.json keeps `notarize: false`, and the afterPack
+#     appex hook skips without CSC_LINK), re-emitted as the unsigned-app
+#     reseal payload the STANDALONE mac-sign stage reopens → resigns
+#     inner-first with per-code-role JIT entitlements (shipit#833) → reseals
+#     the .dmg → notarizes. `sign = true` derives the Apple cert + notary
+#     secret requirement through the standard sign-stage path.
+#   - linux-x86_64: LexEd-<v>.AppImage (a blockmap is collected only when
+#     present — legacy shipped none). Ships unsigned, per legacy.
+#   - windows-x86_64: LexEd.Setup.<v>.exe (+ .exe.blockmap). Declared for
+#     legacy parity; the leg runs shipit on a windows runner and is BLOCKED
+#     on shipit#893 (win-importability) — the coordinator sequences the rc
+#     proof after that fix. Ships unsigned, per legacy.
+# The bundle command is `npm run dist` (bare electron-builder): the build
+# stage's `build:release` already compiled tsc/vite and ran electron-builder
+# once, so the bundle stage's declared-command run is an idempotent repackage
+# over the same compiled tree into `release/` (package.json
+# directories.output — distinct from the bundle output tree, as the
+# composition requires), which the composition then collects from.
+# `product-name` anchors assert-bundle's dmg/AppImage filename fallback tier;
+# the darwin reseal payload's CFBundleExecutable (LexEd) is the authoritative
+# tier.
+[artifacts.lexed]
+build = ["npm"]
+platforms = ["darwin-arm64", "linux-x86_64", "windows-x86_64"]
+bundle = { composition = "electron", command = ["npm", "run", "dist"], source = "release" }
+product-name = "LexEd"
+endpoints = ["gh-release"]
+sign = true
 
 [shipit]
 version = "84818feb7b7c39ebdb5875028828db05b2d65f8a"

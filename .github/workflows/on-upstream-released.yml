@@ -22,7 +22,13 @@ name: On upstream released
 
 on:
   repository_dispatch:
-    types: [upstream-released]
+    # BOTH event types, deliberately (ADP02-WS09 #172; coordinator note on
+    # arthur-debert/shipit#842): the legacy v3 cascade fires
+    # `upstream-released`, while shipit's notify-downstreams endpoint
+    # (shipit#824) fires `upstream-release`. lexed listens for both until
+    # the legacy cascade is retired — dropping the legacy type is that
+    # retirement's job, not this cutover's.
+    types: [upstream-released, upstream-release]
 
 permissions:
   contents: write

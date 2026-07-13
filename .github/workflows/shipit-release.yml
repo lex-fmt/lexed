@@ -1,0 +1,156 @@
+name: shipit-release
+
+# lexed's shipit release caller (ADP02-WS09, #172; workstream of
+# arthur-debert/shipit#842) — the WS09 BLESSED per-stage dispatch shape
+# (ADR-0054, workflows.lex §8), copied verbatim from shipit's own dogfooded
+# caller (shipit#806): one workflow_dispatch caller with a `stage` choice
+# (full | prepare | build | sign | publish), one job per stage, each a
+# single `uses:` line against the matching block, gated
+# `if: inputs.stage == '...'`, forwarding `version`/`tag`/`run-id`/
+# `unsigned` verbatim. Routing ONLY (ADR-0040): the release plan — matrix,
+# live stages, the post-RC-guard endpoint set, required secrets — is
+# preflight's, computed inside the blocks; nothing is re-derived or wired
+# stage-to-stage here.
+#
+# Every ref is the FULL remote `arthur-debert/shipit/...@v1` form — the
+# remote-ref scar (shipit legacy release RC #823): a `./` reusable-workflow
+# ref resolves against the top-level caller's repo, never shipit.
+#
+# lexed's release surface is the electron artifact (.shipit.toml
+# [artifacts.lexed], shipit#823's composition): the plan fans darwin-arm64 /
+# linux-x86_64 / windows-x86_64 build+bundle legs, and the darwin leg
+# (sign = true) routes through the STANDALONE mac-sign stage — the unsigned
+# .app reseal payload is reopened, resigned inner-first with per-code-role
+# JIT entitlements (shipit#833), resealed into the .dmg, and notarized. All
+# five stage choices stay offered (the blessed shape is never trimmed).
+# KNOWN: the windows leg is blocked on shipit#893 (win-importability) — the
+# rc proof is coordinator-sequenced after that fix.
+#
+# Secrets — exactly the plan-required set for lexed's plan:
+#   RELEASE_TOKEN               prepare's tag+branch push through the
+#                               ruleset (a GITHUB_TOKEN push would not
+#                               re-trigger workflows).
+#   APPLE_CERTIFICATE           ← the repo secret APPLE_CERTIFICATE_P12_BASE64
+#                               (the legacy spelling this repo already
+#                               provisions; shipit unified on
+#                               APPLE_CERTIFICATE — the mapping happens here,
+#                               at the caller's secrets boundary, never a
+#                               second repo secret).
+#   APPLE_CERTIFICATE_PASSWORD  same name legacy provisions.
+#   ASC_API_KEY_BASE64 / _ID / ASC_API_ISSUER_ID
+#                               the ASC notary trio, verbatim legacy names.
+# The Apple-ID notary trio (APPLE_ID/APPLE_PASSWORD/APPLE_TEAM_ID) is NOT
+# forwarded: this repo provisions the ASC trio (either trio satisfies the
+# plan, shipit#746); the legacy APPLE_APP_SPECIFIC_PASSWORD secret stays
+# untouched for the legacy release.yml until its post-rc retirement.
+# gh-release rides the workflow's own GITHUB_TOKEN; there are no external
+# endpoints, so no endpoint token is forwarded.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: >-
+          The release version, consumed by `full`/`prepare`: a bare semver
+          (1.0.0, 1.0.0-release-rc) or a bump word (major|minor|patch).
+          Ignored by the tag-dispatched stages.
+        required: false
+        type: string
+      stage:
+        description: >-
+          What to dispatch: the full composed chain (default) or ONE
+          independently re-runnable stage block (per-stage dispatch,
+          ADR-0054). `prepare` dispatches on `version`; `build`, `sign`
+          and `publish` on `tag` (+ `run-id` for the artifact-consuming
+          stages).
+        required: false
+        type: choice
+        default: full
+        options:
+          - full
+          - prepare
+          - build
+          - sign
+          - publish
+      tag:
+        description: >-
+          The release tag (v<version>), consumed by the `build`/`sign`/
+          `publish` stage dispatches (ADR-0041: the version is read off
+          the tag). Ignored by `full`/`prepare`.
+        required: false
+        type: string
+      run-id:
+        description: >-
+          The SOURCE run id whose artifacts feed an artifact-consuming
+          stage dispatch (`sign`, `publish`) — one source run per dispatch
+          (workflows.lex §8). Ignored by the other stages.
+        required: false
+        type: string
+      unsigned:
+        description: >-
+          Break-glass: flip a signing plan to the unsigned path. Forwarded
+          verbatim; lexed's plan signs the darwin leg, so this skips the
+          mac sign/notarize stage and publishes the unsigned set.
+        required: false
+        type: boolean
+        default: false
+
+# The standalone dispatch caller's grant (workflows.lex §8): `contents:
+# write` for prepare's push and publish's gh-release, `actions: read` for
+# the cross-run artifact downloads (`run-id` flips download-artifact onto
+# the REST API). The downloading blocks deliberately declare NO
+# `permissions:` key — a called workflow can only downgrade this token.
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  release:
+    if: inputs.stage == 'full'
+    uses: arthur-debert/shipit/.github/workflows/wf-release.yml@v1
+    with:
+      version: ${{ inputs.version }}
+      unsigned: ${{ inputs.unsigned }}
+    secrets:
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_BASE64 }}
+      ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+      ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+
+  prepare:
+    if: inputs.stage == 'prepare'
+    uses: arthur-debert/shipit/.github/workflows/wf-prepare.yml@v1
+    with:
+      version: ${{ inputs.version }}
+      unsigned: ${{ inputs.unsigned }}
+    secrets:
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+
+  build:
+    if: inputs.stage == 'build'
+    uses: arthur-debert/shipit/.github/workflows/wf-build.yml@v1
+    with:
+      tag: ${{ inputs.tag }}
+
+  sign:
+    if: inputs.stage == 'sign'
+    uses: arthur-debert/shipit/.github/workflows/wf-sign-mac.yml@v1
+    with:
+      tag: ${{ inputs.tag }}
+      run-id: ${{ inputs.run-id }}
+    secrets:
+      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_BASE64 }}
+      ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+      ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+
+  publish:
+    if: inputs.stage == 'publish'
+    uses: arthur-debert/shipit/.github/workflows/wf-publish.yml@v1
+    with:
+      tag: ${{ inputs.tag }}
+      run-id: ${{ inputs.run-id }}
+      unsigned: ${{ inputs.unsigned }}
