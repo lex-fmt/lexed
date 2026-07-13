@@ -25,6 +25,8 @@
     "build:quicklook": "bash ./app-bin/build-quicklook.sh",
     "check-deps": "node ./app-bin/check-deps.mjs",
     "build": "fetch-deps --if-missing && npm run check-deps && tsc && vite build && electron-builder",
+    "build:release": "bash app-bin/release-provision.sh && npm run build",
+    "dist": "electron-builder --publish never",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix --max-warnings 0",
