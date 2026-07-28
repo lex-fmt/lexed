@@ -1,8 +1,10 @@
-<!-- generated - do not edit; fragments live in CHANGELOG/ (`shipit changelog render` regenerates this file) -->
+<!-- generated - do not edit. See CHANGELOG/README.txt -->
 
 # Changelog
 
 ## Unreleased
+
+## 0.11.3 - 2026-07-28
 
 ### CI: adopt shipit's composed release pipeline (ADP02-WS09)
 
