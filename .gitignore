@@ -13,11 +13,9 @@ node_modules
 # Downloaded tree-sitter grammar + queries
 /resources/tree-sitter-lex.wasm
 /resources/queries/
-/resources/embedded-grammars.json
-/resources/embedded-grammars/
 /resources/.tree-sitter-version
 
-# Dependency stamps (fetch-deps + fetch-embedded-grammars)
+# Dependency stamps (fetch-deps)
 /.deps/
 
 # Logs

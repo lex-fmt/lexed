@@ -49,9 +49,8 @@ jobs:
       e2e: true
       e2e-script: test:e2e:ci
       # Bootstrap the canonical fetch-deps from release@main (not on
-      # PATH in CI), then fetch every dep in deps.json — including the
-      # embedded-grammars iteration that used to live in a separate
-      # app-bin script.
+      # PATH in CI), then fetch every dep in deps.json (the lexd-lsp
+      # binary and the tree-sitter-lex grammar + queries).
       pre-test: |
         if command -v fetch-deps &>/dev/null; then
           FETCH_DEPS_BIN="fetch-deps"

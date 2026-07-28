@@ -27,7 +27,6 @@ import { useSettings } from '@/contexts/SettingsContext'
 import { usePlatform } from '@/contexts/PlatformContext'
 import { dispatchFileTreeRefresh } from '@/lib/events'
 import { initTreeSitter, createLexZoneProvider } from '@/treesitter'
-import { createEmbeddedTokenizer } from '@/embedded'
 import type { FileContextMenuHandlers } from './FileContextMenu'
 import type * as Monaco from 'monaco-editor'
 
@@ -340,22 +339,22 @@ export const EditorPane = forwardRef<EditorPaneHandle, EditorPaneProps>(function
       onReadyCleanupsRef.current = []
 
       // Embedded-code highlighter inside `:: python ::` / `:: js ::`
-      // blocks. Tree-sitter loads lazily; if init fails the package
-      // continues without the injection layer.
+      // blocks. Tree-sitter parses the OUTER lex document to find the
+      // zones; the code inside each zone is tokenized by Monaco's own
+      // Monarch tokenizers (ADR-0001 — injected-language resolution
+      // belongs to the host, so we take Monaco's 82 languages over five
+      // bundled tree-sitter grammars). Tree-sitter loads lazily; if init
+      // fails the package continues without the injection layer.
       let tsCancelled = false
-      const embeddedTokenizer = createEmbeddedTokenizer()
       void initTreeSitter().then((ts) => {
-        if (tsCancelled || !ts) {
-          embeddedTokenizer.dispose()
-          return
-        }
+        if (tsCancelled || !ts) return
         if (injectionHighlighterRef.current) {
           injectionHighlighterRef.current.dispose()
         }
         injectionHighlighterRef.current = createMonacoInjectionHighlighter(
           editor,
           createLexZoneProvider(ts),
-          { hostLanguageId: 'lex', tokenizer: embeddedTokenizer }
+          { hostLanguageId: 'lex' }
         )
       })
 
@@ -386,7 +385,6 @@ export const EditorPane = forwardRef<EditorPaneHandle, EditorPaneProps>(function
         tsCancelled = true
         injectionHighlighterRef.current?.dispose()
         injectionHighlighterRef.current = null
-        embeddedTokenizer.dispose()
         smartPasteCancelled = true
         offSmartPaste?.()
         offAsset?.()

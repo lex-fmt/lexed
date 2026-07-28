@@ -2,9 +2,13 @@ Injection Highlighting Sample
 -----------------------------
 
 This fixture is used by `tests/e2e/injection-highlighting.spec.ts`. The
-verbatim blocks below carry `:: <lang> ::` closing annotations — the
-injection highlighter detects them via tree-sitter and runs each
-bundled grammar's `highlights.scm` over the zone content.
+verbatim blocks below carry `:: <lang> ::` closing annotations — tree-sitter
+detects the zones in the outer Lex document and Monaco's own Monarch
+tokenizer for each language colours the zone content.
+
+The `go` and `sql` blocks are deliberately outside the five languages the
+retired embedded-grammar bundle shipped: they are the demonstration that
+host-side resolution covers Monaco's whole language set.
 
 Python example:
 
@@ -58,6 +62,30 @@ Bash example:
     done
 
 :: bash ::
+
+Go example (outside the retired bundle):
+
+    package main
+
+    import "fmt"
+
+    func main() {
+        // count to three
+        for i := 0; i < 3; i++ {
+            fmt.Println("tick", i)
+        }
+    }
+
+:: go ::
+
+SQL example (outside the retired bundle):
+
+    SELECT name, version
+    FROM documents
+    WHERE format = 'lex'
+    ORDER BY name;
+
+:: sql ::
 
 Closing prose — none of these lines should be decorated by the
 injection highlighter; only the verbatim content inside the blocks

@@ -16,24 +16,27 @@ export const VIRTUAL_DOC_SCHEME = 'inline-injection-embedded'
  * If the annotation text is already a registered language ID, it's used
  * directly (see `resolveLanguageId`).
  *
- * Targets follow the tree-sitter naming convention (`bash`, not
- * `shellscript`) so the same map works whether the host plugs in a
- * tree-sitter tokenizer or registers languages with Monaco. Hosts whose
- * tokenizer reports `shellscript` instead of `bash` will simply see the
- * shell aliases not resolve, which is the correct fail-safe.
+ * Targets are Monaco's registered language IDs, as reported by
+ * `monaco.languages.getLanguages()` — the set `resolveLanguageId` is
+ * asked to match against. Monaco's shell family is one language with the
+ * id `shell` (extensions `.sh`/`.bash`, aliases `Shell`/`sh`), so every
+ * shell spelling folds onto that; and Monaco registers no React-flavoured
+ * ids, so `jsx`/`tsx` fold onto `javascript`/`typescript`. An alias whose
+ * target the host has not registered simply doesn't resolve and the zone
+ * is skipped, which is the correct fail-safe.
  */
 export const LANGUAGE_ALIASES: Readonly<Record<string, string>> = {
   py: 'python',
   js: 'javascript',
   jsx: 'javascript',
   ts: 'typescript',
-  tsx: 'tsx',
+  tsx: 'typescript',
   rs: 'rust',
   rb: 'ruby',
-  sh: 'bash',
-  zsh: 'bash',
-  shell: 'bash',
-  shellscript: 'bash',
+  sh: 'shell',
+  bash: 'shell',
+  zsh: 'shell',
+  shellscript: 'shell',
   yml: 'yaml',
   'c++': 'cpp',
   cxx: 'cpp',
