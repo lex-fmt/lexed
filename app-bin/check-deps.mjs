@@ -14,9 +14,8 @@
  * fetch-deps' `✓`; verify the files are on disk before `tsc`/`vite build`.
  *
  * The required-artifact list is DERIVED from `deps.json` (the source of truth
- * for what fetch-deps populates) plus the embedded-grammars manifest, so it
- * stays in sync with the deps the build actually imports
- * (`src/treesitter.ts`, `src/embedded.ts`) without a hand-maintained copy.
+ * for what fetch-deps populates), so it stays in sync with the deps the build
+ * actually imports (`src/treesitter.ts`) without a hand-maintained copy.
  *
  * Exit 0 = all present. Exit 1 = something missing (build aborts).
  */
@@ -29,14 +28,13 @@ const ROOT = path.resolve(__dirname, '..')
 
 /**
  * Derive the set of files fetch-deps is expected to produce, relative to ROOT.
- * Pure function of the two manifests so it is unit-testable without touching
- * the filesystem.
+ * Pure function of the manifest so it is unit-testable without touching the
+ * filesystem.
  *
  * @param {object} deps         parsed deps.json
- * @param {object} grammars     parsed resources/embedded-grammars.json
  * @returns {string[]} repo-relative paths that must exist after fetch-deps
  */
-export function requiredArtifacts(deps, grammars) {
+export function requiredArtifacts(deps) {
   const required = new Set()
 
   // Repo-relative paths are always POSIX (forward slashes): they are matched
@@ -79,14 +77,6 @@ export function requiredArtifacts(deps, grammars) {
     required.add(join(lsp.dest, lsp.binary + exeSuffix))
   }
 
-  // embedded-grammars: one parser.wasm + highlights.scm per grammar in the
-  // manifest. src/embedded.ts globs `resources/embedded-grammars/*/{parser.wasm,highlights.scm}`.
-  for (const g of grammars?.grammars ?? []) {
-    const dir = join('resources/embedded-grammars', g.name)
-    required.add(join(dir, 'parser.wasm'))
-    required.add(join(dir, 'highlights.scm'))
-  }
-
   return [...required]
 }
 
@@ -101,10 +91,9 @@ export function findMissing(required, exists) {
 
 /**
  * Compute the missing-artifact list for a build tree, treating an
- * absent/unreadable manifest as a missing required artifact rather than a
- * crash — the manifests (deps.json, resources/embedded-grammars.json) are
- * themselves fetched/extracted, so a missing one is exactly the failure this
- * preflight exists to catch.
+ * absent/unreadable `deps.json` as a missing required artifact rather than a
+ * crash — a build tree without it cannot have been populated at all, which is
+ * exactly the failure this preflight exists to catch.
  *
  * Pure: all I/O is injected, so this is unit-testable without a filesystem.
  *
@@ -119,16 +108,13 @@ export function computeMissing(readManifest, exists) {
   const deps = readManifest('deps.json')
   if (deps === null) missing.push('deps.json')
 
-  const grammars = readManifest('resources/embedded-grammars.json')
-  if (grammars === null) missing.push('resources/embedded-grammars.json')
-
-  // Derive from whatever manifests we *did* read; a null one contributes no
-  // entries (its absence is already reported above).
-  const required = requiredArtifacts(deps ?? {}, grammars ?? {})
+  // Derive from the manifest we *did* read; a null one contributes no entries
+  // (its absence is already reported above).
+  const required = requiredArtifacts(deps ?? {})
   missing.push(...findMissing(required, exists))
 
   // De-dupe (a manifest can appear both as itself-missing and as a derived
-  // required artifact, e.g. embedded-grammars.json via the tree-sitter extract).
+  // required artifact).
   return [...new Set(missing)]
 }
 

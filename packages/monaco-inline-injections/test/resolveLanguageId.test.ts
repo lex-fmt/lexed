@@ -40,13 +40,19 @@ describe('resolveLanguageId', () => {
     expect(resolveLanguageId('   ', registered)).toBe(null)
   })
 
-  it('zsh/sh/shell/shellscript all alias to bash (tree-sitter parser name)', () => {
-    const registered = new Set(['bash'])
-    expect(resolveLanguageId('bash', registered)).toBe('bash')
-    expect(resolveLanguageId('zsh', registered)).toBe('bash')
-    expect(resolveLanguageId('sh', registered)).toBe('bash')
-    expect(resolveLanguageId('shell', registered)).toBe('bash')
-    expect(resolveLanguageId('shellscript', registered)).toBe('bash')
+  it('bash/zsh/sh/shellscript all alias to shell (Monaco language id)', () => {
+    const registered = new Set(['shell'])
+    expect(resolveLanguageId('shell', registered)).toBe('shell')
+    expect(resolveLanguageId('bash', registered)).toBe('shell')
+    expect(resolveLanguageId('zsh', registered)).toBe('shell')
+    expect(resolveLanguageId('sh', registered)).toBe('shell')
+    expect(resolveLanguageId('shellscript', registered)).toBe('shell')
+  })
+
+  it('jsx/tsx fold onto javascript/typescript (Monaco has no React-flavoured ids)', () => {
+    const registered = new Set(['javascript', 'typescript'])
+    expect(resolveLanguageId('jsx', registered)).toBe('javascript')
+    expect(resolveLanguageId('tsx', registered)).toBe('typescript')
   })
 
   it('c++ aliases to cpp (special char handling)', () => {

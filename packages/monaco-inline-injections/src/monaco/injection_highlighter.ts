@@ -4,14 +4,22 @@
  * Responsibilities:
  *   - Calls the supplied `InjectionZoneProvider` to discover annotated
  *     zones in the document on every (debounced) content change.
- *   - Synthesises an LSP-shaped `SemanticTokens` payload from Monaco's
- *     built-in Monarch tokenizers (`monaco.editor.tokenize`). Languages
- *     without a Monarch tokenizer are silently skipped.
+ *   - Synthesises an LSP-shaped `SemanticTokens` payload from Monaco's own
+ *     tokenizers (`monaco.editor.tokenize`) — Monarch for the basic
+ *     languages, a registered tokens provider for the service-backed ones.
+ *     Languages Monaco cannot tokenize are silently skipped.
  *   - Translates the core module's `InjectionRange[]` output into Monaco
  *     decorations via `IEditorDecorationsCollection`.
  *
  * Decorations carry an `inlineClassName` keyed by category; the actual
  * colours live in `injection_highlighter.css`.
+ *
+ * The injectable language set is exactly what the host has registered with
+ * Monaco (`monaco.languages.getLanguages()`) — there is deliberately no
+ * pluggable tokenizer seam. Resolving injected languages through the host's
+ * own mechanism is the decision recorded in tree-sitter-lex ADR-0001; it
+ * trades per-language fidelity for the whole of Monaco's basic-language set
+ * at zero maintenance cost.
  */
 
 import * as monaco from 'monaco-editor'
@@ -43,23 +51,6 @@ function classNameFor(category: DecorationCategory): string {
   return `${CATEGORY_CLASS_PREFIX}-${category}`
 }
 
-/**
- * Pluggable tokenizer that replaces Monaco's built-in Monarch path. The
- * Monaco fallback is fine for prototyping but inaccurate compared with
- * tree-sitter; hosts that ship a tree-sitter (or other) tokenizer for
- * embedded zones supply it here. Languages absent from
- * `availableLanguages()` are skipped — the host adapter never falls
- * back to Monaco for them.
- */
-export interface InjectionTokenizer {
-  availableLanguages(): Set<string>
-  getSemanticTokens(
-    zoneIndex: number,
-    content: string,
-    langId: string
-  ): Promise<SemanticTokens | null>
-}
-
 export interface HighlighterOptions {
   /** Toggle from a settings UI. Defaults to true. */
   initialEnabled?: boolean
@@ -69,14 +60,6 @@ export interface HighlighterOptions {
    * When omitted, all models are highlighted.
    */
   hostLanguageId?: string
-  /**
-   * Optional tokenizer override. When provided, the highlighter sources
-   * `getRegisteredLanguages` from `tokenizer.availableLanguages()` and
-   * delegates `getSemanticTokens` to the tokenizer. Omit to fall back to
-   * Monaco's built-in Monarch tokenizers (the package's original
-   * behaviour).
-   */
-  tokenizer?: InjectionTokenizer
 }
 
 export function createMonacoInjectionHighlighter(
@@ -86,7 +69,6 @@ export function createMonacoInjectionHighlighter(
 ): MonacoInjectionHighlighterApi {
   let enabled = options.initialEnabled ?? true
   const hostLanguageId = options.hostLanguageId
-  const tokenizer = options.tokenizer
   let disposed = false
 
   const decorationsCollection = editor.createDecorationsCollection()
@@ -95,46 +77,57 @@ export function createMonacoInjectionHighlighter(
   let currentZones: InjectionZone[] = []
   let lastRanges: ReadonlyMap<DecorationCategory, InjectionRange[]> = new Map()
 
-  // Monaco basic-language registration is synchronous, but tokenization
-  // is lazy-loaded on first request. Prime the loader per language the
-  // first time we see it so subsequent `tokenize()` calls return real
-  // tokens instead of null-tokens.
-  const primedLanguages = new Set<string>()
+  // Monaco registers languages synchronously but attaches tokenization
+  // lazily, by two different routes: the Monarch basic-languages register
+  // a factory the tokenization registry loads on demand, while the
+  // service-backed languages (JSON is the one in Monaco's default bundle)
+  // register theirs from an `onLanguage` hook that only fires once a model
+  // of that language exists. Prime both per language the first time we see
+  // it so `tokenize()` returns real tokens instead of null-tokens.
+  const primedLanguages = new Map<string, Promise<void>>()
 
   let cachedLanguages: Set<string> | null = null
 
   async function getRegisteredLanguages(): Promise<Set<string>> {
-    if (tokenizer) return tokenizer.availableLanguages()
     if (!cachedLanguages) {
       cachedLanguages = new Set(monaco.languages.getLanguages().map((l) => l.id))
     }
     return cachedLanguages
   }
 
-  async function primeLanguage(langId: string): Promise<void> {
-    if (primedLanguages.has(langId)) return
-    try {
-      // `monaco.editor.colorize` awaits the lazy tokenizer loader. Once
-      // this resolves, subsequent `monaco.editor.tokenize(...)` calls for
-      // the same language return real tokens instead of the null-state
-      // fallback.
-      await monaco.editor.colorize('', langId, { tabSize: 2 })
-    } catch {
-      // If colorize throws the language is unusable — mark it primed so
-      // we don't retry on every zone, and the null-tokens path below
-      // will silently skip it.
-    }
-    primedLanguages.add(langId)
+  function primeLanguage(langId: string): Promise<void> {
+    const inFlight = primedLanguages.get(langId)
+    if (inFlight) return inFlight
+
+    const priming = (async () => {
+      try {
+        // Creating a model is what calls Monaco's
+        // `requestRichLanguageFeatures`, and that is the only thing that
+        // fires the `onLanguage` hook a service-backed language registers
+        // its tokens provider from. Without it `tokenize('json')` returns
+        // null-tokens forever, however long we wait.
+        monaco.editor.createModel('', langId).dispose()
+        // `monaco.editor.colorize` awaits the lazy Monarch loader. Once
+        // this resolves, subsequent `monaco.editor.tokenize(...)` calls for
+        // the same language return real tokens instead of the null-state
+        // fallback.
+        await monaco.editor.colorize('', langId, { tabSize: 2 })
+      } catch {
+        // If either step throws the language is unusable — the promise
+        // stays memoised so we don't retry on every zone, and the
+        // null-tokens path below will silently skip it.
+      }
+    })()
+
+    primedLanguages.set(langId, priming)
+    return priming
   }
 
   async function getSemanticTokensForZone(
-    zoneIndex: number,
+    _zoneIndex: number,
     content: string,
     langId: string
   ): Promise<SemanticTokens | null> {
-    if (tokenizer) {
-      return tokenizer.getSemanticTokens(zoneIndex, content, langId)
-    }
     await primeLanguage(langId)
 
     let rawTokens: monaco.Token[][]
