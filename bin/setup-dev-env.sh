@@ -233,10 +233,7 @@ resolve_script_dir() {
 			warn "could not resolve the directory holding $path — using it as-is"
 			break
 		fi
-		# GNU `readlink` takes `--`; BSD/macOS `readlink` does not and would
-		# fail on it, silently aborting the chain-follow. Try the GNU form
-		# (stderr muted to hide its usage spew) and fall back to the BSD form.
-		if ! link="$(readlink -- "$path" 2>/dev/null || readlink "$path")"; then
+		if ! link="$(readlink -- "$path")"; then
 			warn "could not read the symlink $path — using it as-is"
 			break
 		fi
